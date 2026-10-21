@@ -1,0 +1,22 @@
+{
+  "name": "tenderprocure-leads-crm",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:api": "npm run dev --workspace=@crm/api",
+    "dev:web": "npm run dev --workspace=@crm/web",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate dev",
+    "prisma:seed": "ts-node prisma/seed.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

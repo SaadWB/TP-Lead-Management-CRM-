@@ -1,0 +1,263 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  TELECALLER
+  SALESMAN
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskType {
+  CALL
+  FOLLOW_UP
+  DEMO
+  MEETING
+  OTHER
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum AssignmentRoleType {
+  TELECALLER
+  SALESMAN
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         Role
+  phone        String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relationships
+  assignedTelecallerLeads Lead[]                  @relation("TelecallerLeads")
+  assignedSalesmanLeads   Lead[]                  @relation("SalesmanLeads")
+  createdLeads            Lead[]                  @relation("CreatedLeads")
+  activities              LeadActivity[]
+  callLogs                CallLog[]
+  followUpTasks           FollowUpTask[]
+  assignedByHistories     LeadAssignmentHistory[] @relation("AssignedBy")
+  previousUserHistories   LeadAssignmentHistory[] @relation("PreviousUser")
+  newUserHistories        LeadAssignmentHistory[] @relation("NewUser")
+  notifications           Notification[]
+  importJobs              ImportJob[]
+  auditLogs               AuditLog[]
+
+  @@index([role, isActive])
+  @@index([email])
+}
+
+model Lead {
+  id                   String       @id @default(cuid())
+  companyName          String
+  serviceProduct       String
+  contactPerson        String?
+  phone                String
+  email                String?
+  alternatePhone       String?
+  website              String?
+  city                 String?
+  state                String?
+  priority             Priority     @default(MEDIUM)
+  pipelineStage        String       @default("New Lead")
+  salesStage           String?
+  callAttempts         Int          @default(0)
+  isRetry              Boolean      @default(false)
+  retryCount           Int          @default(0)
+  lastCallOutcome      String?
+  lastContactDate      DateTime?
+  lastStatusUpdatedAt  DateTime?
+  nextFollowUpDate     DateTime?
+  nextAction           String?
+  notes                String?
+  leadSource           String?
+  
+  assignedTelecallerId String?
+  assignedTelecaller   User?        @relation("TelecallerLeads", fields: [assignedTelecallerId], references: [id], onDelete: SetNull)
+  
+  assignedSalesmanId   String?
+  assignedSalesman     User?        @relation("SalesmanLeads", fields: [assignedSalesmanId], references: [id], onDelete: SetNull)
+  
+  createdById          String?
+  createdBy            User?        @relation("CreatedLeads", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  lastActivityAt       DateTime?    @default(now())
+  convertedAt          DateTime?
+  dealValue            Float?
+  lostReason           String?
+  lostNotes            String?
+  archivedAt           DateTime?
+
+  // Relations
+  activities           LeadActivity[]
+  callLogs             CallLog[]
+  followUpTasks        FollowUpTask[]
+  assignmentHistories  LeadAssignmentHistory[]
+  importRows           ImportRow[]
+
+  @@index([pipelineStage])
+  @@index([assignedTelecallerId])
+  @@index([assignedSalesmanId])
+  @@index([priority])
+  @@index([phone])
+  @@index([email])
+  @@index([companyName])
+  @@index([lastActivityAt])
+  @@index([nextFollowUpDate])
+}
+
+model LeadActivity {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type        String
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([leadId, createdAt])
+  @@index([userId])
+}
+
+model LeadAssignmentHistory {
+  id              String             @id @default(cuid())
+  leadId          String
+  lead            Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignedById    String
+  assignedBy      User               @relation("AssignedBy", fields: [assignedById], references: [id], onDelete: Cascade)
+  previousUserId  String?
+  previousUser    User?              @relation("PreviousUser", fields: [previousUserId], references: [id], onDelete: SetNull)
+  newUserId       String
+  newUser         User               @relation("NewUser", fields: [newUserId], references: [id], onDelete: Cascade)
+  roleType        AssignmentRoleType
+  handoverSummary String?
+  createdAt       DateTime           @default(now())
+
+  @@index([leadId, createdAt])
+  @@index([newUserId])
+}
+
+model CallLog {
+  id              String   @id @default(cuid())
+  leadId          String
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outcome         String
+  notes           String
+  contactDate     DateTime @default(now())
+  followUpNeeded  Boolean  @default(false)
+  nextFollowUpDate DateTime?
+  nextAction      String?
+  durationSeconds Int?
+  createdAt       DateTime @default(now())
+
+  @@index([leadId, contactDate])
+  @@index([userId, contactDate])
+}
+
+model FollowUpTask {
+  id             String     @id @default(cuid())
+  leadId         String
+  lead           Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignedUserId String
+  assignedUser   User       @relation(fields: [assignedUserId], references: [id], onDelete: Cascade)
+  taskType       TaskType   @default(FOLLOW_UP)
+  dueDate        DateTime
+  dueTime        String?
+  notes          String?
+  status         TaskStatus @default(PENDING)
+  completedAt    DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([assignedUserId, dueDate, status])
+  @@index([leadId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead, createdAt])
+}
+
+model ImportJob {
+  id            String      @id @default(cuid())
+  createdById   String
+  createdBy     User        @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  fileName      String
+  totalRows     Int         @default(0)
+  validRows     Int         @default(0)
+  invalidRows   Int         @default(0)
+  duplicateRows Int         @default(0)
+  importedRows  Int         @default(0)
+  skippedRows   Int         @default(0)
+  status        String      @default("COMPLETED")
+  createdAt     DateTime    @default(now())
+  rows          ImportRow[]
+
+  @@index([createdById, createdAt])
+}
+
+model ImportRow {
+  id              String     @id @default(cuid())
+  importJobId     String
+  importJob       ImportJob  @relation(fields: [importJobId], references: [id], onDelete: Cascade)
+  rawData         Json
+  parsedData      Json?
+  status          String     @default("PENDING")
+  duplicateReason String?
+  resolution      String?
+  leadId          String?
+  lead            Lead?      @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  createdAt       DateTime   @default(now())
+
+  @@index([importJobId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([userId, createdAt])
+}
