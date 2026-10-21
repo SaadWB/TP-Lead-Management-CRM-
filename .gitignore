@@ -1,6 +1,10 @@
 node_modules/
 .next/
+apps/api/dist/
+apps/web/dist/
 dist/
+!packages/shared/dist/
+!packages/shared/dist/**
 build/
 .env
 .env.*
