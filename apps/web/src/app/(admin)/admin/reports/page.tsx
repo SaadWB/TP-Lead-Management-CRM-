@@ -32,7 +32,8 @@ export default function AdminReportsPage() {
   }
 
   function handleExportCsv() {
-    window.open(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/v1/reports/export`, '_blank');
+    const apiBase = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '') : '';
+    window.open(`${apiBase}/api/v1/reports/export`, '_blank');
   }
 
   return (

@@ -10,6 +10,9 @@ const autoRuleInterval = setInterval(() => {
     console.error('Error running automatic rules:', err);
   }
 }, 60000);
+if (autoRuleInterval.unref) {
+  autoRuleInterval.unref();
+}
 
 const server = app.listen(config.port, () => {
   console.log(`=======================================================`);
@@ -27,3 +30,5 @@ process.on('SIGTERM', () => {
     console.log('HTTP server closed');
   });
 });
+
+export default app;

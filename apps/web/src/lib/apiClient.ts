@@ -1,6 +1,26 @@
 import { ApiResponse } from '@crm/shared';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+function getApiBase(): string {
+  // Server-side: use bound internal service URL if available
+  if (typeof window === 'undefined') {
+    if (process.env.API_URL) {
+      return process.env.API_URL.replace(/\/$/, '');
+    }
+  }
+
+  // Client-side or fallback: if NEXT_PUBLIC_API_URL is set, use it
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
+  }
+
+  // In browser on Vercel with unified rewrites, use same-origin relative URL
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+
+  // Local development fallback
+  return 'http://localhost:5000';
+}
 
 class ApiClient {
   private getToken(): string | null {
@@ -35,7 +55,8 @@ class ApiClient {
     }
 
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${API_BASE}/api/v1${cleanEndpoint}`;
+    const apiBase = getApiBase();
+    const url = `${apiBase}/api/v1${cleanEndpoint}`;
 
     try {
       const response = await fetch(url, {

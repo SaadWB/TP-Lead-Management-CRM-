@@ -40,7 +40,7 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
   // Health check endpoint
-  app.get('/health', (_req: Request, res: Response) => {
+  app.get(['/health', '/api/health', '/api/v1/health'], (_req: Request, res: Response) => {
     res.status(200).json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -77,3 +77,4 @@ export function createApp(): Application {
 }
 
 export const app = createApp();
+export default app;
