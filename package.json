@@ -19,5 +19,8 @@
   },
   "devDependencies": {
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "@share-crm/sharecrm-cli": "^1.1.17"
   }
 }
