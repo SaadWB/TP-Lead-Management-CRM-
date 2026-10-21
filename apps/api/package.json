@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
+    "prebuild": "npm --prefix ../../packages/shared run build",
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",

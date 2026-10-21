@@ -11,6 +11,7 @@
     "dev:api": "npm run dev --workspace=@crm/api",
     "dev:web": "npm run dev --workspace=@crm/web",
     "build": "npm run build --workspaces --if-present",
+    "postinstall": "npm run build --workspace=@crm/shared",
     "test": "npm run test --workspaces --if-present",
     "prisma:generate": "npx prisma generate",
     "prisma:migrate": "npx prisma migrate dev",
