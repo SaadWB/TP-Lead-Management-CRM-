@@ -96,9 +96,19 @@ export function KanbanCard({ lead, onCardClick, onQuickMove }: KanbanCardProps) 
       <h4 className="text-xs font-bold text-slate-900 group-hover:text-sky-600 transition-colors line-clamp-1 mb-0.5">
         {lead.companyName}
       </h4>
-      <p className="text-[11px] text-slate-500 line-clamp-1 mb-2">
+      <p className="text-[11px] text-slate-500 line-clamp-1 mb-1.5">
         {lead.serviceProduct}
       </p>
+
+      {/* Last Call Outcome Badge */}
+      {lead.lastCallOutcome && (
+        <div className="mb-2 flex items-center gap-1 text-[10px]">
+          <span className="font-semibold text-slate-400">Outcome:</span>
+          <span className="font-bold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200 truncate max-w-[170px]">
+            {lead.lastCallOutcome}
+          </span>
+        </div>
+      )}
 
       {/* Contact Person & Click-to-call */}
       <div className="flex items-center justify-between text-[11px] text-slate-600 py-1 border-t border-slate-100">

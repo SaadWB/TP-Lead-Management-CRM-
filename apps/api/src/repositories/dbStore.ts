@@ -527,12 +527,19 @@ function generateInitialSeed(): DataStore {
 class StoreManager {
   private data: DataStore;
   private lastMtime: number = 0;
+  private lastCheckTime: number = 0;
+  private lastRuleRunTime: number = 0;
 
   constructor() {
     this.data = this.loadData();
   }
 
   public checkReload(): void {
+    const now = Date.now();
+    // Throttle filesystem stat checks to at most once per 1000ms
+    if (now - this.lastCheckTime < 1000) return;
+    this.lastCheckTime = now;
+
     try {
       if (fs.existsSync(DATA_FILE)) {
         const mtime = fs.statSync(DATA_FILE).mtimeMs;
@@ -631,9 +638,13 @@ class StoreManager {
    * - No Answer / Ringing or Busy / Declined returns to New Fresh Leads on 3rd calendar day after call
    */
   public processAutomaticRules(): boolean {
+    const now = Date.now();
+    // Throttle automatic rule evaluations to at most once per 30 seconds
+    if (now - this.lastRuleRunTime < 30000) return false;
+    this.lastRuleRunTime = now;
+
     this.checkReload();
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = new Date(now).toISOString().split('T')[0];
     let changed = false;
 
     if (!Array.isArray(this.data.leads)) return false;
@@ -641,11 +652,14 @@ class StoreManager {
     for (const lead of this.data.leads) {
       if (lead.archivedAt) continue;
 
-      const isNoAnswerOrBusy =
+      const isRetryOutcome =
+        lead.lastCallOutcome === 'No Answer' ||
+        lead.lastCallOutcome === 'Busy' ||
+        lead.lastCallOutcome === 'Call Cut' ||
         lead.pipelineStage === 'No Answer / Ringing' ||
         lead.pipelineStage === 'Busy / Declined';
 
-      if (isNoAnswerOrBusy && lead.lastContactDate) {
+      if (isRetryOutcome && lead.lastContactDate && lead.pipelineStage !== 'New Lead' && lead.pipelineStage !== 'Closed') {
         const callDate = new Date(lead.lastContactDate);
         const callDateStr = callDate.toISOString().split('T')[0];
         const diffMs = new Date(todayStr).getTime() - new Date(callDateStr).getTime();
@@ -656,7 +670,7 @@ class StoreManager {
           lead.pipelineStage = 'New Lead';
           lead.isRetry = true;
           lead.retryCount = (lead.retryCount || 0) + 1;
-          lead.lastActivityAt = now.toISOString();
+          lead.lastActivityAt = new Date(now).toISOString();
 
           this.data.activities.push({
             id: `act_auto_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -671,7 +685,7 @@ class StoreManager {
               automatic: true,
               diffDays,
             },
-            createdAt: now.toISOString(),
+            createdAt: new Date(now).toISOString(),
           });
           changed = true;
         }
@@ -691,6 +705,7 @@ class StoreManager {
       }
       fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
       this.lastMtime = fs.statSync(DATA_FILE).mtimeMs;
+      this.lastCheckTime = Date.now();
     } catch (err) {
       console.error('[StoreManager] Failed to persist data to store.json', err);
     }

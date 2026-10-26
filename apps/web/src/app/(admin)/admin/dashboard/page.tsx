@@ -25,27 +25,12 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
+import { useSWRData } from '@/lib/apiCache';
+
 export default function AdminDashboardPage() {
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchMetrics();
-  }, []);
-
-  async function fetchMetrics() {
-    setLoading(true);
-    try {
-      const res = await api.get<DashboardMetrics>('/reports/dashboard');
-      if (res.success && res.data) {
-        setMetrics(res.data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: metrics, loading, refresh: fetchMetrics } = useSWRData<DashboardMetrics>(
+    '/reports/dashboard'
+  );
 
   const metricCards = [
     { title: 'Total Leads', value: metrics?.totalLeads || 0, icon: Layers, color: 'text-slate-900', bg: 'bg-slate-100', href: '/admin/leads?kpi=total' },
@@ -85,7 +70,7 @@ export default function AdminDashboardPage() {
               </Button>
             </Link>
             <button
-              onClick={fetchMetrics}
+              onClick={() => fetchMetrics()}
               className="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 cursor-pointer shadow-soft-sm"
               title="Refresh metrics"
             >

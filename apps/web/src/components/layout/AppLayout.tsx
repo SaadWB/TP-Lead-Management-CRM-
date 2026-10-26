@@ -28,12 +28,12 @@ export function AppLayout({
   const setHeader = headerContext?.setHeader;
   const updateCallbacks = headerContext?.updateCallbacks;
 
-  // Sync callbacks to ref on every render without triggering re-render
+  // Sync callbacks to ref when changed
   useEffect(() => {
     if (updateCallbacks) {
       updateCallbacks({ onOpenCreateLead, onSearchChange });
     }
-  });
+  }, [updateCallbacks, onOpenCreateLead, onSearchChange]);
 
   // Sync header data when metadata changes
   useEffect(() => {

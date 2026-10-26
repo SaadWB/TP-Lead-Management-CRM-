@@ -28,12 +28,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function checkAuth() {
+    // If no token exists, resolve immediately without unnecessary failing network call
+    const token = api.getToken();
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await api.get<User>('/auth/me');
       if (res.success && res.data) {
         setUser(res.data);
       } else {
         setUser(null);
+        api.setToken(null);
       }
     } catch (err) {
       setUser(null);
@@ -63,13 +72,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
+    // 1. Immediately wipe local session & token
+    api.setToken(null);
+    setUser(null);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('token');
+        sessionStorage.clear();
+      } catch {}
+    }
+
+    // 2. Fire and forget server logout (clear cookies)
     try {
-      await api.post('/auth/logout');
-    } catch {
-      // ignore
-    } finally {
-      api.setToken(null);
-      setUser(null);
+      api.post('/auth/logout').catch(() => {});
+    } catch {}
+
+    // 3. Immediately hard-redirect to /login to flush in-memory state and avoid layout glitches
+    if (typeof window !== 'undefined') {
+      window.location.replace('/login');
+    } else {
       router.push('/login');
     }
   }
@@ -80,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.push('/admin/dashboard');
         break;
       case 'TELECALLER':
-        router.push('/telecaller/today');
+        router.push('/telecaller/leads');
         break;
       case 'SALESMAN':
         router.push('/salesman/dashboard');

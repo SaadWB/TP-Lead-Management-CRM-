@@ -127,6 +127,10 @@ model Lead {
   @@index([companyName])
   @@index([lastActivityAt])
   @@index([nextFollowUpDate])
+  @@index([assignedTelecallerId, pipelineStage])
+  @@index([assignedTelecallerId, nextFollowUpDate])
+  @@index([assignedSalesmanId, salesStage])
+  @@index([pipelineStage, lastCallOutcome])
 }
 
 model LeadActivity {

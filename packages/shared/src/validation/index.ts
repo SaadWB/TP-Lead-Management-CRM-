@@ -45,7 +45,10 @@ export const createLeadSchema = z.object({
   city: z.string().optional().nullable(),
   state: z.string().optional().nullable(),
   priority: z.string().default(PRIORITIES.MEDIUM),
-  pipelineStage: z.string().default(CALL_OUTCOMES.NEW_LEAD),
+  pipelineStage: z.string().default('New Lead'),
+  lastCallOutcome: z.string().optional().nullable(),
+  nextFollowUpDate: z.string().optional().nullable(),
+  nextAction: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   leadSource: z.string().optional().nullable(),
   assignedTelecallerId: z.string().optional().nullable(),
@@ -55,8 +58,11 @@ export const createLeadSchema = z.object({
 export const updateLeadSchema = createLeadSchema.partial();
 
 export const updateStageSchema = z.object({
-  pipelineStage: z.string().min(1, 'Pipeline stage is required'),
-  notes: z.string().optional(),
+  pipelineStage: z.string().optional(),
+  lastCallOutcome: z.string().optional().nullable(),
+  nextFollowUpDate: z.string().optional().nullable(),
+  nextAction: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
   assignedSalesmanId: z.string().optional(),
   handoverSummary: z.string().optional(),
   meetingDate: z.string().optional(),

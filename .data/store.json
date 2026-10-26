@@ -54,6 +54,28 @@
       "isActive": true,
       "createdAt": "2026-09-26T14:19:57.159Z",
       "updatedAt": "2026-10-15T14:19:57.159Z"
+    },
+    {
+      "id": "usr_1792905505215_5rdan",
+      "name": "Saad ",
+      "email": "shadrajput04@gmail.com",
+      "passwordHash": "$2a$10$pUtJRA.piQSso7uplMAKv.Djz4Uk8AeSBjQpzrVHgMhQ4blfFLRBW",
+      "role": "TELECALLER",
+      "phone": "9328027580",
+      "isActive": true,
+      "createdAt": "2026-10-25T05:18:25.216Z",
+      "updatedAt": "2026-10-25T05:18:25.216Z"
+    },
+    {
+      "id": "usr_1792905578688_b0oq8",
+      "name": "Shad Rajput",
+      "email": "shadrajput05@gmail.com",
+      "passwordHash": "$2a$10$4baj7DXcG45R6WXwswVc1.VZug10GbCRofb3.Qro.Syl3db3AtFEO",
+      "role": "TELECALLER",
+      "phone": null,
+      "isActive": true,
+      "createdAt": "2026-10-25T05:19:38.688Z",
+      "updatedAt": "2026-10-25T05:19:38.688Z"
     }
   ],
   "leads": [
@@ -68,9 +90,9 @@
       "city": "Chicago",
       "state": "IL",
       "priority": "HIGH",
-      "pipelineStage": "Interested",
+      "pipelineStage": "Connected – Discussed",
       "callAttempts": 7,
-      "lastCallOutcome": "Interested",
+      "lastCallOutcome": "Connected – Discussed",
       "lastContactDate": "2026-10-20T09:49:38.591Z",
       "nextFollowUpDate": "2026-10-23T04:30:00.000Z",
       "nextAction": "Deliver compliance check presentation",
@@ -83,7 +105,7 @@
       "updatedAt": "2026-10-20T09:49:38.793Z",
       "lastActivityAt": "2026-10-20T09:49:38.787Z",
       "archivedAt": "2026-10-17T12:43:38.489Z",
-      "lastStatusUpdatedAt": "2026-10-20T09:49:38.787Z"
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "id": "lead_102",
@@ -96,9 +118,9 @@
       "city": "Boston",
       "state": "MA",
       "priority": "URGENT",
-      "pipelineStage": "Closed",
+      "pipelineStage": "Follow-up",
       "callAttempts": 3,
-      "lastCallOutcome": "Demo Requested",
+      "lastCallOutcome": "Demo Interested",
       "lastContactDate": "2026-10-14T14:19:57.159Z",
       "nextFollowUpDate": "2026-10-16T14:19:57.159Z",
       "nextAction": "Confirm demo attendees from executive procurement committee",
@@ -111,7 +133,8 @@
       "updatedAt": "2026-10-17T12:43:38.489Z",
       "lastActivityAt": "2026-10-17T07:03:20.030Z",
       "convertedAt": "2026-10-17T07:03:20.030Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "id": "lead_103",
@@ -138,7 +161,8 @@
       "createdAt": "2026-10-14T14:19:57.159Z",
       "updatedAt": "2026-10-17T12:43:38.489Z",
       "lastActivityAt": "2026-10-14T14:19:57.159Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "id": "lead_104",
@@ -151,9 +175,9 @@
       "city": "Atlanta",
       "state": "GA",
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Follow-up",
       "callAttempts": 4,
-      "lastCallOutcome": "Callback Requested",
+      "lastCallOutcome": "Call Back Later",
       "lastContactDate": "2026-10-15T14:19:57.159Z",
       "nextFollowUpDate": "2026-10-17T09:30:00.000Z",
       "nextAction": "Schedule 45-minute live platform demonstration with Sales",
@@ -165,7 +189,8 @@
       "createdAt": "2026-10-06T14:19:57.159Z",
       "updatedAt": "2026-10-17T12:43:38.489Z",
       "lastActivityAt": "2026-10-17T07:06:39.085Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "id": "lead_105",
@@ -204,9 +229,9 @@
       "city": "Washington",
       "state": "DC",
       "priority": "URGENT",
-      "pipelineStage": "Demo Requested",
+      "pipelineStage": "Follow-up",
       "callAttempts": 5,
-      "lastCallOutcome": "Details on WhatsApp",
+      "lastCallOutcome": "Details Requested",
       "lastContactDate": "2026-10-14T14:19:57.159Z",
       "nextFollowUpDate": "2026-10-17T10:30:00.000Z",
       "nextAction": "Sales discovery & architecture sign-off",
@@ -219,7 +244,8 @@
       "updatedAt": "2026-10-17T12:43:38.489Z",
       "lastActivityAt": "2026-10-17T07:12:02.181Z",
       "archivedAt": "2026-10-17T12:43:38.489Z",
-      "salesStage": "ASSIGNED"
+      "salesStage": "ASSIGNED",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "id": "lead_107",
@@ -231,9 +257,9 @@
       "city": "Dallas",
       "state": "TX",
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Follow-up",
       "callAttempts": 3,
-      "lastCallOutcome": "Details on WhatsApp",
+      "lastCallOutcome": "Details Requested",
       "lastContactDate": "2026-10-13T14:19:57.159Z",
       "nextFollowUpDate": "2026-10-18T08:30:00.000Z",
       "nextAction": "Sales demo with VP of Operations",
@@ -246,7 +272,8 @@
       "updatedAt": "2026-10-17T12:43:38.489Z",
       "lastActivityAt": "2026-10-13T14:19:57.159Z",
       "archivedAt": "2026-10-17T12:43:38.489Z",
-      "salesStage": "ASSIGNED"
+      "salesStage": "ASSIGNED",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "id": "lead_108",
@@ -258,9 +285,9 @@
       "city": "Austin",
       "state": "TX",
       "priority": "URGENT",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Follow-up",
       "callAttempts": 6,
-      "lastCallOutcome": "Details on WhatsApp",
+      "lastCallOutcome": "Details Requested",
       "lastContactDate": "2026-10-15T14:19:57.159Z",
       "nextFollowUpDate": "2026-10-17T11:30:00.000Z",
       "nextAction": "Send revised master services agreement with SLA annexure",
@@ -273,7 +300,8 @@
       "updatedAt": "2026-10-17T12:43:38.489Z",
       "lastActivityAt": "2026-10-15T14:19:57.159Z",
       "archivedAt": "2026-10-17T12:43:38.489Z",
-      "salesStage": "ASSIGNED"
+      "salesStage": "ASSIGNED",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "id": "lead_109",
@@ -285,9 +313,9 @@
       "city": "Detroit",
       "state": "MI",
       "priority": "MEDIUM",
-      "pipelineStage": "Closed",
+      "pipelineStage": "Follow-up",
       "callAttempts": 7,
-      "lastCallOutcome": "Details on WhatsApp",
+      "lastCallOutcome": "Details Requested",
       "lastContactDate": "2026-10-11T14:19:57.159Z",
       "nextFollowUpDate": null,
       "nextAction": "Onboarding handover completed",
@@ -302,7 +330,8 @@
       "convertedAt": "2026-10-11T14:19:57.159Z",
       "dealValue": 36000,
       "archivedAt": "2026-10-17T12:43:38.489Z",
-      "salesStage": "ASSIGNED"
+      "salesStage": "ASSIGNED",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "id": "lead_110",
@@ -314,7 +343,7 @@
       "city": "Huntsville",
       "state": "AL",
       "priority": "LOW",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Closed",
       "callAttempts": 4,
       "lastCallOutcome": "Not Interested",
       "lastContactDate": "2026-10-08T14:19:57.159Z",
@@ -331,7 +360,8 @@
       "lostReason": "NO_BUDGET",
       "lostNotes": "Internal freeze on software procurement for FY2026.",
       "archivedAt": "2026-10-17T12:43:38.489Z",
-      "salesStage": "ASSIGNED"
+      "salesStage": "ASSIGNED",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "GIRIRAJJI ENTERPRISES",
@@ -355,7 +385,9 @@
       "createdAt": "2026-10-17T06:58:36.133Z",
       "updatedAt": "2026-10-17T12:43:38.489Z",
       "lastActivityAt": "2026-10-17T07:06:33.469Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "RAHI BILAL MEDICAL AGENCY",
@@ -368,7 +400,7 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Closed",
       "callAttempts": 1,
       "lastCallOutcome": "Not Interested",
       "lastContactDate": null,
@@ -382,7 +414,8 @@
       "createdAt": "2026-10-17T07:24:52.281Z",
       "updatedAt": "2026-10-17T12:47:31.430Z",
       "lastActivityAt": "2026-10-17T12:47:31.430Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "Hitech Scientific & Mediquips",
@@ -395,9 +428,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Follow-up",
       "callAttempts": 4,
-      "lastCallOutcome": "Busy / Declined",
+      "lastCallOutcome": "Busy",
       "lastContactDate": null,
       "nextFollowUpDate": "-",
       "nextAction": null,
@@ -409,7 +442,8 @@
       "createdAt": "2026-10-17T07:24:52.296Z",
       "updatedAt": "2026-10-17T12:47:31.435Z",
       "lastActivityAt": "2026-10-17T12:47:31.435Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "STATEX ELECTRONICS(MSE,MII)( MSE Social Category:OBC )",
@@ -424,7 +458,7 @@
       "priority": "HIGH",
       "pipelineStage": "New Lead",
       "callAttempts": 2,
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "lastContactDate": null,
       "nextFollowUpDate": "46310",
       "nextAction": "Check response on whastapp",
@@ -436,7 +470,8 @@
       "createdAt": "2026-10-17T07:24:52.321Z",
       "updatedAt": "2026-10-17T12:47:31.492Z",
       "lastActivityAt": "2026-10-17T12:47:31.492Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "BHARGAV ENTERPRISES",
@@ -451,7 +486,7 @@
       "priority": "HIGH",
       "pipelineStage": "New Lead",
       "callAttempts": 1,
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "lastContactDate": null,
       "nextFollowUpDate": null,
       "nextAction": null,
@@ -463,7 +498,8 @@
       "createdAt": "2026-10-17T07:24:52.335Z",
       "updatedAt": "2026-10-17T12:47:31.526Z",
       "lastActivityAt": "2026-10-17T12:47:31.526Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "BHARAT SCIENTIFIC HOUSE",
@@ -478,7 +514,7 @@
       "priority": "HIGH",
       "pipelineStage": "New Lead",
       "callAttempts": 1,
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "lastContactDate": null,
       "nextFollowUpDate": "46307",
       "nextAction": "Check response for demo scheduled",
@@ -490,7 +526,8 @@
       "createdAt": "2026-10-17T07:24:52.363Z",
       "updatedAt": "2026-10-17T12:47:31.551Z",
       "lastActivityAt": "2026-10-17T12:47:31.551Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "ZENOTREX MEDICO PRIVATE LIMITED(MII)( MSE Social Category:NA )",
@@ -505,7 +542,7 @@
       "priority": "HIGH",
       "pipelineStage": "New Lead",
       "callAttempts": 1,
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "lastContactDate": null,
       "nextFollowUpDate": "-",
       "nextAction": null,
@@ -517,7 +554,8 @@
       "createdAt": "2026-10-17T07:24:52.395Z",
       "updatedAt": "2026-10-17T12:47:31.579Z",
       "lastActivityAt": "2026-10-17T12:47:31.579Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "STRUMED SOLUTIONS PRIVATE LIMITED(MSE)( MSE Social Category:General )",
@@ -530,9 +568,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Follow-up",
       "callAttempts": 1,
-      "lastCallOutcome": "Busy / Declined",
+      "lastCallOutcome": "Busy",
       "lastContactDate": null,
       "nextFollowUpDate": "-",
       "nextAction": null,
@@ -544,7 +582,8 @@
       "createdAt": "2026-10-17T07:24:52.412Z",
       "updatedAt": "2026-10-17T12:47:31.610Z",
       "lastActivityAt": "2026-10-17T12:47:31.610Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "PROTEOGEN BIOSCIENCES (INDIA) PRIVATE LIMITED",
@@ -559,7 +598,7 @@
       "priority": "HIGH",
       "pipelineStage": "New Lead",
       "callAttempts": 2,
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "lastContactDate": null,
       "nextFollowUpDate": "-",
       "nextAction": null,
@@ -571,7 +610,8 @@
       "createdAt": "2026-10-17T07:24:52.442Z",
       "updatedAt": "2026-10-17T12:47:31.641Z",
       "lastActivityAt": "2026-10-17T12:47:31.641Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "HOLMARC OPTO-MECHATRONICS PRIVATE LIMITED(MSE,MII)( MSE Social Category:General )",
@@ -584,7 +624,7 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Closed",
       "callAttempts": 1,
       "lastCallOutcome": "Not Interested",
       "lastContactDate": null,
@@ -598,7 +638,8 @@
       "createdAt": "2026-10-17T07:24:52.474Z",
       "updatedAt": "2026-10-17T12:47:31.666Z",
       "lastActivityAt": "2026-10-17T12:47:31.666Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "JK SCIENTIFIC SOLUTIONS",
@@ -613,7 +654,7 @@
       "priority": "HIGH",
       "pipelineStage": "New Lead",
       "callAttempts": 2,
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "lastContactDate": null,
       "nextFollowUpDate": "-",
       "nextAction": null,
@@ -625,7 +666,8 @@
       "createdAt": "2026-10-17T07:24:52.477Z",
       "updatedAt": "2026-10-17T12:47:31.694Z",
       "lastActivityAt": "2026-10-17T12:47:31.694Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "TULIN EQUIPMENTS(MSE,MII)( MSE Social Category:General )",
@@ -640,7 +682,7 @@
       "priority": "HIGH",
       "pipelineStage": "New Lead",
       "callAttempts": 1,
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "lastContactDate": null,
       "nextFollowUpDate": "46310",
       "nextAction": "Check response",
@@ -652,7 +694,8 @@
       "createdAt": "2026-10-17T07:24:52.491Z",
       "updatedAt": "2026-10-17T12:47:31.698Z",
       "lastActivityAt": "2026-10-17T12:47:31.698Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "SPT LABTECH INDIA PRIVATE LIMITED",
@@ -679,7 +722,8 @@
       "createdAt": "2026-10-17T07:24:52.809Z",
       "updatedAt": "2026-10-17T12:47:31.725Z",
       "lastActivityAt": "2026-10-17T12:47:31.725Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "NATIONAL SCIENTIFIC PROMOTERS",
@@ -692,9 +736,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Attempting Contact",
       "callAttempts": 1,
-      "lastCallOutcome": "No Answer / Ringing",
+      "lastCallOutcome": "No Answer",
       "lastContactDate": null,
       "nextFollowUpDate": "-",
       "nextAction": null,
@@ -706,7 +750,8 @@
       "createdAt": "2026-10-17T07:24:52.835Z",
       "updatedAt": "2026-10-17T12:47:31.751Z",
       "lastActivityAt": "2026-10-17T12:47:31.751Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "MEDISPEC INDIA LIMITED",
@@ -719,9 +764,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Follow-up",
       "callAttempts": 1,
-      "lastCallOutcome": "Callback Requested",
+      "lastCallOutcome": "Call Back Later",
       "lastContactDate": null,
       "nextFollowUpDate": "46307",
       "nextAction": "Call tommorow",
@@ -733,7 +778,8 @@
       "createdAt": "2026-10-17T07:24:52.847Z",
       "updatedAt": "2026-10-17T12:47:31.784Z",
       "lastActivityAt": "2026-10-17T12:47:31.784Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "Edwil Pharmaceuticals",
@@ -746,9 +792,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Follow-up",
       "callAttempts": 2,
-      "lastCallOutcome": "Busy / Declined",
+      "lastCallOutcome": "Busy",
       "lastContactDate": null,
       "nextFollowUpDate": null,
       "nextAction": null,
@@ -760,7 +806,8 @@
       "createdAt": "2026-10-17T07:24:52.873Z",
       "updatedAt": "2026-10-17T12:47:31.812Z",
       "lastActivityAt": "2026-10-17T12:47:31.812Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "PHOTON BIOLOGICALS",
@@ -773,7 +820,7 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Closed",
       "callAttempts": 1,
       "lastCallOutcome": "Not Interested",
       "lastContactDate": null,
@@ -787,7 +834,8 @@
       "createdAt": "2026-10-17T07:24:52.885Z",
       "updatedAt": "2026-10-17T12:47:32.139Z",
       "lastActivityAt": "2026-10-17T12:47:32.139Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "Ace Instruments Delhi",
@@ -814,7 +862,8 @@
       "createdAt": "2026-10-17T07:24:52.901Z",
       "updatedAt": "2026-10-17T12:47:32.170Z",
       "lastActivityAt": "2026-10-17T12:47:32.170Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "ROHAN BIOCHEM(MSE,MII)( MSE Social Category:General )",
@@ -827,7 +876,7 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Closed",
       "callAttempts": 1,
       "lastCallOutcome": "Not Interested",
       "lastContactDate": null,
@@ -841,7 +890,8 @@
       "createdAt": "2026-10-17T07:24:52.918Z",
       "updatedAt": "2026-10-17T12:47:32.200Z",
       "lastActivityAt": "2026-10-17T12:47:32.200Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "Bioneon Diagnostics INC(MII)",
@@ -854,9 +904,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "New Lead",
+      "pipelineStage": "Follow-up",
       "callAttempts": 2,
-      "lastCallOutcome": "Busy / Declined",
+      "lastCallOutcome": "Busy",
       "lastContactDate": null,
       "nextFollowUpDate": null,
       "nextAction": null,
@@ -868,7 +918,8 @@
       "createdAt": "2026-10-17T07:24:52.920Z",
       "updatedAt": "2026-10-17T12:47:32.231Z",
       "lastActivityAt": "2026-10-17T12:47:32.230Z",
-      "archivedAt": "2026-10-17T12:43:38.489Z"
+      "archivedAt": "2026-10-17T12:43:38.489Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "Bharat Renewable Energy Corp",
@@ -892,7 +943,9 @@
       "createdAt": "2026-10-17T10:11:11.047Z",
       "updatedAt": "2026-10-17T10:11:11.749Z",
       "lastActivityAt": "2026-10-17T10:11:11.189Z",
-      "archivedAt": "2026-10-17T10:11:11.749Z"
+      "archivedAt": "2026-10-17T10:11:11.749Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "DATA PATTERNS (INDIA) LIMITED(MII)",
@@ -918,7 +971,8 @@
       "id": "lead_1792241416349_zxo3",
       "createdAt": "2026-10-17T12:50:16.349Z",
       "updatedAt": "2026-10-17T12:50:16.349Z",
-      "lastActivityAt": "2026-10-17T12:50:16.349Z"
+      "lastActivityAt": "2026-10-17T12:50:16.349Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "SHUBH MEDICAIDS",
@@ -944,7 +998,8 @@
       "id": "lead_1792241416376_o0go",
       "createdAt": "2026-10-17T12:50:16.376Z",
       "updatedAt": "2026-10-17T12:50:16.376Z",
-      "lastActivityAt": "2026-10-17T12:50:16.376Z"
+      "lastActivityAt": "2026-10-17T12:50:16.376Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "M/S J C TRADING COMPANY",
@@ -970,7 +1025,8 @@
       "id": "lead_1792241416405_xrgn",
       "createdAt": "2026-10-17T12:50:16.405Z",
       "updatedAt": "2026-10-17T12:50:16.405Z",
-      "lastActivityAt": "2026-10-17T12:50:16.405Z"
+      "lastActivityAt": "2026-10-17T12:50:16.405Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "MATUSHRI TRADING COMPANY",
@@ -996,7 +1052,8 @@
       "id": "lead_1792241416422_744m",
       "createdAt": "2026-10-17T12:50:16.422Z",
       "updatedAt": "2026-10-17T12:50:16.422Z",
-      "lastActivityAt": "2026-10-17T12:50:16.422Z"
+      "lastActivityAt": "2026-10-17T12:50:16.422Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "Sigmatronics",
@@ -1009,9 +1066,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "Invalid / Wrong Number",
+      "pipelineStage": "Closed",
       "callAttempts": 0,
-      "lastCallOutcome": null,
+      "lastCallOutcome": "Wrong Number",
       "lastContactDate": null,
       "nextFollowUpDate": null,
       "nextAction": null,
@@ -1022,7 +1079,8 @@
       "id": "lead_1792241416449_vs03",
       "createdAt": "2026-10-17T12:50:16.449Z",
       "updatedAt": "2026-10-19T09:45:40.414Z",
-      "lastActivityAt": "2026-10-19T09:45:40.414Z"
+      "lastActivityAt": "2026-10-19T09:45:40.414Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "ACCUTE HEALTHCARE PRIVATE LIMITED",
@@ -1048,7 +1106,8 @@
       "id": "lead_1792241416480_vxjr",
       "createdAt": "2026-10-17T12:50:16.480Z",
       "updatedAt": "2026-10-17T12:50:16.481Z",
-      "lastActivityAt": "2026-10-17T12:50:16.481Z"
+      "lastActivityAt": "2026-10-17T12:50:16.481Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "INVENTIS TECHNOSYS PRIVATE LIMITED",
@@ -1061,9 +1120,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "Demo Requested",
+      "pipelineStage": "Follow-up",
       "callAttempts": 0,
-      "lastCallOutcome": null,
+      "lastCallOutcome": "Demo Interested",
       "lastContactDate": null,
       "nextFollowUpDate": "2026-10-19T15:20",
       "nextAction": null,
@@ -1073,8 +1132,9 @@
       "createdById": "usr_admin_1",
       "id": "lead_1792241416509_crrb",
       "createdAt": "2026-10-17T12:50:16.509Z",
-      "updatedAt": "2026-10-19T09:46:16.118Z",
-      "lastActivityAt": "2026-10-19T09:46:16.114Z"
+      "updatedAt": "2026-10-24T14:43:31.609Z",
+      "lastActivityAt": "2026-10-24T14:43:31.608Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "MITRA MEDICAL SERVICES LLP(MSE,MII)( MSE Social Category:General )",
@@ -1100,7 +1160,8 @@
       "id": "lead_1792241416538_cyc3",
       "createdAt": "2026-10-17T12:50:16.538Z",
       "updatedAt": "2026-10-17T12:50:16.538Z",
-      "lastActivityAt": "2026-10-17T12:50:16.538Z"
+      "lastActivityAt": "2026-10-17T12:50:16.538Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "SOLUTION TECHNOLOGY",
@@ -1113,9 +1174,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "Not Interested",
+      "pipelineStage": "Closed",
       "callAttempts": 0,
-      "lastCallOutcome": null,
+      "lastCallOutcome": "Not Interested",
       "lastContactDate": null,
       "nextFollowUpDate": null,
       "nextAction": null,
@@ -1126,7 +1187,8 @@
       "id": "lead_1792241416569_pgln",
       "createdAt": "2026-10-17T12:50:16.569Z",
       "updatedAt": "2026-10-19T09:45:35.830Z",
-      "lastActivityAt": "2026-10-19T09:45:35.830Z"
+      "lastActivityAt": "2026-10-19T09:45:35.830Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "INVITROGEN BIOSERVICES INDIA PRIVATE LIMITED",
@@ -1152,7 +1214,8 @@
       "id": "lead_1792241416600_rc9i",
       "createdAt": "2026-10-17T12:50:16.600Z",
       "updatedAt": "2026-10-17T12:50:16.600Z",
-      "lastActivityAt": "2026-10-17T12:50:16.600Z"
+      "lastActivityAt": "2026-10-17T12:50:16.600Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "IMPERIAL LIFE SCIENCES PRIVATE LIMITED",
@@ -1165,9 +1228,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "Busy / Declined",
+      "pipelineStage": "Follow-up",
       "callAttempts": 0,
-      "lastCallOutcome": null,
+      "lastCallOutcome": "Busy",
       "lastContactDate": null,
       "nextFollowUpDate": null,
       "nextAction": null,
@@ -1178,7 +1241,8 @@
       "id": "lead_1792241495999_e9jz",
       "createdAt": "2026-10-17T12:51:35.999Z",
       "updatedAt": "2026-10-19T09:45:32.663Z",
-      "lastActivityAt": "2026-10-19T09:45:32.663Z"
+      "lastActivityAt": "2026-10-19T09:45:32.663Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "LIFE MEDICAL HALL",
@@ -1191,10 +1255,10 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "No Answer / Ringing",
-      "callAttempts": 0,
-      "lastCallOutcome": null,
-      "lastContactDate": null,
+      "pipelineStage": "Attempting Contact",
+      "callAttempts": 1,
+      "lastCallOutcome": "No Answer",
+      "lastContactDate": "2026-10-24T14:40:24.130Z",
       "nextFollowUpDate": null,
       "nextAction": null,
       "notes": null,
@@ -1203,8 +1267,9 @@
       "createdById": "usr_admin_1",
       "id": "lead_1792241496025_o79d",
       "createdAt": "2026-10-17T12:51:36.025Z",
-      "updatedAt": "2026-10-19T09:45:30.922Z",
-      "lastActivityAt": "2026-10-19T09:45:30.922Z"
+      "updatedAt": "2026-10-24T14:40:24.130Z",
+      "lastActivityAt": "2026-10-24T14:40:24.130Z",
+      "lastStatusUpdatedAt": "2026-10-24T14:40:24.130Z"
     },
     {
       "companyName": "HI TECH CALIBRATION SERVICES(MSE)( MSE Social Category:General )",
@@ -1217,9 +1282,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "Assign to Salesman",
+      "pipelineStage": "Connected – Discussed",
       "callAttempts": 0,
-      "lastCallOutcome": null,
+      "lastCallOutcome": "Connected – Discussed",
       "lastContactDate": null,
       "nextFollowUpDate": null,
       "nextAction": null,
@@ -1232,7 +1297,8 @@
       "updatedAt": "2026-10-17T13:44:06.845Z",
       "lastActivityAt": "2026-10-17T13:44:06.833Z",
       "assignedSalesmanId": "usr_sales_1",
-      "salesStage": "ASSIGNED"
+      "salesStage": "ASSIGNED",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "GENE TECHNOLOGIES",
@@ -1247,7 +1313,7 @@
       "priority": "HIGH",
       "pipelineStage": "Closed",
       "callAttempts": 0,
-      "lastCallOutcome": null,
+      "lastCallOutcome": "Closed",
       "lastContactDate": null,
       "nextFollowUpDate": null,
       "nextAction": null,
@@ -1259,7 +1325,8 @@
       "createdAt": "2026-10-17T12:51:36.095Z",
       "updatedAt": "2026-10-17T13:38:52.233Z",
       "lastActivityAt": "2026-10-17T13:38:52.232Z",
-      "convertedAt": "2026-10-17T13:38:52.232Z"
+      "convertedAt": "2026-10-17T13:38:52.232Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "Biochrom International",
@@ -1272,9 +1339,9 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "Callback Requested",
+      "pipelineStage": "Follow-up",
       "callAttempts": 1,
-      "lastCallOutcome": "Demo Requested",
+      "lastCallOutcome": "Demo Interested",
       "lastContactDate": "2026-10-17T13:02:26.623Z",
       "nextFollowUpDate": null,
       "nextAction": null,
@@ -1285,7 +1352,8 @@
       "id": "lead_1792241496124_1yah",
       "createdAt": "2026-10-17T12:51:36.124Z",
       "updatedAt": "2026-10-17T13:02:26.640Z",
-      "lastActivityAt": "2026-10-17T13:02:26.639Z"
+      "lastActivityAt": "2026-10-17T13:02:26.639Z",
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "Acme Test Corp Empty Contact",
@@ -1298,7 +1366,7 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "Details on WhatsApp",
+      "pipelineStage": "New Lead",
       "notes": null,
       "leadSource": "DIRECT_CALL",
       "assignedTelecallerId": "usr_tele_1",
@@ -1308,9 +1376,12 @@
       "id": "lead_1792385179704_vnjx",
       "createdAt": "2026-10-19T04:46:19.705Z",
       "updatedAt": "2026-10-19T09:45:15.356Z",
-      "lastActivityAt": "2026-10-19T09:45:15.356Z",
-      "lastCallOutcome": "No Answer / Ringing",
-      "lastContactDate": "2026-10-19T09:26:30.265Z"
+      "lastActivityAt": "2026-10-25T05:39:34.467Z",
+      "lastCallOutcome": "No Answer",
+      "lastContactDate": "2026-10-19T09:26:30.265Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z",
+      "isRetry": true,
+      "retryCount": 2
     },
     {
       "companyName": "Acme Test Corp Empty Contact",
@@ -1323,7 +1394,7 @@
       "city": null,
       "state": null,
       "priority": "HIGH",
-      "pipelineStage": "Assign to Salesman",
+      "pipelineStage": "Follow-up",
       "notes": "Demo presentation booked with CTO\n[2026-10-19 - DEMO_COMPLETED]: Completed live walkthrough of API & dashboard\n[2026-10-19 - FOLLOW_UP_REQUIRED]: Client requested pricing proposal followup\n[2026-10-19 - QUALIFIED]: Budget approved ($45k annual contract)\n[2026-10-19 - NEGOTIATION]: Reviewing MSA and SLA terms\n[2026-10-19 - ON_HOLD]: Client waiting for Q1 budget cycle\n[2026-10-19 - CONVERTED]: Contract signed! Paid in full.",
       "leadSource": "DIRECT_CALL",
       "assignedTelecallerId": "usr_tele_1",
@@ -1334,12 +1405,13 @@
       "createdAt": "2026-10-19T04:48:34.163Z",
       "updatedAt": "2026-10-19T04:48:35.449Z",
       "lastActivityAt": "2026-10-19T04:48:35.449Z",
-      "lastCallOutcome": "Callback Requested",
+      "lastCallOutcome": "Call Back Later",
       "lastContactDate": "2026-10-19T04:48:34.799Z",
       "nextFollowUpDate": "2026-10-20T04:48:34.790Z",
       "salesStage": "CONVERTED",
       "convertedAt": "2026-10-19T04:48:35.449Z",
-      "dealValue": 45000
+      "dealValue": 45000,
+      "lastStatusUpdatedAt": "2026-10-24T10:08:55.182Z"
     },
     {
       "companyName": "NoAnswer Corp",
@@ -1362,7 +1434,9 @@
       "id": "lead_1792413576966_xd6d",
       "createdAt": "2026-10-19T12:39:36.966Z",
       "updatedAt": "2026-10-19T12:39:36.966Z",
-      "lastActivityAt": "2026-10-19T12:39:36.967Z"
+      "lastActivityAt": "2026-10-19T12:39:36.967Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "Round4 Test Corp",
@@ -1386,10 +1460,10 @@
       "createdAt": "2026-10-19T13:15:38.436Z",
       "updatedAt": "2026-10-19T14:44:38.929Z",
       "lastActivityAt": "2026-10-19T14:44:38.928Z",
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "nextFollowUpDate": "2026-10-22T04:30:00.000Z",
       "nextAction": "Follow-up Closed",
-      "lastStatusUpdatedAt": "2026-10-19T14:44:38.928Z"
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "NoAnswer Corp",
@@ -1412,11 +1486,12 @@
       "id": "lead_1792415738666_6a4m",
       "createdAt": "2026-10-19T13:15:38.666Z",
       "updatedAt": "2026-10-16T13:15:38.821Z",
-      "lastActivityAt": "2026-10-19T13:15:38.885Z",
-      "lastCallOutcome": "No Answer / Ringing",
+      "lastActivityAt": "2026-10-25T05:39:34.467Z",
+      "lastCallOutcome": "No Answer",
       "lastContactDate": "2026-10-16T13:15:38.821Z",
       "isRetry": true,
-      "retryCount": 1
+      "retryCount": 3,
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "Round4 Test Corp",
@@ -1440,10 +1515,11 @@
       "createdAt": "2026-10-19T13:24:29.295Z",
       "updatedAt": "2026-10-19T13:58:00.784Z",
       "lastActivityAt": "2026-10-19T13:58:00.783Z",
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "nextFollowUpDate": null,
       "nextAction": "Follow-up Closed",
-      "lastContactDate": "2026-10-19T13:52:36.901Z"
+      "lastContactDate": "2026-10-19T13:52:36.901Z",
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     },
     {
       "companyName": "NoAnswer Corp",
@@ -1467,10 +1543,11 @@
       "createdAt": "2026-10-19T13:24:29.617Z",
       "updatedAt": "2026-10-19T13:58:01.919Z",
       "lastActivityAt": "2026-10-19T13:58:01.919Z",
-      "lastCallOutcome": "New Lead",
+      "lastCallOutcome": null,
       "lastContactDate": "2026-10-16T13:24:29.810Z",
       "isRetry": true,
-      "retryCount": 1
+      "retryCount": 1,
+      "lastStatusUpdatedAt": "2026-10-25T05:38:34.342Z"
     }
   ],
   "activities": [
@@ -4493,6 +4570,2120 @@
         "followUpDate": "2026-10-23T04:30:00.000Z"
       },
       "createdAt": "2026-10-20T09:49:38.835Z"
+    },
+    {
+      "id": "act_mig_1792836535186_nmnkf",
+      "leadId": "lead_101",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Interested",
+          "oldOutcome": "Interested"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535189_ro39a",
+      "leadId": "lead_102",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Demo Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Closed",
+          "oldOutcome": "Demo Requested"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Demo Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535190_iar7b",
+      "leadId": "lead_103",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535190_204fh",
+      "leadId": "lead_104",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Call Back Later\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Callback Requested"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Call Back Later"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535190_u5o58",
+      "leadId": "lead_106",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Details Requested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Demo Requested",
+          "oldOutcome": "Details on WhatsApp"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Details Requested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535190_lq7j8",
+      "leadId": "lead_107",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Details Requested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Details on WhatsApp"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Details Requested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535190_n9vyc",
+      "leadId": "lead_108",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Details Requested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Details on WhatsApp"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Details Requested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535190_fxopm",
+      "leadId": "lead_109",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Details Requested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Closed",
+          "oldOutcome": "Details on WhatsApp"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Details Requested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535190_1b0r3",
+      "leadId": "lead_110",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Closed\" and last call outcome to \"Not Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Not Interested"
+        },
+        "migratedTo": {
+          "newPipeline": "Closed",
+          "newOutcome": "Not Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535190_ehria",
+      "leadId": "lead_1792220316133_8u1c",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_p601p",
+      "leadId": "lead_1792221892281_9vir",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Closed\" and last call outcome to \"Not Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Not Interested"
+        },
+        "migratedTo": {
+          "newPipeline": "Closed",
+          "newOutcome": "Not Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_7ei3x",
+      "leadId": "lead_1792221892296_hxp0",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Busy\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Busy / Declined"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Busy"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_wqc8h",
+      "leadId": "lead_1792221892321_xp4m",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_s49za",
+      "leadId": "lead_1792221892335_vjw1",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_1j078",
+      "leadId": "lead_1792221892363_h1q3",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_pfqhn",
+      "leadId": "lead_1792221892395_5keo",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_rd8mg",
+      "leadId": "lead_1792221892412_ksoy",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Busy\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Busy / Declined"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Busy"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_3ndsq",
+      "leadId": "lead_1792221892442_2jqx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_r4z6a",
+      "leadId": "lead_1792221892474_ptrv",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Closed\" and last call outcome to \"Not Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Not Interested"
+        },
+        "migratedTo": {
+          "newPipeline": "Closed",
+          "newOutcome": "Not Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_nqjfl",
+      "leadId": "lead_1792221892477_7jmh",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_pcjv9",
+      "leadId": "lead_1792221892491_lhri",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_85jfa",
+      "leadId": "lead_1792221892809_4swg",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_rvskb",
+      "leadId": "lead_1792221892835_1aqm",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Attempting Contact\" and last call outcome to \"No Answer\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "No Answer / Ringing"
+        },
+        "migratedTo": {
+          "newPipeline": "Attempting Contact",
+          "newOutcome": "No Answer"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_zy327",
+      "leadId": "lead_1792221892847_ww44",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Call Back Later\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Callback Requested"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Call Back Later"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_h7pfa",
+      "leadId": "lead_1792221892873_lgie",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Busy\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Busy / Declined"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Busy"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_yogt7",
+      "leadId": "lead_1792221892885_v2bo",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Closed\" and last call outcome to \"Not Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Not Interested"
+        },
+        "migratedTo": {
+          "newPipeline": "Closed",
+          "newOutcome": "Not Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_rc6mg",
+      "leadId": "lead_1792221892901_5xgp",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_xwjlu",
+      "leadId": "lead_1792221892918_yzd8",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Closed\" and last call outcome to \"Not Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Not Interested"
+        },
+        "migratedTo": {
+          "newPipeline": "Closed",
+          "newOutcome": "Not Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_ovr92",
+      "leadId": "lead_1792221892920_tkty",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Busy\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Busy / Declined"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Busy"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_8gjdn",
+      "leadId": "lead_1792231871047_0p81",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_2h5g1",
+      "leadId": "lead_1792241416349_zxo3",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_ngfnn",
+      "leadId": "lead_1792241416376_o0go",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_awwtb",
+      "leadId": "lead_1792241416405_xrgn",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_5vgsg",
+      "leadId": "lead_1792241416422_744m",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_bos0p",
+      "leadId": "lead_1792241416449_vs03",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Closed\" and last call outcome to \"Wrong Number\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Invalid / Wrong Number",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "Closed",
+          "newOutcome": "Wrong Number"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_4kx0x",
+      "leadId": "lead_1792241416480_vxjr",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_8wxjd",
+      "leadId": "lead_1792241416509_crrb",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Demo Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Demo Requested",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Demo Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_ewbb8",
+      "leadId": "lead_1792241416538_cyc3",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535191_nw0di",
+      "leadId": "lead_1792241416569_pgln",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Closed\" and last call outcome to \"Not Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Not Interested",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "Closed",
+          "newOutcome": "Not Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_265x0",
+      "leadId": "lead_1792241416600_rc9i",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_ss5so",
+      "leadId": "lead_1792241495999_e9jz",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Busy\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Busy / Declined",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Busy"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_3bs6n",
+      "leadId": "lead_1792241496025_o79d",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Attempting Contact\" and last call outcome to \"No Answer\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "No Answer / Ringing",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "Attempting Contact",
+          "newOutcome": "No Answer"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_03hph",
+      "leadId": "lead_1792241496061_i5dp",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Assign to Salesman",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_p4nxp",
+      "leadId": "lead_1792241496095_tl7v",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Closed\" and last call outcome to \"Closed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Closed",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "Closed",
+          "newOutcome": "Closed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_o0ae6",
+      "leadId": "lead_1792241496124_1yah",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Demo Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Callback Requested",
+          "oldOutcome": "Demo Requested"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Demo Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_ug7k4",
+      "leadId": "lead_1792385179704_vnjx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Attempting Contact\" and last call outcome to \"No Answer\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Details on WhatsApp",
+          "oldOutcome": "No Answer / Ringing"
+        },
+        "migratedTo": {
+          "newPipeline": "Attempting Contact",
+          "newOutcome": "No Answer"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_y2373",
+      "leadId": "lead_1792385314163_057y",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Call Back Later\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Assign to Salesman",
+          "oldOutcome": "Callback Requested"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Call Back Later"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_ikjir",
+      "leadId": "lead_1792413576966_xd6d",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_aj9r1",
+      "leadId": "lead_1792415738435_tssx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_bqlzn",
+      "leadId": "lead_1792415738666_6a4m",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Attempting Contact\" and last call outcome to \"No Answer\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "No Answer / Ringing"
+        },
+        "migratedTo": {
+          "newPipeline": "Attempting Contact",
+          "newOutcome": "No Answer"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_ldpme",
+      "leadId": "lead_1792416269295_1db5",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792836535192_hoa6m",
+      "leadId": "lead_1792416269617_l2mk",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "New Lead"
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T10:08:55.182Z"
+    },
+    {
+      "id": "act_mig_1792852691632_2fwwu",
+      "leadId": "lead_101",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Connected – Discussed",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_qsos6",
+      "leadId": "lead_103",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_qgfm0",
+      "leadId": "lead_1792220316133_8u1c",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_8wdr5",
+      "leadId": "lead_1792221892321_xp4m",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_o10w9",
+      "leadId": "lead_1792221892335_vjw1",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_7zdj7",
+      "leadId": "lead_1792221892363_h1q3",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_bnbno",
+      "leadId": "lead_1792221892395_5keo",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_7j9hz",
+      "leadId": "lead_1792221892442_2jqx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_uaogt",
+      "leadId": "lead_1792221892477_7jmh",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_wt2vm",
+      "leadId": "lead_1792221892491_lhri",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_3g3k8",
+      "leadId": "lead_1792221892809_4swg",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_cut61",
+      "leadId": "lead_1792221892901_5xgp",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_xp0pu",
+      "leadId": "lead_1792231871047_0p81",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_ikke3",
+      "leadId": "lead_1792241416349_zxo3",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_hwye5",
+      "leadId": "lead_1792241416376_o0go",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_d4s9e",
+      "leadId": "lead_1792241416405_xrgn",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_snl3v",
+      "leadId": "lead_1792241416422_744m",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_bpx8a",
+      "leadId": "lead_1792241416480_vxjr",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_yj7jx",
+      "leadId": "lead_1792241416538_cyc3",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_3g2jb",
+      "leadId": "lead_1792241416600_rc9i",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_8ltw9",
+      "leadId": "lead_1792241496061_i5dp",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Follow-up",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_4aw5u",
+      "leadId": "lead_1792413576966_xd6d",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_yq0iq",
+      "leadId": "lead_1792415738435_tssx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_dakvw",
+      "leadId": "lead_1792416269295_1db5",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_mig_1792852691632_uj5xd",
+      "leadId": "lead_1792416269617_l2mk",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-24T14:38:11.631Z"
+    },
+    {
+      "id": "act_auto_1792852752827_jtuqo",
+      "leadId": "lead_1792385179704_vnjx",
+      "userId": null,
+      "type": "STAGE_CHANGED",
+      "description": "Automatically returned to New Fresh Leads (Retry) on the 3rd day after \"Attempting Contact\".",
+      "metadata": {
+        "oldStage": "Attempting Contact",
+        "newStage": "New Lead",
+        "isRetry": true,
+        "automatic": true,
+        "diffDays": 5
+      },
+      "createdAt": "2026-10-24T14:39:11.856Z"
+    },
+    {
+      "id": "act_auto_1792852752829_uytw3",
+      "leadId": "lead_1792415738666_6a4m",
+      "userId": null,
+      "type": "STAGE_CHANGED",
+      "description": "Automatically returned to New Fresh Leads (Retry) on the 3rd day after \"Attempting Contact\".",
+      "metadata": {
+        "oldStage": "Attempting Contact",
+        "newStage": "New Lead",
+        "isRetry": true,
+        "automatic": true,
+        "diffDays": 8
+      },
+      "createdAt": "2026-10-24T14:39:11.856Z"
+    },
+    {
+      "id": "act_1792852819251_9ud3",
+      "leadId": "lead_1792241496025_o79d",
+      "userId": "usr_tele_1",
+      "user": {
+        "id": "usr_tele_1",
+        "name": "Priya Sharma",
+        "email": "telecaller1@tenderprocure.com",
+        "role": "TELECALLER"
+      },
+      "type": "STAGE_CHANGED",
+      "description": "Pipeline set to \"Connected\" by Priya Sharma.",
+      "metadata": {
+        "oldStage": "Attempting Contact",
+        "oldOutcome": "No Answer",
+        "newPipeline": "Connected"
+      },
+      "createdAt": "2026-10-24T14:40:19.251Z"
+    },
+    {
+      "id": "act_1792852824169_3aka",
+      "leadId": "lead_1792241496025_o79d",
+      "userId": "usr_tele_1",
+      "user": {
+        "id": "usr_tele_1",
+        "name": "Priya Sharma",
+        "email": "telecaller1@tenderprocure.com",
+        "role": "TELECALLER"
+      },
+      "type": "STAGE_CHANGED",
+      "description": "Pipeline set to \"Attempting Contact\", Outcome: \"No Answer\" by Priya Sharma.",
+      "metadata": {
+        "oldStage": "Connected",
+        "oldOutcome": "No Answer",
+        "newPipeline": "Attempting Contact",
+        "newOutcome": "No Answer",
+        "notes": null
+      },
+      "createdAt": "2026-10-24T14:40:24.169Z"
+    },
+    {
+      "id": "act_1792853011616_lxms",
+      "leadId": "lead_1792241416509_crrb",
+      "userId": "usr_tele_1",
+      "user": {
+        "id": "usr_tele_1",
+        "name": "Priya Sharma",
+        "email": "telecaller1@tenderprocure.com",
+        "role": "TELECALLER"
+      },
+      "type": "STAGE_CHANGED",
+      "description": "Pipeline set to \"Demo\" by Priya Sharma.",
+      "metadata": {
+        "oldStage": "Follow-up",
+        "oldOutcome": "Demo Interested",
+        "newPipeline": "Demo"
+      },
+      "createdAt": "2026-10-24T14:43:31.616Z"
+    },
+    {
+      "id": "act_mig_1792906714343_0nowx",
+      "leadId": "lead_101",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Connected – Discussed",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714343_rdfct",
+      "leadId": "lead_103",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714343_qcdws",
+      "leadId": "lead_1792220316133_8u1c",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714343_7pdqb",
+      "leadId": "lead_1792221892321_xp4m",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714343_cwn5c",
+      "leadId": "lead_1792221892335_vjw1",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714343_kyylc",
+      "leadId": "lead_1792221892363_h1q3",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714343_rvwrg",
+      "leadId": "lead_1792221892395_5keo",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714343_0al8q",
+      "leadId": "lead_1792221892442_2jqx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714343_xivhk",
+      "leadId": "lead_1792221892477_7jmh",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714343_yzmdu",
+      "leadId": "lead_1792221892491_lhri",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_9pxfr",
+      "leadId": "lead_1792221892809_4swg",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_i6xb6",
+      "leadId": "lead_1792221892901_5xgp",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_i2v0f",
+      "leadId": "lead_1792231871047_0p81",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_w9rik",
+      "leadId": "lead_1792241416349_zxo3",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_b3ufa",
+      "leadId": "lead_1792241416376_o0go",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_ansjd",
+      "leadId": "lead_1792241416405_xrgn",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_3giw8",
+      "leadId": "lead_1792241416422_744m",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_j3zdt",
+      "leadId": "lead_1792241416480_vxjr",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_r4zxk",
+      "leadId": "lead_1792241416509_crrb",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Demo Interested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Demo",
+          "oldOutcome": "Demo Interested"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Demo Interested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_01bul",
+      "leadId": "lead_1792241416538_cyc3",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_48ase",
+      "leadId": "lead_1792241416600_rc9i",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_lj0tz",
+      "leadId": "lead_1792241496061_i5dp",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Connected – Discussed",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_acgqs",
+      "leadId": "lead_1792385179704_vnjx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Attempting Contact\" and last call outcome to \"No Answer\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "No Answer"
+        },
+        "migratedTo": {
+          "newPipeline": "Attempting Contact",
+          "newOutcome": "No Answer"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_dtzwv",
+      "leadId": "lead_1792413576966_xd6d",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_xn0sj",
+      "leadId": "lead_1792415738435_tssx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_4yu0x",
+      "leadId": "lead_1792415738666_6a4m",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Attempting Contact\" and last call outcome to \"No Answer\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "No Answer"
+        },
+        "migratedTo": {
+          "newPipeline": "Attempting Contact",
+          "newOutcome": "No Answer"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_n0el6",
+      "leadId": "lead_1792416269295_1db5",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_mig_1792906714344_z72lt",
+      "leadId": "lead_1792416269617_l2mk",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-10-25T05:38:34.342Z"
+    },
+    {
+      "id": "act_auto_1792906774469_losh2",
+      "leadId": "lead_1792385179704_vnjx",
+      "userId": null,
+      "type": "STAGE_CHANGED",
+      "description": "Automatically returned to New Fresh Leads (Retry) on the 3rd day after \"Attempting Contact\".",
+      "metadata": {
+        "oldStage": "Attempting Contact",
+        "newStage": "New Lead",
+        "isRetry": true,
+        "automatic": true,
+        "diffDays": 6
+      },
+      "createdAt": "2026-10-25T05:39:34.467Z"
+    },
+    {
+      "id": "act_auto_1792906774469_3q3sb",
+      "leadId": "lead_1792415738666_6a4m",
+      "userId": null,
+      "type": "STAGE_CHANGED",
+      "description": "Automatically returned to New Fresh Leads (Retry) on the 3rd day after \"Attempting Contact\".",
+      "metadata": {
+        "oldStage": "Attempting Contact",
+        "newStage": "New Lead",
+        "isRetry": true,
+        "automatic": true,
+        "diffDays": 9
+      },
+      "createdAt": "2026-10-25T05:39:34.467Z"
     }
   ],
   "assignmentHistories": [
@@ -5047,7 +7238,7 @@
         "name": "Priya Sharma",
         "email": "telecaller1@tenderprocure.com"
       },
-      "outcome": "Callback Requested",
+      "outcome": "Call Back Later",
       "notes": "Callback scheduled for tomorrow 2pm",
       "contactDate": "2026-10-19T04:48:34.799Z",
       "followUpNeeded": true,
@@ -5065,7 +7256,7 @@
         "name": "Priya Sharma",
         "email": "telecaller1@tenderprocure.com"
       },
-      "outcome": "No Answer / Ringing",
+      "outcome": "No Answer",
       "notes": "",
       "contactDate": "2026-10-19T09:26:30.265Z",
       "followUpNeeded": false,
@@ -5083,7 +7274,7 @@
         "name": "Priya Sharma",
         "email": "telecaller1@tenderprocure.com"
       },
-      "outcome": "Details on WhatsApp",
+      "outcome": "Details Requested",
       "notes": "Discussion about tender integration went very well",
       "contactDate": "2026-10-20T07:12:34.805Z",
       "followUpNeeded": true,
@@ -5101,7 +7292,7 @@
         "name": "Priya Sharma",
         "email": "telecaller1@tenderprocure.com"
       },
-      "outcome": "Details on WhatsApp",
+      "outcome": "Details Requested",
       "notes": "Discussion about tender integration went very well",
       "contactDate": "2026-10-20T09:40:13.745Z",
       "followUpNeeded": true,
@@ -5119,7 +7310,7 @@
         "name": "Priya Sharma",
         "email": "telecaller1@tenderprocure.com"
       },
-      "outcome": "Details on WhatsApp",
+      "outcome": "Details Requested",
       "notes": "Discussion about tender integration went very well",
       "contactDate": "2026-10-20T09:49:38.591Z",
       "followUpNeeded": true,

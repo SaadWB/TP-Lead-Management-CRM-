@@ -74,8 +74,12 @@ export function KanbanBoard({ leads, onLeadsChange, onCardClick, customColumns }
 
     if (!targetStage || targetStage === lead.pipelineStage) return;
 
-    // Check if moving to Callback Requested or Demo Requested -> requires Date and Time popup
-    if (targetStage === 'Callback Requested' || targetStage === 'Demo Requested') {
+    // Check if moving to Follow-up or Demo without date -> requires Date and Time popup
+    if (
+      targetStage === 'Callback Requested' ||
+      targetStage === 'Demo Requested' ||
+      ((targetStage === 'Follow-up' || targetStage === 'Demo') && !lead.nextFollowUpDate)
+    ) {
       setFollowUpTarget({ lead, targetStage });
       return;
     }
@@ -123,7 +127,11 @@ export function KanbanBoard({ leads, onLeadsChange, onCardClick, customColumns }
     const lead = leads.find((l) => l.id === leadId);
     if (!lead || lead.pipelineStage === newStage) return;
 
-    if (newStage === 'Callback Requested' || newStage === 'Demo Requested') {
+    if (
+      newStage === 'Callback Requested' ||
+      newStage === 'Demo Requested' ||
+      ((newStage === 'Follow-up' || newStage === 'Demo') && !lead.nextFollowUpDate)
+    ) {
       setFollowUpTarget({ lead, targetStage: newStage });
       return;
     }

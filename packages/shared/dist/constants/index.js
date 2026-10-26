@@ -1,27 +1,61 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.IMPORT_TEMPLATE_COLUMNS = exports.ACTIVITY_TYPES = exports.LOST_REASONS = exports.TASK_STATUSES = exports.TASK_TYPES = exports.TELECALLER_KANBAN_COLUMNS = exports.SALES_STAGE_OPTIONS = exports.SALES_STAGES = exports.PRIORITIES = exports.CALL_OUTCOME_LIST = exports.CALL_OUTCOMES = exports.USER_ROLES = void 0;
+exports.IMPORT_TEMPLATE_COLUMNS = exports.ACTIVITY_TYPES = exports.LOST_REASONS = exports.TASK_STATUSES = exports.TASK_TYPES = exports.TELECALLER_KANBAN_COLUMNS = exports.SALES_STAGE_OPTIONS = exports.SALES_STAGES = exports.PRIORITIES = exports.CALL_OUTCOME_LIST = exports.TELECALLER_CALL_OUTCOMES = exports.CALL_OUTCOMES = exports.PIPELINE_STAGE_LIST = exports.PIPELINE_STAGES = exports.USER_ROLES = void 0;
+exports.getSuggestedPipelineForOutcome = getSuggestedPipelineForOutcome;
 exports.normalizeCallOutcome = normalizeCallOutcome;
 exports.USER_ROLES = {
     SUPER_ADMIN: 'SUPER_ADMIN',
     TELECALLER: 'TELECALLER',
     SALESMAN: 'SALESMAN',
 };
-exports.CALL_OUTCOMES = {
+exports.PIPELINE_STAGES = {
     NEW_LEAD: 'New Lead',
-    NO_ANSWER: 'No Answer / Ringing',
-    BUSY: 'Busy / Declined',
-    CALLBACK_REQUESTED: 'Callback Requested',
+    ATTEMPTING_CONTACT: 'Attempting Contact',
+    CONNECTED: 'Connected',
+    FOLLOW_UP: 'Follow-up',
+    DEMO: 'Demo',
+    CLOSED: 'Closed',
+};
+exports.PIPELINE_STAGE_LIST = Object.values(exports.PIPELINE_STAGES);
+exports.CALL_OUTCOMES = {
+    NO_ANSWER: 'No Answer',
+    BUSY: 'Busy',
+    CALL_CUT: 'Call Cut',
+    CALL_BACK_LATER: 'Call Back Later',
+    CONNECTED_DISCUSSED: 'Connected – Discussed',
+    DETAILS_REQUESTED: 'Details Requested',
+    DEMO_INTERESTED: 'Demo Interested',
+    DEMO_SCHEDULED: 'Demo Scheduled',
+    DEMO_COMPLETED: 'Demo Completed',
+    DECISION_PENDING: 'Decision Pending',
     NOT_INTERESTED: 'Not Interested',
-    DETAILS_ON_WHATSAPP: 'Details on WhatsApp',
-    DEMO_REQUESTED: 'Demo Requested',
-    INTERESTED: 'Interested',
-    DISCUSSING: 'Discussing',
-    INVALID_NUMBER: 'Invalid / Wrong Number',
-    DO_NOT_CONTACT: 'Do Not Contact',
+    WRONG_NUMBER: 'Wrong Number',
+    // Backward-compatible aliases
+    NEW_LEAD: 'New Lead',
+    CALLBACK_REQUESTED: 'Call Back Later',
+    DETAILS_ON_WHATSAPP: 'Details Requested',
+    DEMO_REQUESTED: 'Demo Interested',
+    INTERESTED: 'Connected – Discussed',
+    DISCUSSING: 'Connected – Discussed',
+    INVALID_NUMBER: 'Wrong Number',
+    DO_NOT_CONTACT: 'Not Interested',
     CLOSED: 'Closed',
     ASSIGN_TO_SALESMAN: 'Assign to Salesman',
 };
+exports.TELECALLER_CALL_OUTCOMES = [
+    'No Answer',
+    'Busy',
+    'Call Cut',
+    'Call Back Later',
+    'Connected – Discussed',
+    'Details Requested',
+    'Demo Interested',
+    'Demo Scheduled',
+    'Demo Completed',
+    'Decision Pending',
+    'Not Interested',
+    'Wrong Number',
+];
 exports.CALL_OUTCOME_LIST = Object.values(exports.CALL_OUTCOMES);
 exports.PRIORITIES = {
     LOW: 'LOW',
@@ -52,55 +86,74 @@ exports.SALES_STAGE_OPTIONS = [
     { value: 'ON_HOLD', label: 'On Hold', color: 'slate' },
 ];
 exports.TELECALLER_KANBAN_COLUMNS = [
-    { id: 'New Lead', title: 'New Lead', color: 'blue', description: 'Freshly uploaded or uncontacted leads' },
-    { id: 'No Answer / Ringing', title: 'No Answer / Ringing', color: 'amber', description: 'Call placed but not answered' },
-    { id: 'Busy / Declined', title: 'Busy / Declined', color: 'orange', description: 'Line engaged or call rejected' },
-    { id: 'Callback Requested', title: 'Callback Requested', color: 'purple', description: 'Contact requested a callback at scheduled time' },
-    { id: 'Not Interested', title: 'Not Interested', color: 'slate', description: 'Prospect declined offering' },
-    { id: 'Details on WhatsApp', title: 'Details on WhatsApp', color: 'emerald', description: 'Info / brochure requested on WhatsApp' },
-    { id: 'Demo Requested', title: 'Demo Requested', color: 'cyan', description: 'Prospect requested product demonstration' },
-    { id: 'Interested', title: 'Interested', color: 'emerald', description: 'Prospect expressed positive interest' },
-    { id: 'Discussing', title: 'Discussing', color: 'sky', description: 'Active preliminary discussions' },
-    { id: 'Invalid / Wrong Number', title: 'Invalid / Wrong Number', color: 'rose', description: 'Wrong number or invalid contact' },
-    { id: 'Do Not Contact', title: 'Do Not Contact', color: 'red', description: 'Explicit opt-out / DNC requested' },
-    { id: 'Closed', title: 'Closed', color: 'indigo', description: 'Closed by telecaller' },
-    { id: 'Assign to Salesman', title: 'Assign to Salesman', color: 'teal', description: 'Handed over to direct sales closer' },
+    { id: 'New Lead', title: 'New Lead', color: 'blue', description: 'Lead added, no contact attempt yet' },
+    { id: 'Attempting Contact', title: 'Attempting Contact', color: 'amber', description: 'Trying to reach, no meaningful conversation yet' },
+    { id: 'Connected', title: 'Connected', color: 'sky', description: 'Spoke to prospect, need or next step not clear yet' },
+    { id: 'Follow-up', title: 'Follow-up', color: 'purple', description: 'Need to contact again for call, feedback, details, or decision' },
+    { id: 'Demo', title: 'Demo', color: 'indigo', description: 'Demo process started (scheduled, confirmation, or post-demo)' },
+    { id: 'Closed', title: 'Closed', color: 'slate', description: 'Active process ended (Converted, Not Interested, Invalid, Nurture)' },
 ];
+function getSuggestedPipelineForOutcome(outcome) {
+    if (!outcome)
+        return 'New Lead';
+    const norm = normalizeCallOutcome(outcome);
+    switch (norm) {
+        case 'No Answer':
+        case 'Call Cut':
+            return 'Attempting Contact';
+        case 'Busy':
+        case 'Call Back Later':
+        case 'Details Requested':
+        case 'Demo Interested':
+        case 'Demo Completed':
+        case 'Decision Pending':
+            return 'Follow-up';
+        case 'Connected – Discussed':
+            return 'Connected';
+        case 'Demo Scheduled':
+            return 'Demo';
+        case 'Not Interested':
+        case 'Wrong Number':
+            return 'Closed';
+        default:
+            return 'Follow-up';
+    }
+}
 function normalizeCallOutcome(raw) {
     if (!raw)
-        return 'New Lead';
+        return '';
     const val = raw.trim();
-    if (exports.CALL_OUTCOME_LIST.includes(val)) {
+    if (exports.TELECALLER_CALL_OUTCOMES.includes(val)) {
         return val;
     }
-    const upper = val.toUpperCase().replace(/\s+/g, '_');
-    if (upper === 'NEW' || upper === 'NEW_LEAD')
-        return 'New Lead';
-    if (upper === 'CONTACT_ATTEMPTED' || upper === 'NO_ANSWER' || upper === 'NO_ANSWER_/_RINGING')
-        return 'No Answer / Ringing';
-    if (upper === 'BUSY' || upper === 'DECLINED' || upper === 'BUSY_/_DECLINED')
-        return 'Busy / Declined';
-    if (upper === 'CONNECTED' || upper === 'DETAILS_ON_WHATSAPP')
-        return 'Details on WhatsApp';
-    if (upper === 'CALL_BACK_REQUESTED' || upper === 'CALLBACK_REQUESTED' || upper === 'FOLLOW_UP_SCHEDULED')
-        return 'Callback Requested';
-    if (upper === 'DEMO_REQUESTED' || upper === 'DEMO_MEETING_REQUIRED')
-        return 'Demo Requested';
-    if (upper === 'INTERESTED')
-        return 'Interested';
-    if (upper === 'DISCUSSING')
-        return 'Discussing';
-    if (upper === 'NOT_INTERESTED')
+    const lower = val.toLowerCase().replace(/[\/\-_]/g, ' ').replace(/\s+/g, ' ');
+    if (lower.includes('no answer') || lower.includes('ringing'))
+        return 'No Answer';
+    if (lower.includes('busy') || lower.includes('declined'))
+        return 'Busy';
+    if (lower.includes('cut'))
+        return 'Call Cut';
+    if (lower.includes('callback') || lower.includes('call back'))
+        return 'Call Back Later';
+    if (lower.includes('whatsapp') || lower.includes('details requested') || lower.includes('brochure'))
+        return 'Details Requested';
+    if (lower.includes('demo scheduled'))
+        return 'Demo Scheduled';
+    if (lower.includes('demo completed'))
+        return 'Demo Completed';
+    if (lower.includes('demo requested') || lower.includes('demo interested'))
+        return 'Demo Interested';
+    if (lower.includes('decision pending'))
+        return 'Decision Pending';
+    if (lower.includes('connected') || lower.includes('discussing') || lower.includes('interested'))
+        return 'Connected – Discussed';
+    if (lower.includes('not interested') || lower.includes('dnc') || lower.includes('do not contact'))
         return 'Not Interested';
-    if (upper === 'INVALID_CONTACT' || upper === 'INVALID_NUMBER' || upper === 'INVALID_/_WRONG_NUMBER')
-        return 'Invalid / Wrong Number';
-    if (upper === 'DO_NOT_CONTACT' || upper === 'DNC')
-        return 'Do Not Contact';
-    if (upper === 'CLOSED' || upper === 'CONVERTED')
+    if (lower.includes('invalid') || lower.includes('wrong number'))
+        return 'Wrong Number';
+    if (lower === 'closed')
         return 'Closed';
-    if (upper === 'ASSIGNED_TO_SALESMAN' || upper === 'ASSIGN_TO_SALESMAN')
-        return 'Assign to Salesman';
-    return 'New Lead';
+    return val;
 }
 exports.TASK_TYPES = {
     CALL: 'CALL',

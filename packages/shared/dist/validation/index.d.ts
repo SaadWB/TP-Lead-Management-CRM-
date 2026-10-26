@@ -65,6 +65,9 @@ export declare const createLeadSchema: z.ZodObject<{
     state: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     priority: z.ZodDefault<z.ZodString>;
     pipelineStage: z.ZodDefault<z.ZodString>;
+    lastCallOutcome: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    nextFollowUpDate: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    nextAction: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     notes: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     leadSource: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     assignedTelecallerId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
@@ -81,6 +84,9 @@ export declare const createLeadSchema: z.ZodObject<{
     website?: string | null | undefined;
     city?: string | null | undefined;
     state?: string | null | undefined;
+    lastCallOutcome?: string | null | undefined;
+    nextFollowUpDate?: string | null | undefined;
+    nextAction?: string | null | undefined;
     notes?: string | null | undefined;
     leadSource?: string | null | undefined;
     assignedTelecallerId?: string | null | undefined;
@@ -97,6 +103,9 @@ export declare const createLeadSchema: z.ZodObject<{
     city?: string | null | undefined;
     state?: string | null | undefined;
     priority?: string | undefined;
+    lastCallOutcome?: string | null | undefined;
+    nextFollowUpDate?: string | null | undefined;
+    nextAction?: string | null | undefined;
     notes?: string | null | undefined;
     leadSource?: string | null | undefined;
     assignedTelecallerId?: string | null | undefined;
@@ -114,6 +123,9 @@ export declare const updateLeadSchema: z.ZodObject<{
     state: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     priority: z.ZodOptional<z.ZodDefault<z.ZodString>>;
     pipelineStage: z.ZodOptional<z.ZodDefault<z.ZodString>>;
+    lastCallOutcome: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+    nextFollowUpDate: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+    nextAction: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     notes: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     leadSource: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     assignedTelecallerId: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
@@ -130,6 +142,9 @@ export declare const updateLeadSchema: z.ZodObject<{
     city?: string | null | undefined;
     state?: string | null | undefined;
     priority?: string | undefined;
+    lastCallOutcome?: string | null | undefined;
+    nextFollowUpDate?: string | null | undefined;
+    nextAction?: string | null | undefined;
     notes?: string | null | undefined;
     leadSource?: string | null | undefined;
     assignedTelecallerId?: string | null | undefined;
@@ -146,14 +161,20 @@ export declare const updateLeadSchema: z.ZodObject<{
     city?: string | null | undefined;
     state?: string | null | undefined;
     priority?: string | undefined;
+    lastCallOutcome?: string | null | undefined;
+    nextFollowUpDate?: string | null | undefined;
+    nextAction?: string | null | undefined;
     notes?: string | null | undefined;
     leadSource?: string | null | undefined;
     assignedTelecallerId?: string | null | undefined;
     assignedSalesmanId?: string | null | undefined;
 }>;
 export declare const updateStageSchema: z.ZodObject<{
-    pipelineStage: z.ZodString;
-    notes: z.ZodOptional<z.ZodString>;
+    pipelineStage: z.ZodOptional<z.ZodString>;
+    lastCallOutcome: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    nextFollowUpDate: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    nextAction: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    notes: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     assignedSalesmanId: z.ZodOptional<z.ZodString>;
     handoverSummary: z.ZodOptional<z.ZodString>;
     meetingDate: z.ZodOptional<z.ZodString>;
@@ -161,8 +182,11 @@ export declare const updateStageSchema: z.ZodObject<{
     lostReason: z.ZodOptional<z.ZodString>;
     lostNotes: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    pipelineStage: string;
-    notes?: string | undefined;
+    pipelineStage?: string | undefined;
+    lastCallOutcome?: string | null | undefined;
+    nextFollowUpDate?: string | null | undefined;
+    nextAction?: string | null | undefined;
+    notes?: string | null | undefined;
     assignedSalesmanId?: string | undefined;
     dealValue?: number | undefined;
     lostReason?: string | undefined;
@@ -170,8 +194,11 @@ export declare const updateStageSchema: z.ZodObject<{
     handoverSummary?: string | undefined;
     meetingDate?: string | undefined;
 }, {
-    pipelineStage: string;
-    notes?: string | undefined;
+    pipelineStage?: string | undefined;
+    lastCallOutcome?: string | null | undefined;
+    nextFollowUpDate?: string | null | undefined;
+    nextAction?: string | null | undefined;
+    notes?: string | null | undefined;
     assignedSalesmanId?: string | undefined;
     dealValue?: number | undefined;
     lostReason?: string | undefined;
@@ -187,14 +214,14 @@ export declare const updateSalesStageSchema: z.ZodObject<{
     lostReason: z.ZodOptional<z.ZodString>;
     lostNotes: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    salesStage: "ASSIGNED" | "DEMO_SCHEDULED" | "DEMO_COMPLETED" | "FOLLOW_UP_REQUIRED" | "QUALIFIED" | "NEGOTIATION" | "CONVERTED" | "LOST" | "ON_HOLD";
+    salesStage: "DEMO_SCHEDULED" | "DEMO_COMPLETED" | "ASSIGNED" | "FOLLOW_UP_REQUIRED" | "QUALIFIED" | "NEGOTIATION" | "CONVERTED" | "LOST" | "ON_HOLD";
     notes?: string | null | undefined;
     dealValue?: number | undefined;
     lostReason?: string | undefined;
     lostNotes?: string | undefined;
     followUpDate?: string | null | undefined;
 }, {
-    salesStage: "ASSIGNED" | "DEMO_SCHEDULED" | "DEMO_COMPLETED" | "FOLLOW_UP_REQUIRED" | "QUALIFIED" | "NEGOTIATION" | "CONVERTED" | "LOST" | "ON_HOLD";
+    salesStage: "DEMO_SCHEDULED" | "DEMO_COMPLETED" | "ASSIGNED" | "FOLLOW_UP_REQUIRED" | "QUALIFIED" | "NEGOTIATION" | "CONVERTED" | "LOST" | "ON_HOLD";
     notes?: string | null | undefined;
     dealValue?: number | undefined;
     lostReason?: string | undefined;
@@ -241,14 +268,14 @@ export declare const createFollowUpTaskSchema: z.ZodObject<{
     assignedUserId: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     leadId: string;
-    taskType: "CALL" | "FOLLOW_UP" | "DEMO" | "MEETING" | "OTHER";
+    taskType: "FOLLOW_UP" | "DEMO" | "CALL" | "MEETING" | "OTHER";
     dueDate: string;
     notes?: string | null | undefined;
     dueTime?: string | null | undefined;
     assignedUserId?: string | undefined;
 }, {
     leadId: string;
-    taskType: "CALL" | "FOLLOW_UP" | "DEMO" | "MEETING" | "OTHER";
+    taskType: "FOLLOW_UP" | "DEMO" | "CALL" | "MEETING" | "OTHER";
     dueDate: string;
     notes?: string | null | undefined;
     dueTime?: string | null | undefined;

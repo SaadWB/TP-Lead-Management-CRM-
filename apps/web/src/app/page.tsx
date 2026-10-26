@@ -16,7 +16,7 @@ export default function HomePage() {
       } else if (user.role === 'SUPER_ADMIN') {
         router.push('/admin/dashboard');
       } else if (user.role === 'TELECALLER') {
-        router.push('/telecaller/today');
+        router.push('/telecaller/leads');
       } else if (user.role === 'SALESMAN') {
         router.push('/salesman/dashboard');
       } else {

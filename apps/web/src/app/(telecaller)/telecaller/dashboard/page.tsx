@@ -9,26 +9,12 @@ import { PhoneCall, CalendarCheck, ThumbsUp, Send, ArrowRight } from 'lucide-rea
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 
+import { useSWRData } from '@/lib/apiCache';
+
 export default function TelecallerDashboardPage() {
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadMetrics();
-  }, []);
-
-  async function loadMetrics() {
-    try {
-      const res = await api.get<DashboardMetrics>('/reports/dashboard');
-      if (res.success && res.data) {
-        setMetrics(res.data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { data: metrics, loading } = useSWRData<DashboardMetrics>(
+    '/reports/dashboard'
+  );
 
   return (
     <AppLayout

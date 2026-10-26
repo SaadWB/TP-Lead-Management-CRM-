@@ -6,23 +6,61 @@ export const USER_ROLES = {
 
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 
-export const CALL_OUTCOMES = {
+export const PIPELINE_STAGES = {
   NEW_LEAD: 'New Lead',
-  NO_ANSWER: 'No Answer / Ringing',
-  BUSY: 'Busy / Declined',
-  CALLBACK_REQUESTED: 'Callback Requested',
+  ATTEMPTING_CONTACT: 'Attempting Contact',
+  CONNECTED: 'Connected',
+  FOLLOW_UP: 'Follow-up',
+  DEMO: 'Demo',
+  CLOSED: 'Closed',
+} as const;
+
+export type PipelineStage = (typeof PIPELINE_STAGES)[keyof typeof PIPELINE_STAGES] | string;
+export const PIPELINE_STAGE_LIST = Object.values(PIPELINE_STAGES);
+
+export const CALL_OUTCOMES = {
+  NO_ANSWER: 'No Answer',
+  BUSY: 'Busy',
+  CALL_CUT: 'Call Cut',
+  CALL_BACK_LATER: 'Call Back Later',
+  CONNECTED_DISCUSSED: 'Connected – Discussed',
+  DETAILS_REQUESTED: 'Details Requested',
+  DEMO_INTERESTED: 'Demo Interested',
+  DEMO_SCHEDULED: 'Demo Scheduled',
+  DEMO_COMPLETED: 'Demo Completed',
+  DECISION_PENDING: 'Decision Pending',
   NOT_INTERESTED: 'Not Interested',
-  DETAILS_ON_WHATSAPP: 'Details on WhatsApp',
-  DEMO_REQUESTED: 'Demo Requested',
-  INTERESTED: 'Interested',
-  DISCUSSING: 'Discussing',
-  INVALID_NUMBER: 'Invalid / Wrong Number',
-  DO_NOT_CONTACT: 'Do Not Contact',
+  WRONG_NUMBER: 'Wrong Number',
+  // Backward-compatible aliases
+  NEW_LEAD: 'New Lead',
+  CALLBACK_REQUESTED: 'Call Back Later',
+  DETAILS_ON_WHATSAPP: 'Details Requested',
+  DEMO_REQUESTED: 'Demo Interested',
+  INTERESTED: 'Connected – Discussed',
+  DISCUSSING: 'Connected – Discussed',
+  INVALID_NUMBER: 'Wrong Number',
+  DO_NOT_CONTACT: 'Not Interested',
   CLOSED: 'Closed',
   ASSIGN_TO_SALESMAN: 'Assign to Salesman',
 } as const;
 
-export type CallOutcome = (typeof CALL_OUTCOMES)[keyof typeof CALL_OUTCOMES];
+export const TELECALLER_CALL_OUTCOMES = [
+  'No Answer',
+  'Busy',
+  'Call Cut',
+  'Call Back Later',
+  'Connected – Discussed',
+  'Details Requested',
+  'Demo Interested',
+  'Demo Scheduled',
+  'Demo Completed',
+  'Decision Pending',
+  'Not Interested',
+  'Wrong Number',
+] as const;
+
+export type TelecallerCallOutcome = (typeof TELECALLER_CALL_OUTCOMES)[number];
+export type CallOutcome = (typeof CALL_OUTCOMES)[keyof typeof CALL_OUTCOMES] | string;
 export const CALL_OUTCOME_LIST = Object.values(CALL_OUTCOMES);
 
 export const PRIORITIES = {
@@ -61,46 +99,62 @@ export const SALES_STAGE_OPTIONS: { value: SalesStage; label: string; color: str
   { value: 'ON_HOLD', label: 'On Hold', color: 'slate' },
 ];
 
-export type PipelineStage = string;
-
-export const TELECALLER_KANBAN_COLUMNS: { id: CallOutcome; title: string; color: string; description: string }[] = [
-  { id: 'New Lead', title: 'New Lead', color: 'blue', description: 'Freshly uploaded or uncontacted leads' },
-  { id: 'No Answer / Ringing', title: 'No Answer / Ringing', color: 'amber', description: 'Call placed but not answered' },
-  { id: 'Busy / Declined', title: 'Busy / Declined', color: 'orange', description: 'Line engaged or call rejected' },
-  { id: 'Callback Requested', title: 'Callback Requested', color: 'purple', description: 'Contact requested a callback at scheduled time' },
-  { id: 'Not Interested', title: 'Not Interested', color: 'slate', description: 'Prospect declined offering' },
-  { id: 'Details on WhatsApp', title: 'Details on WhatsApp', color: 'emerald', description: 'Info / brochure requested on WhatsApp' },
-  { id: 'Demo Requested', title: 'Demo Requested', color: 'cyan', description: 'Prospect requested product demonstration' },
-  { id: 'Interested', title: 'Interested', color: 'emerald', description: 'Prospect expressed positive interest' },
-  { id: 'Discussing', title: 'Discussing', color: 'sky', description: 'Active preliminary discussions' },
-  { id: 'Invalid / Wrong Number', title: 'Invalid / Wrong Number', color: 'rose', description: 'Wrong number or invalid contact' },
-  { id: 'Do Not Contact', title: 'Do Not Contact', color: 'red', description: 'Explicit opt-out / DNC requested' },
-  { id: 'Closed', title: 'Closed', color: 'indigo', description: 'Closed by telecaller' },
-  { id: 'Assign to Salesman', title: 'Assign to Salesman', color: 'teal', description: 'Handed over to direct sales closer' },
+export const TELECALLER_KANBAN_COLUMNS: { id: string; title: string; color: string; description: string }[] = [
+  { id: 'New Lead', title: 'New Lead', color: 'blue', description: 'Lead added, no contact attempt yet' },
+  { id: 'Attempting Contact', title: 'Attempting Contact', color: 'amber', description: 'Trying to reach, no meaningful conversation yet' },
+  { id: 'Connected', title: 'Connected', color: 'sky', description: 'Spoke to prospect, need or next step not clear yet' },
+  { id: 'Follow-up', title: 'Follow-up', color: 'purple', description: 'Need to contact again for call, feedback, details, or decision' },
+  { id: 'Demo', title: 'Demo', color: 'indigo', description: 'Demo process started (scheduled, confirmation, or post-demo)' },
+  { id: 'Closed', title: 'Closed', color: 'slate', description: 'Active process ended (Converted, Not Interested, Invalid, Nurture)' },
 ];
 
-
-export function normalizeCallOutcome(raw: string | null | undefined): CallOutcome {
-  if (!raw) return 'New Lead';
-  const val = raw.trim();
-  if (CALL_OUTCOME_LIST.includes(val as CallOutcome)) {
-    return val as CallOutcome;
+export function getSuggestedPipelineForOutcome(outcome: string | null | undefined): string {
+  if (!outcome) return 'New Lead';
+  const norm = normalizeCallOutcome(outcome);
+  switch (norm) {
+    case 'No Answer':
+    case 'Call Cut':
+      return 'Attempting Contact';
+    case 'Busy':
+    case 'Call Back Later':
+    case 'Details Requested':
+    case 'Demo Interested':
+    case 'Demo Completed':
+    case 'Decision Pending':
+      return 'Follow-up';
+    case 'Connected – Discussed':
+      return 'Connected';
+    case 'Demo Scheduled':
+      return 'Demo';
+    case 'Not Interested':
+    case 'Wrong Number':
+      return 'Closed';
+    default:
+      return 'Follow-up';
   }
-  const upper = val.toUpperCase().replace(/\s+/g, '_');
-  if (upper === 'NEW' || upper === 'NEW_LEAD') return 'New Lead';
-  if (upper === 'CONTACT_ATTEMPTED' || upper === 'NO_ANSWER' || upper === 'NO_ANSWER_/_RINGING') return 'No Answer / Ringing';
-  if (upper === 'BUSY' || upper === 'DECLINED' || upper === 'BUSY_/_DECLINED') return 'Busy / Declined';
-  if (upper === 'CONNECTED' || upper === 'DETAILS_ON_WHATSAPP') return 'Details on WhatsApp';
-  if (upper === 'CALL_BACK_REQUESTED' || upper === 'CALLBACK_REQUESTED' || upper === 'FOLLOW_UP_SCHEDULED') return 'Callback Requested';
-  if (upper === 'DEMO_REQUESTED' || upper === 'DEMO_MEETING_REQUIRED') return 'Demo Requested';
-  if (upper === 'INTERESTED') return 'Interested';
-  if (upper === 'DISCUSSING') return 'Discussing';
-  if (upper === 'NOT_INTERESTED') return 'Not Interested';
-  if (upper === 'INVALID_CONTACT' || upper === 'INVALID_NUMBER' || upper === 'INVALID_/_WRONG_NUMBER') return 'Invalid / Wrong Number';
-  if (upper === 'DO_NOT_CONTACT' || upper === 'DNC') return 'Do Not Contact';
-  if (upper === 'CLOSED' || upper === 'CONVERTED') return 'Closed';
-  if (upper === 'ASSIGNED_TO_SALESMAN' || upper === 'ASSIGN_TO_SALESMAN') return 'Assign to Salesman';
-  return 'New Lead';
+}
+
+export function normalizeCallOutcome(raw: string | null | undefined): string {
+  if (!raw) return '';
+  const val = raw.trim();
+  if (TELECALLER_CALL_OUTCOMES.includes(val as any)) {
+    return val;
+  }
+  const lower = val.toLowerCase().replace(/[\/\-_]/g, ' ').replace(/\s+/g, ' ');
+  if (lower.includes('no answer') || lower.includes('ringing')) return 'No Answer';
+  if (lower.includes('busy') || lower.includes('declined')) return 'Busy';
+  if (lower.includes('cut')) return 'Call Cut';
+  if (lower.includes('callback') || lower.includes('call back')) return 'Call Back Later';
+  if (lower.includes('whatsapp') || lower.includes('details requested') || lower.includes('brochure')) return 'Details Requested';
+  if (lower.includes('demo scheduled')) return 'Demo Scheduled';
+  if (lower.includes('demo completed')) return 'Demo Completed';
+  if (lower.includes('demo requested') || lower.includes('demo interested')) return 'Demo Interested';
+  if (lower.includes('decision pending')) return 'Decision Pending';
+  if (lower.includes('connected') || lower.includes('discussing') || lower.includes('interested')) return 'Connected – Discussed';
+  if (lower.includes('not interested') || lower.includes('dnc') || lower.includes('do not contact')) return 'Not Interested';
+  if (lower.includes('invalid') || lower.includes('wrong number')) return 'Wrong Number';
+  if (lower === 'closed') return 'Closed';
+  return val;
 }
 
 export const TASK_TYPES = {

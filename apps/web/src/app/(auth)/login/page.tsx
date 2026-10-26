@@ -1,17 +1,36 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ShieldCheck, Lock, Mail, ArrowRight, UserCheck, PhoneCall, Briefcase } from 'lucide-react';
+import { UserRole } from '@crm/shared';
 
 export default function LoginPage() {
-  const { login, quickLogin } = useAuth();
+  const { user, loading: authLoading, login, quickLogin } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('admin@tenderprocure.com');
   const [password, setPassword] = useState('Password@123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!authLoading && user) {
+      switch (user.role) {
+        case 'SUPER_ADMIN':
+          router.replace('/admin/dashboard');
+          break;
+        case 'TELECALLER':
+          router.replace('/telecaller/leads');
+          break;
+        case 'SALESMAN':
+          router.replace('/salesman/dashboard');
+          break;
+      }
+    }
+  }, [user, authLoading, router]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -22,6 +41,18 @@ export default function LoginPage() {
       await login(email, password);
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleQuickLogin(role: UserRole) {
+    setLoading(true);
+    setError('');
+    try {
+      await quickLogin(role);
+    } catch (err: any) {
+      setError(err.message || 'Quick login failed.');
     } finally {
       setLoading(false);
     }
@@ -92,8 +123,9 @@ export default function LoginPage() {
             <div className="grid grid-cols-3 gap-2">
               <button
                 type="button"
-                onClick={() => quickLogin('SUPER_ADMIN')}
-                className="p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 text-left transition-colors cursor-pointer group"
+                disabled={loading}
+                onClick={() => handleQuickLogin('SUPER_ADMIN')}
+                className="p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 text-left transition-colors cursor-pointer group disabled:opacity-50"
               >
                 <div className="flex items-center gap-1 text-[11px] font-bold">
                   <ShieldCheck className="h-3.5 w-3.5 text-purple-600" /> Admin
@@ -105,8 +137,9 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                onClick={() => quickLogin('TELECALLER')}
-                className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 text-left transition-colors cursor-pointer group"
+                disabled={loading}
+                onClick={() => handleQuickLogin('TELECALLER')}
+                className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 text-left transition-colors cursor-pointer group disabled:opacity-50"
               >
                 <div className="flex items-center gap-1 text-[11px] font-bold">
                   <PhoneCall className="h-3.5 w-3.5 text-blue-600" /> Telecaller
@@ -118,8 +151,9 @@ export default function LoginPage() {
 
               <button
                 type="button"
-                onClick={() => quickLogin('SALESMAN')}
-                className="p-2.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-900 text-left transition-colors cursor-pointer group"
+                disabled={loading}
+                onClick={() => handleQuickLogin('SALESMAN')}
+                className="p-2.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-900 text-left transition-colors cursor-pointer group disabled:opacity-50"
               >
                 <div className="flex items-center gap-1 text-[11px] font-bold">
                   <Briefcase className="h-3.5 w-3.5 text-teal-600" /> Salesman

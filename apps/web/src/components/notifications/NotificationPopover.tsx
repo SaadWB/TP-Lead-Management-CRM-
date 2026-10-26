@@ -32,6 +32,7 @@ export function NotificationPopover() {
   }, [isOpen]);
 
   async function fetchNotifications() {
+    if (!api.getToken()) return;
     try {
       const res = await api.get<{ notifications: NotificationItem[]; unreadCount: number }>(
         '/notifications'

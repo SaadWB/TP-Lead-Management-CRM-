@@ -1,6 +1,13 @@
 import { app } from './app';
 import { config } from './config';
 import { dbStore } from './repositories/dbStore';
+import { runRound7Migration } from './scripts/migrateRound7';
+
+try {
+  runRound7Migration();
+} catch (err) {
+  console.error('[Server Startup] Round 7 migration error:', err);
+}
 
 // Periodic runner for automatic follow-up and return-to-fresh rules (runs every 60s)
 const autoRuleInterval = setInterval(() => {

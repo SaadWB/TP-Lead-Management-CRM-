@@ -36,7 +36,10 @@ exports.createLeadSchema = zod_1.z.object({
     city: zod_1.z.string().optional().nullable(),
     state: zod_1.z.string().optional().nullable(),
     priority: zod_1.z.string().default(constants_1.PRIORITIES.MEDIUM),
-    pipelineStage: zod_1.z.string().default(constants_1.CALL_OUTCOMES.NEW_LEAD),
+    pipelineStage: zod_1.z.string().default('New Lead'),
+    lastCallOutcome: zod_1.z.string().optional().nullable(),
+    nextFollowUpDate: zod_1.z.string().optional().nullable(),
+    nextAction: zod_1.z.string().optional().nullable(),
     notes: zod_1.z.string().optional().nullable(),
     leadSource: zod_1.z.string().optional().nullable(),
     assignedTelecallerId: zod_1.z.string().optional().nullable(),
@@ -44,8 +47,11 @@ exports.createLeadSchema = zod_1.z.object({
 });
 exports.updateLeadSchema = exports.createLeadSchema.partial();
 exports.updateStageSchema = zod_1.z.object({
-    pipelineStage: zod_1.z.string().min(1, 'Pipeline stage is required'),
-    notes: zod_1.z.string().optional(),
+    pipelineStage: zod_1.z.string().optional(),
+    lastCallOutcome: zod_1.z.string().optional().nullable(),
+    nextFollowUpDate: zod_1.z.string().optional().nullable(),
+    nextAction: zod_1.z.string().optional().nullable(),
+    notes: zod_1.z.string().optional().nullable(),
     assignedSalesmanId: zod_1.z.string().optional(),
     handoverSummary: zod_1.z.string().optional(),
     meetingDate: zod_1.z.string().optional(),

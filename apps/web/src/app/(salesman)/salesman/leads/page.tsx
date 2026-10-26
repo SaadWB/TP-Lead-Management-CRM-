@@ -5,42 +5,37 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { LeadDrawer } from '@/components/leads/LeadDrawer';
-import { UpdateSalesStageModal } from '@/components/leads/UpdateSalesStageModal';
+import dynamic from 'next/dynamic';
 import { Lead, SalesStage, SALES_STAGE_OPTIONS } from '@crm/shared';
 import { api } from '@/lib/apiClient';
+import { useSWRData } from '@/lib/apiCache';
 import { formatDate, getPriorityColor, getStageColor } from '@/lib/utils';
 import { Award, RefreshCw, Edit3 } from 'lucide-react';
 
+const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
+  ssr: false,
+});
+const UpdateSalesStageModal = dynamic(
+  () => import('@/components/leads/UpdateSalesStageModal').then((m) => m.UpdateSalesStageModal),
+  { ssr: false }
+);
+
 export default function SalesmanLeadsPage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [stageModalTarget, setStageModalTarget] = useState<{ lead: Lead; targetStage?: SalesStage } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState('');
 
-  useEffect(() => {
-    fetchLeads();
-  }, [stageFilter]);
+  const params: any = { limit: 100 };
+  if (stageFilter) params.salesStage = stageFilter;
 
-  async function fetchLeads() {
-    setLoading(true);
-    try {
-      const params: any = { limit: 100 };
-      if (stageFilter) params.salesStage = stageFilter;
+  const { data: leadsData, loading, mutate: fetchLeads } = useSWRData<Lead[]>(
+    '/leads',
+    params
+  );
 
-      const res = await api.get<Lead[]>('/leads', params);
-      if (res.success && res.data) {
-        setLeads(res.data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const leads = leadsData || [];
 
   const filtered = leads.filter((l) => {
     if (!searchTerm) return true;
@@ -85,7 +80,7 @@ export default function SalesmanLeadsPage() {
           </div>
 
           <button
-            onClick={fetchLeads}
+            onClick={() => fetchLeads()}
             className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors"
             title="Refresh leads"
           >
@@ -227,7 +222,7 @@ export default function SalesmanLeadsPage() {
           setSelectedLeadId(null);
         }}
         onLeadUpdated={(updated) => {
-          setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+          fetchLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? updated : l)) : [updated]));
         }}
       />
 
@@ -238,9 +233,8 @@ export default function SalesmanLeadsPage() {
           lead={stageModalTarget.lead}
           initialStage={stageModalTarget.targetStage}
           onSuccess={(updated) => {
-            setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+            fetchLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? updated : l)) : [updated]));
             setStageModalTarget(null);
-            fetchLeads();
           }}
         />
       )}

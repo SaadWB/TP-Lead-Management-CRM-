@@ -29,62 +29,60 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
     const unassignedLeads = leads.filter((l) => !l.assignedTelecallerId && !l.assignedSalesmanId).length;
     const leadsAssignedToTelecallers = leads.filter((l) => !!l.assignedTelecallerId).length;
     const leadsInProgress = visibleLeads.filter((l) =>
-      [
-        'No Answer / Ringing',
-        'Busy / Declined',
-        'Callback Requested',
-        'Details on WhatsApp',
-        'Demo Requested',
-        'CONTACT_ATTEMPTED',
-        'CONNECTED',
-        'INTERESTED',
-        'FOLLOW_UP_SCHEDULED',
-      ].includes(l.pipelineStage)
+      ['Attempting Contact', 'Connected', 'Follow-up', 'Demo'].includes(l.pipelineStage)
     ).length;
     const interestedLeads = visibleLeads.filter((l) =>
-      ['Interested', 'INTERESTED', 'Demo Requested', 'DEMO_REQUESTED'].includes(l.pipelineStage)
+      ['Connected', 'Demo'].includes(l.pipelineStage) ||
+      ['Connected – Discussed', 'Demo Interested', 'Demo Scheduled', 'Demo Completed', 'Details Requested'].includes(l.lastCallOutcome || '')
     ).length;
     const leadsAssignedToSalesmen = visibleLeads.filter((l) =>
       l.pipelineStage === 'Assign to Salesman' || l.pipelineStage === 'ASSIGNED_TO_SALESMAN' || !!l.assignedSalesmanId
     ).length;
     const demosMeetingsScheduled = visibleLeads.filter((l) =>
-      ['Demo Requested', 'DEMO_MEETING_REQUIRED', 'DEMO_SCHEDULED'].includes(l.pipelineStage) ||
+      l.pipelineStage === 'Demo' ||
+      l.lastCallOutcome === 'Demo Scheduled' ||
       l.salesStage === 'DEMO_SCHEDULED'
     ).length;
 
     // Follow-up calculations strictly aligned with lead rows
-    const followUpsDueToday = visibleLeads.filter((l) => {
-      const directMatch = !!(l.nextFollowUpDate && l.nextFollowUpDate.split('T')[0] === todayStr);
-      const taskMatch = dbStore.store.followUpTasks.some(
-        (t) => t.leadId === l.id && t.status === 'PENDING' && t.dueDate.split('T')[0] === todayStr &&
-          (user.role === USER_ROLES.SUPER_ADMIN || t.assignedUserId === user.id)
-      );
-      return directMatch || taskMatch;
-    }).length;
+    const store = dbStore.store;
+    const todayTaskLeadIds = new Set(
+      store.followUpTasks
+        .filter(
+          (t) =>
+            t.status === 'PENDING' &&
+            t.dueDate.split('T')[0] === todayStr &&
+            (user.role === USER_ROLES.SUPER_ADMIN || t.assignedUserId === user.id)
+        )
+        .map((t) => t.leadId)
+    );
+    const overdueTaskLeadIds = new Set(
+      store.followUpTasks
+        .filter(
+          (t) =>
+            t.status === 'PENDING' &&
+            t.dueDate.split('T')[0] < todayStr &&
+            (user.role === USER_ROLES.SUPER_ADMIN || t.assignedUserId === user.id)
+        )
+        .map((t) => t.leadId)
+    );
 
-    const overdueFollowUps = visibleLeads.filter((l) => {
-      const directMatch = !!(l.nextFollowUpDate && l.nextFollowUpDate.split('T')[0] < todayStr);
-      const taskMatch = dbStore.store.followUpTasks.some(
-        (t) => t.leadId === l.id && t.status === 'PENDING' && t.dueDate.split('T')[0] < todayStr &&
-          (user.role === USER_ROLES.SUPER_ADMIN || t.assignedUserId === user.id)
-      );
-      return directMatch || taskMatch;
-    }).length;
+    const followUpsDueToday = visibleLeads.filter(
+      (l) => (l.nextFollowUpDate && l.nextFollowUpDate.split('T')[0] === todayStr) || todayTaskLeadIds.has(l.id)
+    ).length;
+
+    const overdueFollowUps = visibleLeads.filter(
+      (l) => (l.nextFollowUpDate && l.nextFollowUpDate.split('T')[0] < todayStr) || overdueTaskLeadIds.has(l.id)
+    ).length;
 
     const convertedLeads = visibleLeads.filter(
-      (l) => l.pipelineStage === 'Closed' || l.pipelineStage === 'CONVERTED' || l.salesStage === 'CONVERTED'
+      (l) => (l.pipelineStage === 'Closed' && l.lastCallOutcome !== 'Not Interested' && l.lastCallOutcome !== 'Wrong Number') || l.salesStage === 'CONVERTED'
     ).length;
     const lostLeads = visibleLeads.filter(
       (l) =>
-        [
-          'Not Interested',
-          'Invalid / Wrong Number',
-          'Do Not Contact',
-          'NOT_INTERESTED',
-          'INVALID_CONTACT',
-          'DO_NOT_CONTACT',
-          'LOST',
-        ].includes(l.pipelineStage) || l.salesStage === 'LOST'
+        (l.pipelineStage === 'Closed' && (l.lastCallOutcome === 'Not Interested' || l.lastCallOutcome === 'Wrong Number')) ||
+        l.salesStage === 'LOST' ||
+        l.lostReason
     ).length;
 
     const closedLeads = convertedLeads + lostLeads;
@@ -139,7 +137,7 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
         const assigned = leads.filter((l) => l.assignedTelecallerId === t.id);
         const calls = dbStore.store.callLogs.filter((c) => c.userId === t.id);
         const connected = calls.filter((c) =>
-          !['No Answer / Ringing', 'Busy / Declined', 'Invalid / Wrong Number', 'NO_ANSWER', 'BUSY', 'INVALID_NUMBER'].includes(c.outcome as string)
+          !['No Answer', 'Busy', 'Call Cut', 'Wrong Number', 'No Answer / Ringing', 'Busy / Declined', 'Invalid / Wrong Number', 'NO_ANSWER', 'BUSY', 'INVALID_NUMBER'].includes(c.outcome as string)
         ).length;
         const handedOver = leads.filter((l) => l.assignedTelecallerId === t.id && l.assignedSalesmanId).length;
         return {

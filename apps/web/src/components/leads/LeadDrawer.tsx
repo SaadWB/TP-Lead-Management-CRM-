@@ -294,9 +294,9 @@ export function LeadDrawer({
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Call Outcome:
+                      Pipeline:
                     </span>
                     <select
                       value={lead.pipelineStage}
@@ -309,6 +309,13 @@ export function LeadDrawer({
                         </option>
                       ))}
                     </select>
+
+                    {lead.lastCallOutcome && (
+                      <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                        <span className="text-[10px] uppercase font-bold text-slate-500">Outcome:</span>
+                        <span className="text-xs font-bold text-slate-800">{lead.lastCallOutcome}</span>
+                      </div>
+                    )}
 
                     {lead.salesStage && (
                       <div className="flex items-center gap-1.5 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200">

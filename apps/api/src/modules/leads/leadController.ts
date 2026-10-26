@@ -10,6 +10,8 @@ import {
   PipelineStage,
   USER_ROLES,
   normalizeCallOutcome,
+  getSuggestedPipelineForOutcome,
+  TELECALLER_CALL_OUTCOMES,
 } from '@crm/shared';
 import { leadRepository, LeadFilterOptions } from '../../repositories/leadRepository';
 import { userRepository } from '../../repositories/userRepository';
@@ -52,11 +54,17 @@ export async function listLeads(req: Request, res: Response, next: NextFunction)
     const filter: LeadFilterOptions = {
       search: req.query.search as string | undefined,
       pipelineStage: req.query.pipelineStage as string | undefined,
+      lastCallOutcome: req.query.lastCallOutcome as string | undefined,
       salesStage: req.query.salesStage as string | undefined,
       priority: req.query.priority as Priority | undefined,
       leadSource: req.query.leadSource as string | undefined,
       followUpStatus: req.query.followUpStatus as any,
       kpi: req.query.kpi as string | undefined,
+      dateField: req.query.dateField as any,
+      fromDate: req.query.fromDate as string | undefined,
+      toDate: req.query.toDate as string | undefined,
+      sortBy: req.query.sortBy as any,
+      sortOrder: req.query.sortOrder as any,
       page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
       limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 50,
     };
@@ -306,60 +314,95 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
 
     const data = updateStageSchema.parse(req.body);
     const oldStage = lead.pipelineStage;
-    const newStage = data.pipelineStage;
-    const normNewStage = normalizeCallOutcome(newStage);
+    const oldOutcome = lead.lastCallOutcome;
+
+    let targetOutcome: string | null | undefined = data.lastCallOutcome !== undefined ? data.lastCallOutcome : undefined;
+    let targetPipeline: string | undefined = data.pipelineStage;
+
+    // If outcome is provided, normalize it
+    if (targetOutcome) {
+      targetOutcome = normalizeCallOutcome(targetOutcome);
+    }
+
+    // If outcome is provided but not pipeline, suggest default pipeline
+    if (targetOutcome && !targetPipeline) {
+      targetPipeline = getSuggestedPipelineForOutcome(targetOutcome);
+    } else if (!targetPipeline && !targetOutcome) {
+      targetPipeline = oldStage;
+    }
 
     // Validation rules for specific stage transitions
     if (
-      (normNewStage === 'Assign to Salesman' || newStage === 'ASSIGNED_TO_SALESMAN') &&
+      (targetPipeline === 'Assign to Salesman' || targetPipeline === 'ASSIGNED_TO_SALESMAN') &&
       !data.assignedSalesmanId &&
       !lead.assignedSalesmanId
     ) {
       throw new BadRequestError('Assigning to Salesman requires selecting an active Sales Closer.');
     }
 
-    // Require follow-up date and time for Callback Requested and Demo Requested
-    let followUpDate: string | undefined = undefined;
-    if (normNewStage === 'Callback Requested' || normNewStage === 'Demo Requested') {
-      const inputDate = data.meetingDate || (req.body as any).nextFollowUpDate || (req.body as any).followUpDate;
-      if (!inputDate) {
-        throw new BadRequestError(`Date and time are required when moving to "${normNewStage}".`);
+    // Rules for dates:
+    // Call Back Later and Demo Scheduled: date and time is required (past dates not allowed)
+    let followUpDate: string | undefined = data.nextFollowUpDate || (data as any).meetingDate || (req.body as any).followUpDate;
+    if (targetOutcome === 'Call Back Later' || targetOutcome === 'Demo Scheduled') {
+      if (!followUpDate) {
+        throw new BadRequestError(`Date and time are required when selecting "${targetOutcome}".`);
       }
-      const parsedTime = new Date(inputDate).getTime();
+      const parsedTime = new Date(followUpDate).getTime();
       if (isNaN(parsedTime) || parsedTime < Date.now() - 60000) {
         throw new BadRequestError('Date and time cannot be in the past.');
       }
-      followUpDate = inputDate;
-    } else if (normNewStage === 'Interested') {
-      // Rule 5: Interested lead is automatically added to Follow-ups after 3 days
-      const d = new Date();
-      d.setDate(d.getDate() + 3);
-      d.setHours(10, 0, 0, 0);
-      followUpDate = d.toISOString();
+    } else if (
+      targetOutcome === 'Demo Interested' ||
+      targetOutcome === 'Details Requested' ||
+      targetOutcome === 'Demo Completed' ||
+      targetOutcome === 'Decision Pending'
+    ) {
+      // Demo Interested, Details Requested, Demo Completed, Decision Pending: Next Follow-up date is required
+      if (!followUpDate && !lead.nextFollowUpDate) {
+        throw new BadRequestError(`Next follow-up date is required for "${targetOutcome}".`);
+      }
+    } else if (targetOutcome === 'Not Interested' || targetOutcome === 'Wrong Number') {
+      // Not Interested and Wrong Number set Pipeline to Closed, no follow-up date
+      targetPipeline = 'Closed';
+      followUpDate = undefined;
     }
 
-    if (newStage === 'LOST' && !data.lostReason) {
-      throw new BadRequestError('A reason is mandatory when marking a lead as Lost.');
-    }
-
+    const now = new Date();
     const updatePayload: any = {
-      pipelineStage: normNewStage,
-      lastCallOutcome: normNewStage,
-      lastStatusUpdatedAt: new Date().toISOString(),
-      lastActivityAt: new Date().toISOString(),
+      lastStatusUpdatedAt: now.toISOString(),
+      lastActivityAt: now.toISOString(),
     };
 
-    if (normNewStage === 'No Answer / Ringing' || normNewStage === 'Busy / Declined') {
-      updatePayload.lastContactDate = new Date().toISOString();
+    if (targetPipeline) {
+      updatePayload.pipelineStage = targetPipeline;
+    }
+    if (targetOutcome !== undefined) {
+      updatePayload.lastCallOutcome = targetOutcome;
     }
 
-    if (followUpDate) {
+    if (
+      targetOutcome === 'No Answer' ||
+      targetOutcome === 'Busy' ||
+      targetOutcome === 'Call Cut' ||
+      targetOutcome === 'Connected – Discussed'
+    ) {
+      updatePayload.lastContactDate = now.toISOString();
+      updatePayload.callAttempts = (lead.callAttempts || 0) + 1;
+    }
+
+    if (targetPipeline === 'Closed') {
+      updatePayload.nextFollowUpDate = null;
+    } else if (followUpDate) {
       updatePayload.nextFollowUpDate = followUpDate;
+    }
+
+    if (data.nextAction !== undefined) {
+      updatePayload.nextAction = data.nextAction;
     }
 
     if (data.notes) {
       updatePayload.notes = lead.notes
-        ? `${lead.notes}\n[${new Date().toISOString().split('T')[0]}]: ${data.notes}`
+        ? `${lead.notes}\n[${now.toISOString().split('T')[0]}]: ${data.notes}`
         : data.notes;
     }
 
@@ -393,7 +436,10 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
         lead.contactPerson || '-',
         req.user!.name
       );
-    } else if (normNewStage === 'Assign to Salesman' && lead.assignedSalesmanId) {
+    } else if (
+      (targetPipeline === 'Assign to Salesman' || targetOutcome === 'Assign to Salesman') &&
+      lead.assignedSalesmanId
+    ) {
       updatePayload.salesStage = lead.salesStage || 'ASSIGNED';
     }
 
@@ -402,21 +448,21 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       await followUpTaskRepository.create({
         leadId: lead.id,
         assignedUserId: req.user!.id,
-        taskType: normNewStage === 'Demo Requested' ? 'DEMO' : 'CALL',
+        taskType: (targetOutcome === 'Demo Scheduled' || targetOutcome === 'Demo Interested' || targetPipeline === 'Demo') ? 'DEMO' : 'CALL',
         dueDate: followUpDate.split('T')[0],
         dueTime: followUpDate.includes('T') ? followUpDate.split('T')[1].substring(0, 5) : '10:00',
-        notes: data.notes || `Scheduled follow-up for ${normNewStage}`,
+        notes: data.notes || `Scheduled follow-up for ${targetOutcome || targetPipeline}`,
       });
     }
 
     // Won / Converted
-    if (normNewStage === 'Closed' || newStage === 'CONVERTED') {
+    if (targetPipeline === 'Closed' && targetOutcome === 'Converted') {
       updatePayload.convertedAt = new Date().toISOString();
       if (data.dealValue) updatePayload.dealValue = data.dealValue;
     }
 
-    // Lost
-    if (newStage === 'LOST') {
+    // Lost / Reason
+    if (data.lostReason) {
       updatePayload.lostReason = data.lostReason;
       updatePayload.lostNotes = data.lostNotes || null;
     }
@@ -424,17 +470,27 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
     const updated = await leadRepository.update(lead.id, updatePayload);
 
     // Record stage transition activity
+    const activityDesc = `Pipeline set to "${targetPipeline}"${targetOutcome ? `, Outcome: "${targetOutcome}"` : ''} by ${req.user!.name}.${
+      data.notes ? ` Notes: ${data.notes}` : ''
+    }${data.handoverSummary ? ` (Summary: ${data.handoverSummary})` : ''}${followUpDate ? ` (Follow-up: ${followUpDate})` : ''}`;
+
     await activityRepository.create({
       leadId: lead.id,
       userId: req.user!.id,
       type: 'STAGE_CHANGED',
-      description: `Call outcome moved from "${oldStage}" to "${normNewStage}" by ${req.user!.name}${
-        data.handoverSummary ? ` (Summary: ${data.handoverSummary})` : ''
-      }${followUpDate ? ` (Follow-up: ${followUpDate})` : ''}`,
-      metadata: { oldStage, newStage: normNewStage, handoverSummary: data.handoverSummary, followUpDate },
+      description: activityDesc,
+      metadata: {
+        oldStage,
+        oldOutcome,
+        newPipeline: targetPipeline,
+        newOutcome: targetOutcome,
+        handoverSummary: data.handoverSummary,
+        followUpDate,
+        notes: data.notes,
+      },
     });
 
-    sendSuccess(res, updated, `Pipeline stage moved to ${normNewStage}`);
+    sendSuccess(res, updated, `Pipeline updated to ${targetPipeline}`);
   } catch (error) {
     next(error);
   }
@@ -691,21 +747,7 @@ export async function addCustomOption(req: Request, res: Response, next: NextFun
       dbStore.persist();
       sendSuccess(res, dbStore.store.customOptions, `Priority "${cleanName}" added successfully.`);
     } else if (type === 'CALL_OUTCOME') {
-      const defaultOutcomes = [
-        'New Lead',
-        'No Answer / Ringing',
-        'Busy / Declined',
-        'Callback Requested',
-        'Not Interested',
-        'Details on WhatsApp',
-        'Demo Requested',
-        'Interested',
-        'Discussing',
-        'Invalid / Wrong Number',
-        'Do Not Contact',
-        'Closed',
-        'Assign to Salesman',
-      ];
+      const defaultOutcomes = [...TELECALLER_CALL_OUTCOMES];
       const existing = [...defaultOutcomes, ...dbStore.store.customOptions.callOutcomes];
       if (existing.some((o) => o.toLowerCase() === cleanName.toLowerCase())) {
         throw new BadRequestError(`Call Outcome "${cleanName}" already exists.`);

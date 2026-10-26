@@ -17,6 +17,7 @@ import {
   ChevronRight,
   ShieldAlert,
   CheckSquare,
+  Table,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/Badge';
@@ -31,6 +32,11 @@ interface NavItem {
 export function Sidebar() {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const [optimisticPath, setOptimisticPath] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    setOptimisticPath(null);
+  }, [pathname]);
 
   if (!user) return null;
 
@@ -43,9 +49,9 @@ export function Sidebar() {
   ];
 
   const telecallerNav: NavItem[] = [
-    { title: "Today's Work", href: '/telecaller/today', icon: CheckSquare, badge: 'Daily' },
-    { title: 'Calling Dashboard', href: '/telecaller/kanban', icon: Kanban, badge: 'Pipeline' },
-    { title: 'Follow-up & Task', href: '/telecaller/tasks', icon: CalendarCheck },
+    { title: 'My Leads', href: '/telecaller/leads', icon: Table, badge: 'Table' },
+    { title: "Today's Work", href: '/telecaller/today', icon: CheckSquare, badge: 'Follow-ups' },
+    { title: 'Calling Dashboard', href: '/telecaller/kanban', icon: Kanban, badge: 'Board' },
     { title: 'My Performance', href: '/telecaller/dashboard', icon: LayoutDashboard },
   ];
 
@@ -106,12 +112,17 @@ export function Sidebar() {
           Workspace Navigation
         </div>
         {currentNav.map((item) => {
-          const isActive = pathname === item.href;
+          const activeHref = optimisticPath ?? pathname;
+          const isActive =
+            activeHref === item.href ||
+            (item.href === '/telecaller/kanban' && activeHref === '/telecaller/leads');
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
+              onClick={() => setOptimisticPath(item.href)}
               className={cn(
                 'flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer group',
                 isActive

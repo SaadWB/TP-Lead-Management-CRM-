@@ -4,23 +4,44 @@ export declare const USER_ROLES: {
     readonly SALESMAN: "SALESMAN";
 };
 export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
-export declare const CALL_OUTCOMES: {
+export declare const PIPELINE_STAGES: {
     readonly NEW_LEAD: "New Lead";
-    readonly NO_ANSWER: "No Answer / Ringing";
-    readonly BUSY: "Busy / Declined";
-    readonly CALLBACK_REQUESTED: "Callback Requested";
+    readonly ATTEMPTING_CONTACT: "Attempting Contact";
+    readonly CONNECTED: "Connected";
+    readonly FOLLOW_UP: "Follow-up";
+    readonly DEMO: "Demo";
+    readonly CLOSED: "Closed";
+};
+export type PipelineStage = (typeof PIPELINE_STAGES)[keyof typeof PIPELINE_STAGES] | string;
+export declare const PIPELINE_STAGE_LIST: ("New Lead" | "Attempting Contact" | "Connected" | "Follow-up" | "Demo" | "Closed")[];
+export declare const CALL_OUTCOMES: {
+    readonly NO_ANSWER: "No Answer";
+    readonly BUSY: "Busy";
+    readonly CALL_CUT: "Call Cut";
+    readonly CALL_BACK_LATER: "Call Back Later";
+    readonly CONNECTED_DISCUSSED: "Connected – Discussed";
+    readonly DETAILS_REQUESTED: "Details Requested";
+    readonly DEMO_INTERESTED: "Demo Interested";
+    readonly DEMO_SCHEDULED: "Demo Scheduled";
+    readonly DEMO_COMPLETED: "Demo Completed";
+    readonly DECISION_PENDING: "Decision Pending";
     readonly NOT_INTERESTED: "Not Interested";
-    readonly DETAILS_ON_WHATSAPP: "Details on WhatsApp";
-    readonly DEMO_REQUESTED: "Demo Requested";
-    readonly INTERESTED: "Interested";
-    readonly DISCUSSING: "Discussing";
-    readonly INVALID_NUMBER: "Invalid / Wrong Number";
-    readonly DO_NOT_CONTACT: "Do Not Contact";
+    readonly WRONG_NUMBER: "Wrong Number";
+    readonly NEW_LEAD: "New Lead";
+    readonly CALLBACK_REQUESTED: "Call Back Later";
+    readonly DETAILS_ON_WHATSAPP: "Details Requested";
+    readonly DEMO_REQUESTED: "Demo Interested";
+    readonly INTERESTED: "Connected – Discussed";
+    readonly DISCUSSING: "Connected – Discussed";
+    readonly INVALID_NUMBER: "Wrong Number";
+    readonly DO_NOT_CONTACT: "Not Interested";
     readonly CLOSED: "Closed";
     readonly ASSIGN_TO_SALESMAN: "Assign to Salesman";
 };
-export type CallOutcome = (typeof CALL_OUTCOMES)[keyof typeof CALL_OUTCOMES];
-export declare const CALL_OUTCOME_LIST: ("New Lead" | "No Answer / Ringing" | "Busy / Declined" | "Callback Requested" | "Not Interested" | "Details on WhatsApp" | "Demo Requested" | "Interested" | "Discussing" | "Invalid / Wrong Number" | "Do Not Contact" | "Closed" | "Assign to Salesman")[];
+export declare const TELECALLER_CALL_OUTCOMES: readonly ["No Answer", "Busy", "Call Cut", "Call Back Later", "Connected – Discussed", "Details Requested", "Demo Interested", "Demo Scheduled", "Demo Completed", "Decision Pending", "Not Interested", "Wrong Number"];
+export type TelecallerCallOutcome = (typeof TELECALLER_CALL_OUTCOMES)[number];
+export type CallOutcome = (typeof CALL_OUTCOMES)[keyof typeof CALL_OUTCOMES] | string;
+export declare const CALL_OUTCOME_LIST: ("New Lead" | "Closed" | "No Answer" | "Busy" | "Call Cut" | "Call Back Later" | "Connected – Discussed" | "Details Requested" | "Demo Interested" | "Demo Scheduled" | "Demo Completed" | "Decision Pending" | "Not Interested" | "Wrong Number" | "Assign to Salesman")[];
 export declare const PRIORITIES: {
     readonly LOW: "LOW";
     readonly MEDIUM: "MEDIUM";
@@ -45,14 +66,14 @@ export declare const SALES_STAGE_OPTIONS: {
     label: string;
     color: string;
 }[];
-export type PipelineStage = string;
 export declare const TELECALLER_KANBAN_COLUMNS: {
-    id: CallOutcome;
+    id: string;
     title: string;
     color: string;
     description: string;
 }[];
-export declare function normalizeCallOutcome(raw: string | null | undefined): CallOutcome;
+export declare function getSuggestedPipelineForOutcome(outcome: string | null | undefined): string;
+export declare function normalizeCallOutcome(raw: string | null | undefined): string;
 export declare const TASK_TYPES: {
     readonly CALL: "CALL";
     readonly FOLLOW_UP: "FOLLOW_UP";

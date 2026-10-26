@@ -1,29 +1,33 @@
 import { ApiResponse } from '@crm/shared';
 
 function getApiBase(): string {
-  // Server-side: use bound internal service URL if available
-  if (typeof window === 'undefined') {
-    if (process.env.API_URL) {
-      return process.env.API_URL.replace(/\/$/, '');
-    }
-  }
-
-  // Client-side or fallback: if NEXT_PUBLIC_API_URL is set, use it
+  // Explicit override via environment variable
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
   }
 
-  // In browser on Vercel with unified rewrites, use same-origin relative URL
+  // Client-side in browser
   if (typeof window !== 'undefined') {
+    // In local development, communicate directly with the API server on port 5000.
+    // Using 127.0.0.1 bypasses Next.js proxy overhead and prevents Windows Node.js IPv6 ::1 lookup timeouts.
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://127.0.0.1:5000';
+    }
+    // In production on Vercel (unified domain), use same-origin relative URL handled by Vercel rewrites
     return '';
   }
 
-  // Local development fallback
-  return 'http://localhost:5000';
+  // Server-side (SSR / Server Components)
+  if (process.env.API_URL) {
+    return process.env.API_URL.replace(/\/$/, '');
+  }
+
+  // Local development server-side fallback
+  return 'http://127.0.0.1:5000';
 }
 
 class ApiClient {
-  private getToken(): string | null {
+  public getToken(): string | null {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('token');
   }
@@ -67,6 +71,9 @@ class ApiClient {
       const data: ApiResponse<T> = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401 && typeof window !== 'undefined') {
+          this.setToken(null);
+        }
         throw new Error(data.message || `Request failed with status ${response.status}`);
       }
 

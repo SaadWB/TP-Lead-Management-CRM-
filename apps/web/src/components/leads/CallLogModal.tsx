@@ -5,7 +5,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
-import { CALL_OUTCOMES, CallOutcome, Lead, User } from '@crm/shared';
+import { CALL_OUTCOMES, CallOutcome, TELECALLER_CALL_OUTCOMES, Lead, User } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { PhoneCall, Calendar, UserCheck, Clock } from 'lucide-react';
 
@@ -17,7 +17,7 @@ interface CallLogModalProps {
 }
 
 export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalProps) {
-  const [outcome, setOutcome] = useState<CallOutcome>('New Lead');
+  const [outcome, setOutcome] = useState<CallOutcome>('Connected – Discussed');
   const [notes, setNotes] = useState('');
   const [durationSeconds, setDurationSeconds] = useState('180');
   const [nextFollowUpDate, setNextFollowUpDate] = useState('');
@@ -60,7 +60,13 @@ export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalP
 
   if (!lead) return null;
 
-  const isFollowUpOutcome = outcome === 'Callback Requested' || outcome === 'Demo Requested';
+  const isFollowUpOutcome =
+    outcome === 'Call Back Later' ||
+    outcome === 'Demo Scheduled' ||
+    outcome === 'Demo Interested' ||
+    outcome === 'Details Requested' ||
+    outcome === 'Demo Completed' ||
+    outcome === 'Decision Pending';
   const isAssignSalesman = outcome === 'Assign to Salesman';
 
   async function handleSubmit(e: React.FormEvent) {
@@ -138,37 +144,11 @@ export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalP
             className="w-full text-xs bg-white border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           >
             {[
-              'New Lead',
-              'No Answer / Ringing',
-              'Busy / Declined',
-              'Callback Requested',
-              'Not Interested',
-              'Details on WhatsApp',
-              'Demo Requested',
-              'Interested',
-              'Discussing',
-              'Invalid / Wrong Number',
-              'Do Not Contact',
-              'Closed',
-              'Assign to Salesman',
+              ...TELECALLER_CALL_OUTCOMES,
               ...customOutcomes.filter(
                 (o) =>
                   !o.toLowerCase().includes('special inquiry') &&
-                  ![
-                    'New Lead',
-                    'No Answer / Ringing',
-                    'Busy / Declined',
-                    'Callback Requested',
-                    'Not Interested',
-                    'Details on WhatsApp',
-                    'Demo Requested',
-                    'Interested',
-                    'Discussing',
-                    'Invalid / Wrong Number',
-                    'Do Not Contact',
-                    'Closed',
-                    'Assign to Salesman',
-                  ].includes(o)
+                  !TELECALLER_CALL_OUTCOMES.includes(o as any)
               ),
             ].map((opt) => (
               <option key={opt} value={opt}>
@@ -190,7 +170,7 @@ export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalP
           <div className="p-3.5 bg-sky-50/70 rounded-xl border border-sky-200/80 space-y-2 animate-fade-in">
             <div className="flex items-center gap-1.5 text-xs font-bold text-sky-900">
               <Calendar className="h-4 w-4 text-sky-600" />
-              <span>{outcome === 'Demo Requested' ? 'Demo Scheduled Date & Time' : 'Callback Date & Time'} (Required)</span>
+              <span>{outcome === 'Demo Scheduled' ? 'Demo Scheduled Date & Time' : 'Follow-up Date & Time'} (Required)</span>
             </div>
             <Input
               type="datetime-local"

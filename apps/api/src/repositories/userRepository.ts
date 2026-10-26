@@ -15,19 +15,39 @@ export class UserRepository {
   }
 
   async findAll(filter?: { role?: UserRole; isActive?: boolean }): Promise<User[]> {
-    let users = dbStore.store.users;
+    const store = dbStore.store;
+    let users = store.users;
     if (filter?.role) {
       users = users.filter((u) => u.role === filter.role);
     }
     if (filter?.isActive !== undefined) {
       users = users.filter((u) => u.isActive === filter.isActive);
     }
+
+    const telecallerCounts = new Map<string, number>();
+    const salesmanCounts = new Map<string, number>();
+    for (const l of store.leads) {
+      if (l.assignedTelecallerId) {
+        telecallerCounts.set(l.assignedTelecallerId, (telecallerCounts.get(l.assignedTelecallerId) || 0) + 1);
+      }
+      if (l.assignedSalesmanId) {
+        salesmanCounts.set(l.assignedSalesmanId, (salesmanCounts.get(l.assignedSalesmanId) || 0) + 1);
+      }
+    }
+
+    const taskCounts = new Map<string, number>();
+    for (const t of store.followUpTasks) {
+      if (t.assignedUserId && t.status === 'PENDING') {
+        taskCounts.set(t.assignedUserId, (taskCounts.get(t.assignedUserId) || 0) + 1);
+      }
+    }
+
     return users.map(({ passwordHash, ...rest }) => ({
       ...rest,
       _count: {
-        assignedTelecallerLeads: dbStore.store.leads.filter((l) => l.assignedTelecallerId === rest.id).length,
-        assignedSalesmanLeads: dbStore.store.leads.filter((l) => l.assignedSalesmanId === rest.id).length,
-        tasks: dbStore.store.followUpTasks.filter((t) => t.assignedUserId === rest.id && t.status === 'PENDING').length,
+        assignedTelecallerLeads: telecallerCounts.get(rest.id) || 0,
+        assignedSalesmanLeads: salesmanCounts.get(rest.id) || 0,
+        tasks: taskCounts.get(rest.id) || 0,
       },
     }));
   }

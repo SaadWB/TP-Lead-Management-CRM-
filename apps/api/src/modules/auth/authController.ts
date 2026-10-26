@@ -20,7 +20,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       throw new UnauthorizedError('Account is deactivated. Please contact your CRM administrator.');
     }
 
-    const isMatch = bcrypt.compareSync(password, userWithPass.passwordHash);
+    const isMatch = await bcrypt.compare(password, userWithPass.passwordHash);
     if (!isMatch) {
       throw new UnauthorizedError('Invalid email or password');
     }

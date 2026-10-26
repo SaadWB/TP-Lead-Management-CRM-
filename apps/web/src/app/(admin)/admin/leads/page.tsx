@@ -1,15 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { LeadDrawer } from '@/components/leads/LeadDrawer';
-import { CreateLeadModal } from '@/components/leads/CreateLeadModal';
-import { Lead, Priority, TELECALLER_KANBAN_COLUMNS, SALES_STAGE_OPTIONS, User } from '@crm/shared';
+import {
+  Lead,
+  Priority,
+  TELECALLER_KANBAN_COLUMNS,
+  TELECALLER_CALL_OUTCOMES,
+  SALES_STAGE_OPTIONS,
+  User,
+} from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { formatDate, getPriorityColor, getStageColor } from '@/lib/utils';
 import {
@@ -24,6 +30,14 @@ import {
   X,
   AlertTriangle,
 } from 'lucide-react';
+
+const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
+  ssr: false,
+});
+const CreateLeadModal = dynamic(
+  () => import('@/components/leads/CreateLeadModal').then((m) => m.CreateLeadModal),
+  { ssr: false }
+);
 
 export default function AdminLeadsPage() {
   return (
@@ -47,6 +61,7 @@ function AdminLeadsContent() {
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState('');
+  const [outcomeFilter, setOutcomeFilter] = useState('');
   const [salesStageFilter, setSalesStageFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [telecallerFilter, setTelecallerFilter] = useState('');
@@ -83,7 +98,7 @@ function AdminLeadsContent() {
   useEffect(() => {
     fetchLeads();
     loadTelecallers();
-  }, [stageFilter, salesStageFilter, priorityFilter, telecallerFilter, currentKpi]);
+  }, [stageFilter, outcomeFilter, salesStageFilter, priorityFilter, telecallerFilter, currentKpi]);
 
   async function fetchLeads() {
     setLoading(true);
@@ -91,6 +106,7 @@ function AdminLeadsContent() {
       const params: any = { limit: 100 };
       if (currentKpi) params.kpi = currentKpi;
       if (stageFilter) params.pipelineStage = stageFilter;
+      if (outcomeFilter) params.lastCallOutcome = outcomeFilter;
       if (salesStageFilter) params.salesStage = salesStageFilter;
       if (priorityFilter) params.priority = priorityFilter;
       if (telecallerFilter) params.assignedTelecallerId = telecallerFilter;
@@ -209,6 +225,7 @@ function AdminLeadsContent() {
   }
 
   const filteredLeads = leads.filter((lead) => {
+    if (outcomeFilter && lead.lastCallOutcome !== outcomeFilter) return false;
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
     return (
@@ -292,6 +309,19 @@ function AdminLeadsContent() {
             </select>
 
             <select
+              value={outcomeFilter}
+              onChange={(e) => setOutcomeFilter(e.target.value)}
+              className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
+            >
+              <option value="">All Call Outcomes</option>
+              {TELECALLER_CALL_OUTCOMES.map((oc) => (
+                <option key={oc} value={oc}>
+                  {oc}
+                </option>
+              ))}
+            </select>
+
+            <select
               value={salesStageFilter}
               onChange={(e) => setSalesStageFilter(e.target.value)}
               className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
@@ -329,10 +359,11 @@ function AdminLeadsContent() {
               ))}
             </select>
 
-            {(stageFilter || salesStageFilter || priorityFilter || telecallerFilter) && (
+            {(stageFilter || outcomeFilter || salesStageFilter || priorityFilter || telecallerFilter) && (
               <button
                 onClick={() => {
                   setStageFilter('');
+                  setOutcomeFilter('');
                   setSalesStageFilter('');
                   setPriorityFilter('');
                   setTelecallerFilter('');
@@ -583,14 +614,24 @@ function AdminLeadsContent() {
                             </select>
                           </td>
 
-                          {/* Pipeline Stage */}
+                          {/* Pipeline Stage & Last Call Outcome */}
                           <td className="w-44 min-w-[160px] max-w-[180px] p-3 min-w-0">
-                            <span
-                              className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-bold border truncate max-w-full ${stage.bg} ${stage.text} ${stage.border}`}
-                              title={lead.pipelineStage}
-                            >
-                              {lead.pipelineStage}
-                            </span>
+                            <div className="flex flex-col gap-1 items-start">
+                              <span
+                                className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-bold border truncate max-w-full ${stage.bg} ${stage.text} ${stage.border}`}
+                                title={lead.pipelineStage}
+                              >
+                                {lead.pipelineStage}
+                              </span>
+                              {lead.lastCallOutcome && (
+                                <span
+                                  className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-full"
+                                  title={`Last Outcome: ${lead.lastCallOutcome}`}
+                                >
+                                  {lead.lastCallOutcome}
+                                </span>
+                              )}
+                            </div>
                           </td>
 
                           {/* Assigned Telecaller */}
