@@ -27,6 +27,7 @@ export function WhatsAppIcon({ className = 'h-3.5 w-3.5' }: { className?: string
 interface WhatsAppButtonProps {
   phone: string;
   leadId?: string;
+  leadName?: string;
   className?: string;
   showText?: boolean;
   size?: 'sm' | 'md';
@@ -35,6 +36,7 @@ interface WhatsAppButtonProps {
 export function WhatsAppButton({
   phone,
   leadId,
+  leadName,
   className = '',
   showText = false,
   size = 'sm',

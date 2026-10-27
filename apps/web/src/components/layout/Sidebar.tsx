@@ -69,18 +69,20 @@ export function Sidebar({ onClose, className = '', isMobileDrawer = false }: Sid
 
   // STRICT SINGLE-ACTIVE DETERMINATION
   // 1. Exact route match has highest priority
-  // 2. Prefix matching only for sub-routes, excluding root '/'
-  // 3. Exactly one (or zero) nav item can be active at any given time
+  // 2. First nav item strictly requires exact route matching (no prefix leakage)
+  // 3. Sub-route prefix match for subsequent items only, excluding root '/'
+  // 4. Exactly one (or zero) nav item can be active at any given time
   const activeHref = useMemo(() => {
     if (!pathname) return null;
 
-    // 1. Exact match
+    // 1. Exact match across all nav items
     const exact = currentNav.find((item) => item.href === pathname);
     if (exact) return exact.href;
 
-    // 2. Sub-route prefix match
+    // 2. Sub-route prefix match (first item excluded to enforce exact route matching)
+    const firstHref = currentNav[0]?.href;
     const prefixMatches = currentNav
-      .filter((item) => item.href !== '/' && pathname.startsWith(item.href + '/'))
+      .filter((item) => item.href !== '/' && item.href !== firstHref && pathname.startsWith(item.href + '/'))
       .sort((a, b) => b.href.length - a.href.length);
 
     return prefixMatches[0]?.href ?? null;

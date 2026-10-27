@@ -1393,9 +1393,10 @@ export default function TelecallerTodayPage() {
                   onClick={() => {
                     const l = whatsAppPromptLead;
                     setWhatsAppPromptLead(null);
-                    openWhatsAppChat(l.phone, {
+                    openWhatsAppChat({
+                      phone: l.phone,
                       leadId: l.id,
-                      telecallerName: user?.name,
+                      callerName: user?.name,
                     });
                   }}
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-soft-sm min-h-[40px] flex items-center gap-1.5 cursor-pointer"

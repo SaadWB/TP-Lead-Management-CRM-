@@ -79,7 +79,7 @@ describe('Integration Tests: API Endpoints & Auth Flow', () => {
 
     expect(callRes.status).toBe(201);
     expect(callRes.body.success).toBe(true);
-    expect(callRes.body.data.callLog.outcome).toBe('Details on WhatsApp');
+    expect(callRes.body.data.callLog.outcome).toBe('Details Requested');
     expect(callRes.body.data.lead.callAttempts).toBeGreaterThanOrEqual(1);
   });
 

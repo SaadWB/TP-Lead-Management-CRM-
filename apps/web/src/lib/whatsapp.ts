@@ -47,20 +47,39 @@ export function getWhatsAppUrl(formattedNumber: string, callerName?: string): st
   return `https://wa.me/${formattedNumber}?text=${encodeURIComponent(defaultText)}`;
 }
 
-/**
- * Opens WhatsApp in new tab and logs a note in lead history: "WhatsApp opened"
- */
-export async function openWhatsAppChat({
-  phone,
-  leadId,
-  callerName,
-  onInvalid,
-}: {
-  phone: string;
+export interface OpenWhatsAppOptions {
+  phone?: string;
   leadId?: string;
   callerName?: string;
+  telecallerName?: string;
   onInvalid?: (err: string) => void;
-}): Promise<boolean> {
+}
+
+/**
+ * Opens WhatsApp in new tab and logs a note in lead history: "WhatsApp opened"
+ * Supports both openWhatsAppChat({ phone, ... }) and openWhatsAppChat(phone, { ... })
+ */
+export async function openWhatsAppChat(
+  phoneOrOptions: string | OpenWhatsAppOptions,
+  secondaryOptions?: OpenWhatsAppOptions
+): Promise<boolean> {
+  let phone = '';
+  let leadId: string | undefined;
+  let callerName: string | undefined;
+  let onInvalid: ((err: string) => void) | undefined;
+
+  if (typeof phoneOrOptions === 'string') {
+    phone = phoneOrOptions;
+    leadId = secondaryOptions?.leadId;
+    callerName = secondaryOptions?.callerName || secondaryOptions?.telecallerName;
+    onInvalid = secondaryOptions?.onInvalid;
+  } else if (phoneOrOptions && typeof phoneOrOptions === 'object') {
+    phone = phoneOrOptions.phone || '';
+    leadId = phoneOrOptions.leadId;
+    callerName = phoneOrOptions.callerName || phoneOrOptions.telecallerName;
+    onInvalid = phoneOrOptions.onInvalid;
+  }
+
   const result = formatWhatsAppNumber(phone);
   if (!result.valid) {
     if (onInvalid) {

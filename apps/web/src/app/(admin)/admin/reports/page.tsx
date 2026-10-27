@@ -181,6 +181,7 @@ export default function AdminReportsPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </AppLayout>
   );

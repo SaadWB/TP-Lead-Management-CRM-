@@ -11,6 +11,7 @@ import { api } from '@/lib/apiClient';
 import { useSWRData } from '@/lib/apiCache';
 import { Award, RefreshCw, Edit3, Phone } from 'lucide-react';
 import { WhatsAppButton } from '@/components/leads/WhatsAppButton';
+import { formatDate, getPriorityColor, getStageColor } from '@/lib/utils';
 
 const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
   ssr: false,

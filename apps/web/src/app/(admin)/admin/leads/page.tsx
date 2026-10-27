@@ -854,6 +854,7 @@ function AdminLeadsContent() {
                 </tbody>
               </table>
             </div>
+          </CardContent>
         </Card>
 
         {/* Sticky Mobile Bulk Action Bar */}

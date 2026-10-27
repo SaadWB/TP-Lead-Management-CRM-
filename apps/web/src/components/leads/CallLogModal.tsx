@@ -8,6 +8,9 @@ import { Input } from '../ui/Input';
 import { CALL_OUTCOMES, CallOutcome, TELECALLER_CALL_OUTCOMES, Lead, User } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { PhoneCall, Calendar, UserCheck, Clock } from 'lucide-react';
+import { useAuth } from '@/lib/authContext';
+import { WhatsAppIcon } from './WhatsAppButton';
+import { openWhatsAppChat } from '@/lib/whatsapp';
 
 interface CallLogModalProps {
   isOpen: boolean;
@@ -17,6 +20,7 @@ interface CallLogModalProps {
 }
 
 export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalProps) {
+  const { user } = useAuth();
   const [outcome, setOutcome] = useState<CallOutcome>('Connected – Discussed');
   const [notes, setNotes] = useState('');
   const [durationSeconds, setDurationSeconds] = useState('180');
@@ -162,6 +166,37 @@ export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalP
           <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-center gap-2">
             <Clock className="h-4 w-4 text-emerald-600 shrink-0" />
             <span>Automatic Rule: Selecting <strong>Interested</strong> will automatically schedule a follow-up for 3 days later.</span>
+          </div>
+        )}
+
+        {/* WhatsApp Auto-Prompt when Details Requested is chosen */}
+        {outcome === 'Details Requested' && (
+          <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                  <WhatsAppIcon className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-emerald-900">Open WhatsApp now?</h4>
+                  <p className="text-[11px] text-emerald-700">Prospect requested details. Share info & decks via WhatsApp.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  openWhatsAppChat({
+                    phone: lead.phone,
+                    leadId: lead.id,
+                    callerName: user?.name,
+                  });
+                }}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow-soft-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 min-h-[36px]"
+              >
+                <WhatsAppIcon className="h-3.5 w-3.5" />
+                <span>Open WhatsApp</span>
+              </button>
+            </div>
           </div>
         )}
 
