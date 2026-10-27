@@ -80,7 +80,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* 12 Metric Cards Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {metricCards.map((m) => {
             const Icon = m.icon;
             return (

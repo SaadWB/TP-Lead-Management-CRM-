@@ -24,9 +24,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           id={selectId}
           ref={ref}
           className={cn(
-            'w-full bg-white border border-slate-300 rounded-lg text-sm text-slate-900',
-            'py-2 px-3 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 transition-all duration-150',
-            'disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed cursor-pointer',
+            'w-full bg-white border border-slate-300 rounded-lg text-base sm:text-sm text-slate-900',
+            'py-2.5 sm:py-2 px-3 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-600 transition-all duration-150',
+            'disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed cursor-pointer min-h-[44px] sm:min-h-0',
             error && 'border-rose-400 focus:ring-rose-500/20 focus:border-rose-600',
             className
           )}

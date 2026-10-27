@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { DashboardMetrics } from '@crm/shared';
 import { api } from '@/lib/apiClient';
-import { Download, AlertTriangle } from 'lucide-react';
+import { Download, AlertTriangle, Users } from 'lucide-react';
+import { TelecallerReportsView } from '@/components/reports/TelecallerReportsView';
 
 export default function AdminReportsPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
@@ -41,20 +42,36 @@ export default function AdminReportsPage() {
       title="Reports & Analytics Intelligence"
       subtitle="Comprehensive breakdown of pipeline conversion rates, acquisition sources, lost reasons, and inactive records."
     >
-      <div className="space-y-6 max-w-6xl mx-auto">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-slate-800">Executive Performance Intelligence</h2>
-            <p className="text-xs text-slate-500">Export audited CRM datasets for external BI analysis</p>
+      <div className="space-y-8 max-w-6xl mx-auto">
+        {/* Telecaller Performance Intelligence Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                <Users className="h-4 w-4 text-sky-600" /> Telecaller Team Work Reports
+              </h2>
+              <p className="text-xs text-slate-500">
+                Audit call output, connected discussions, and demo schedules per telecaller or for the entire team.
+              </p>
+            </div>
           </div>
-          <Button
-            size="sm"
-            onClick={handleExportCsv}
-            icon={<Download className="h-4 w-4" />}
-          >
-            Export All Leads to CSV
-          </Button>
+          <TelecallerReportsView isAdmin={true} />
         </div>
+
+        <div className="border-t border-slate-200 pt-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <div>
+              <h2 className="text-sm font-bold text-slate-800">Executive Performance Intelligence</h2>
+              <p className="text-xs text-slate-500">Export audited CRM datasets for external BI analysis</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleExportCsv}
+              icon={<Download className="h-4 w-4" />}
+            >
+              Export All Leads to CSV
+            </Button>
+          </div>
 
         {/* Lead Source Breakdown & Lost Reasons */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

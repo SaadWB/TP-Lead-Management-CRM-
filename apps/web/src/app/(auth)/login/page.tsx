@@ -120,17 +120,17 @@ export default function LoginPage() {
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block text-center mb-3">
               Fast Demo Login (1-Click Test Access)
             </span>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <button
                 type="button"
                 disabled={loading}
                 onClick={() => handleQuickLogin('SUPER_ADMIN')}
-                className="p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 text-left transition-colors cursor-pointer group disabled:opacity-50"
+                className="p-3 sm:p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 text-left transition-colors cursor-pointer group disabled:opacity-50 min-h-[44px]"
               >
-                <div className="flex items-center gap-1 text-[11px] font-bold">
-                  <ShieldCheck className="h-3.5 w-3.5 text-purple-600" /> Admin
+                <div className="flex items-center gap-1.5 text-xs sm:text-[11px] font-bold">
+                  <ShieldCheck className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-purple-600" /> Admin
                 </div>
-                <span className="text-[10px] text-purple-700 block mt-0.5 truncate">
+                <span className="text-[11px] sm:text-[10px] text-purple-700 block mt-0.5 truncate">
                   Full Access
                 </span>
               </button>
@@ -139,12 +139,12 @@ export default function LoginPage() {
                 type="button"
                 disabled={loading}
                 onClick={() => handleQuickLogin('TELECALLER')}
-                className="p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 text-left transition-colors cursor-pointer group disabled:opacity-50"
+                className="p-3 sm:p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 text-left transition-colors cursor-pointer group disabled:opacity-50 min-h-[44px]"
               >
-                <div className="flex items-center gap-1 text-[11px] font-bold">
-                  <PhoneCall className="h-3.5 w-3.5 text-blue-600" /> Telecaller
+                <div className="flex items-center gap-1.5 text-xs sm:text-[11px] font-bold">
+                  <PhoneCall className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-blue-600" /> Telecaller
                 </div>
-                <span className="text-[10px] text-blue-700 block mt-0.5 truncate">
+                <span className="text-[11px] sm:text-[10px] text-blue-700 block mt-0.5 truncate">
                   Kanban Queue
                 </span>
               </button>
@@ -153,12 +153,12 @@ export default function LoginPage() {
                 type="button"
                 disabled={loading}
                 onClick={() => handleQuickLogin('SALESMAN')}
-                className="p-2.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-900 text-left transition-colors cursor-pointer group disabled:opacity-50"
+                className="p-3 sm:p-2.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-900 text-left transition-colors cursor-pointer group disabled:opacity-50 min-h-[44px]"
               >
-                <div className="flex items-center gap-1 text-[11px] font-bold">
-                  <Briefcase className="h-3.5 w-3.5 text-teal-600" /> Salesman
+                <div className="flex items-center gap-1.5 text-xs sm:text-[11px] font-bold">
+                  <Briefcase className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-teal-600" /> Salesman
                 </div>
-                <span className="text-[10px] text-teal-700 block mt-0.5 truncate">
+                <span className="text-[11px] sm:text-[10px] text-teal-700 block mt-0.5 truncate">
                   Demo & Closer
                 </span>
               </button>

@@ -763,3 +763,27 @@ export async function addCustomOption(req: Request, res: Response, next: NextFun
   }
 }
 
+export async function logWhatsAppActivity(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const lead = await leadRepository.findById(req.params.id);
+    if (!lead) throw new NotFoundError('Lead not found');
+
+    assertLeadAccess(req.user, lead);
+
+    await activityRepository.create({
+      leadId: lead.id,
+      userId: req.user!.id,
+      type: 'NOTE_ADDED',
+      description: `WhatsApp opened by ${req.user!.name}`,
+      metadata: { action: 'WHATSAPP_OPENED' },
+    });
+
+    await leadRepository.update(lead.id, { lastActivityAt: new Date().toISOString() });
+
+    sendSuccess(res, { success: true }, 'WhatsApp interaction recorded');
+  } catch (error) {
+    next(error);
+  }
+}
+
+

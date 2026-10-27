@@ -24,11 +24,20 @@ export interface HeaderContextType {
   header: HeaderState;
   setHeader: (state: HeaderInput) => void;
   updateCallbacks?: (callbacks: { onOpenCreateLead?: () => void; onSearchChange?: (val: string) => void }) => void;
+  isMobileSidebarOpen: boolean;
+  openMobileSidebar: () => void;
+  closeMobileSidebar: () => void;
+  toggleMobileSidebar: () => void;
 }
 
 const HeaderContext = createContext<HeaderContextType | undefined>(undefined);
 
 export function PageHeaderProvider({ children }: { children: ReactNode }) {
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const openMobileSidebar = useCallback(() => setIsMobileSidebarOpen(true), []);
+  const closeMobileSidebar = useCallback(() => setIsMobileSidebarOpen(false), []);
+  const toggleMobileSidebar = useCallback(() => setIsMobileSidebarOpen((prev) => !prev), []);
+
   const [headerState, setHeaderState] = useState<{
     title: string;
     subtitle?: string;
@@ -116,8 +125,12 @@ export function PageHeaderProvider({ children }: { children: ReactNode }) {
       header,
       setHeader,
       updateCallbacks,
+      isMobileSidebarOpen,
+      openMobileSidebar,
+      closeMobileSidebar,
+      toggleMobileSidebar,
     }),
-    [header, setHeader, updateCallbacks]
+    [header, setHeader, updateCallbacks, isMobileSidebarOpen, openMobileSidebar, closeMobileSidebar, toggleMobileSidebar]
   );
 
   return <HeaderContext.Provider value={value}>{children}</HeaderContext.Provider>;

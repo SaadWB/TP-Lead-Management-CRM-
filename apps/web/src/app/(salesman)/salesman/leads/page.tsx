@@ -9,8 +9,8 @@ import dynamic from 'next/dynamic';
 import { Lead, SalesStage, SALES_STAGE_OPTIONS } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { useSWRData } from '@/lib/apiCache';
-import { formatDate, getPriorityColor, getStageColor } from '@/lib/utils';
-import { Award, RefreshCw, Edit3 } from 'lucide-react';
+import { Award, RefreshCw, Edit3, Phone } from 'lucide-react';
+import { WhatsAppButton } from '@/components/leads/WhatsAppButton';
 
 const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
   ssr: false,
@@ -88,8 +88,150 @@ export default function SalesmanLeadsPage() {
           </button>
         </div>
 
-        {/* Table */}
-        <Card>
+        {/* Mobile Cards View (< md) */}
+        <div className="md:hidden space-y-3">
+          {filtered.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
+              No assigned leads in this filter
+            </div>
+          ) : (
+            filtered.map((lead) => {
+              const priority = getPriorityColor(lead.priority);
+              const currentSalesStage = (lead.salesStage as SalesStage) || 'ASSIGNED';
+              const stageColor = getStageColor(currentSalesStage);
+
+              return (
+                <div
+                  key={lead.id}
+                  className="bg-white rounded-xl border border-slate-200 shadow-soft-sm p-4 space-y-3"
+                >
+                  {/* Top row: Company & Priority */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3
+                        onClick={() => {
+                          setSelectedLeadId(lead.id);
+                          setIsDrawerOpen(true);
+                        }}
+                        className="font-extrabold text-sm text-slate-900 truncate hover:text-sky-600 cursor-pointer"
+                      >
+                        {lead.companyName}
+                      </h3>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 truncate">
+                        <span className="font-semibold text-slate-700">{lead.contactPerson || 'No contact'}</span>
+                        {lead.serviceProduct && (
+                          <>
+                            <span>•</span>
+                            <span className="truncate">{lead.serviceProduct}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold border shrink-0 ${priority.bg} ${priority.text} ${priority.border}`}
+                    >
+                      {lead.priority}
+                    </span>
+                  </div>
+
+                  {/* Phone Row with Click-to-Call + WhatsApp */}
+                  <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 truncate min-w-0">
+                      <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{lead.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href={`tel:${lead.phone}`}
+                        className="inline-flex items-center justify-center p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs border border-emerald-200 min-h-[40px] min-w-[40px]"
+                        title={`Call ${lead.phone}`}
+                      >
+                        <Phone className="h-4 w-4" />
+                      </a>
+                      <WhatsAppButton
+                        phone={lead.phone}
+                        leadId={lead.id}
+                        leadName={lead.contactPerson || lead.companyName}
+                        size="sm"
+                        showText={false}
+                        className="min-h-[40px] min-w-[40px]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sales Stage Dropdown */}
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                      Sales Stage
+                    </label>
+                    <select
+                      value={currentSalesStage}
+                      onChange={(e) => {
+                        const newStage = e.target.value as SalesStage;
+                        setStageModalTarget({ lead, targetStage: newStage });
+                      }}
+                      className={`w-full text-xs font-bold rounded-lg border p-2.5 cursor-pointer min-h-[44px] ${stageColor.bg} ${stageColor.text} ${stageColor.border}`}
+                    >
+                      {SALES_STAGE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value} className="bg-white text-slate-800 font-normal">
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Follow-up date & Quick Action Buttons */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2 flex-wrap">
+                    {lead.nextFollowUpDate ? (
+                      <span className="text-[11px] font-bold text-cyan-700">
+                        Due: {formatDate(lead.nextFollowUpDate)}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">
+                        Last contact: {formatDate(lead.lastContactDate)}
+                      </span>
+                    )}
+
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setStageModalTarget({ lead, targetStage: currentSalesStage })}
+                        className="text-xs min-h-[38px] px-2.5"
+                        icon={<Edit3 className="h-3.5 w-3.5" />}
+                      >
+                        Update
+                      </Button>
+                      {currentSalesStage !== 'CONVERTED' && (
+                        <Button
+                          size="sm"
+                          onClick={() => setStageModalTarget({ lead, targetStage: 'CONVERTED' })}
+                          className="text-xs min-h-[38px] px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                          icon={<Award className="h-3.5 w-3.5" />}
+                        >
+                          Won
+                        </Button>
+                      )}
+                      {currentSalesStage !== 'LOST' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setStageModalTarget({ lead, targetStage: 'LOST' })}
+                          className="text-xs min-h-[38px] px-2.5 text-rose-700 border-rose-200 hover:bg-rose-50"
+                        >
+                          Lost
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table */}
+        <Card className="hidden md:block border border-slate-200/90 shadow-soft-sm overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -132,7 +274,25 @@ export default function SalesmanLeadsPage() {
                             <span className="text-[11px] text-slate-500 block">{lead.serviceProduct}</span>
                           </td>
                           <td className="p-3.5 font-semibold text-slate-800">{lead.contactPerson || '-'}</td>
-                          <td className="p-3.5 font-semibold text-emerald-700">{lead.phone}</td>
+                          <td className="p-3.5 font-semibold text-emerald-700 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5">
+                              <a
+                                href={`tel:${lead.phone}`}
+                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1"
+                                title={`Call ${lead.phone}`}
+                              >
+                                <Phone className="h-3 w-3 shrink-0" />
+                                <span>{lead.phone}</span>
+                              </a>
+                              <WhatsAppButton
+                                phone={lead.phone}
+                                leadId={lead.id}
+                                leadName={lead.contactPerson || lead.companyName}
+                                size="sm"
+                                showText={false}
+                              />
+                            </div>
+                          </td>
                           <td className="p-3.5">
                             <span
                               className={`px-2 py-0.5 rounded text-[11px] font-bold border ${priority.bg} ${priority.text} ${priority.border}`}

@@ -72,7 +72,7 @@ export default function SalesmanTasksPage() {
             tasks.map((task) => (
               <div
                 key={task.id}
-                className="p-4 bg-white rounded-xl border border-slate-200 shadow-soft-sm flex items-center justify-between gap-4"
+                className="p-4 bg-white rounded-xl border border-slate-200 shadow-soft-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">

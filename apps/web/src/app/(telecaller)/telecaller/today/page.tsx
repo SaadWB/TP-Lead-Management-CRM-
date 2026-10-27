@@ -29,9 +29,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Search,
 } from 'lucide-react';
 import { formatDate, formatDateTime, getPriorityColor } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import { WhatsAppButton, WhatsAppIcon } from '@/components/leads/WhatsAppButton';
+import { openWhatsAppChat } from '@/lib/whatsapp';
 
 // Dynamic imports for heavy modals
 const CallLogModal = dynamic(() => import('@/components/leads/CallLogModal').then((m) => m.CallLogModal), {
@@ -95,6 +98,9 @@ export default function TelecallerTodayPage() {
 
   // Calls logged today counter
   const [callsDoneToday, setCallsDoneToday] = useState(0);
+
+  // WhatsApp auto-suggestion prompt state
+  const [whatsAppPromptLead, setWhatsAppPromptLead] = useState<Lead | null>(null);
 
   // Sync with SWR data
   useEffect(() => {
@@ -389,6 +395,9 @@ export default function TelecallerTodayPage() {
             triggerUndo(previousLead, `Updated ${lead.companyName} with outcome ${newOutcome}`);
           }
         }
+        if (newOutcome === 'Details Requested') {
+          setWhatsAppPromptLead(res.data);
+        }
       }
     } catch (err: any) {
       setLeads((prev) => [...prev.filter((l) => l.id !== lead.id), previousLead]);
@@ -615,12 +624,24 @@ export default function TelecallerTodayPage() {
           </div>
         </div>
 
+        {/* Mobile Search Bar (Always visible on mobile) */}
+        <div className="md:hidden relative">
+          <Search className="h-4 w-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search follow-ups by company, phone, contact..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-soft-xs min-h-[44px]"
+          />
+        </div>
+
         {/* Quick Range Filter Tabs with Count Badges */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin -mx-2 px-2 sm:mx-0 sm:px-0">
           {/* ALL IN RANGE */}
           <button
             onClick={() => setRangeFilter('ALL')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
               rangeFilter === 'ALL'
                 ? 'bg-slate-900 text-white border-slate-900 shadow-soft-sm'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -639,7 +660,7 @@ export default function TelecallerTodayPage() {
           {/* OVERDUE */}
           <button
             onClick={() => setRangeFilter('OVERDUE')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
               rangeFilter === 'OVERDUE'
                 ? 'bg-rose-600 text-white border-rose-600 shadow-soft-sm'
                 : overdueLeads.length > 0
@@ -664,7 +685,7 @@ export default function TelecallerTodayPage() {
           {/* TODAY */}
           <button
             onClick={() => setRangeFilter('TODAY')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
               rangeFilter === 'TODAY'
                 ? 'bg-amber-600 text-white border-amber-600 shadow-soft-sm'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -683,7 +704,7 @@ export default function TelecallerTodayPage() {
           {/* TOMORROW */}
           <button
             onClick={() => setRangeFilter('TOMORROW')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
               rangeFilter === 'TOMORROW'
                 ? 'bg-sky-600 text-white border-sky-600 shadow-soft-sm'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -702,7 +723,7 @@ export default function TelecallerTodayPage() {
           {/* NEXT 3 DAYS */}
           <button
             onClick={() => setRangeFilter('NEXT_3_DAYS')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
               rangeFilter === 'NEXT_3_DAYS'
                 ? 'bg-indigo-600 text-white border-indigo-600 shadow-soft-sm'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -719,8 +740,206 @@ export default function TelecallerTodayPage() {
           </button>
         </div>
 
-        {/* Follow-up Table */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-soft-sm overflow-hidden flex flex-col">
+        {/* Mobile Cards View (< md) */}
+        <div className="md:hidden space-y-3">
+          {displayLeads.length === 0 ? (
+            <div className="p-8 bg-white rounded-xl border border-slate-200 text-center text-slate-400">
+              <CheckCircle2 className="h-8 w-8 text-emerald-400 mx-auto mb-2" />
+              <span className="font-bold text-sm text-slate-700 block">No follow-ups in this range!</span>
+              <span className="text-xs text-slate-400">All commitments are up to date or completed.</span>
+            </div>
+          ) : (
+            displayLeads.map((lead, idx) => {
+              const rowNumber = idx + 1;
+              const priorityMeta = getPriorityColor(lead.priority);
+              const leadDateStr = lead.nextFollowUpDate ? lead.nextFollowUpDate.split('T')[0] : '';
+              const isOverdue = leadDateStr && leadDateStr < todayStr;
+              const isToday = leadDateStr && leadDateStr === todayStr;
+
+              return (
+                <div
+                  key={lead.id}
+                  className={`bg-white rounded-xl border shadow-soft-sm p-4 space-y-3 ${
+                    isOverdue
+                      ? 'border-rose-300 ring-1 ring-rose-200'
+                      : isToday
+                      ? 'border-amber-300 ring-1 ring-amber-100'
+                      : 'border-slate-200'
+                  }`}
+                >
+                  {/* Top row: # Serial, Company Name, Contact, Priority */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 min-w-0">
+                      <span className={`px-2 py-0.5 rounded-md font-black text-xs shrink-0 ${
+                        isOverdue ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
+                      }`}>
+                        #{rowNumber}
+                      </span>
+                      <div className="min-w-0">
+                        <h3
+                          onClick={() => {
+                            setDrawerLeadId(lead.id);
+                            setIsDrawerOpen(true);
+                          }}
+                          className="font-extrabold text-sm text-slate-900 truncate hover:text-sky-600 cursor-pointer"
+                        >
+                          {lead.companyName}
+                        </h3>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 truncate">
+                          <span className="font-semibold text-slate-700">{lead.contactPerson || 'No contact'}</span>
+                          {lead.serviceProduct && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">{lead.serviceProduct}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Priority Dropdown */}
+                    <select
+                      value={lead.priority}
+                      onChange={(e) => handlePriorityChange(lead, e.target.value as Priority)}
+                      className={`text-[11px] font-bold rounded-lg px-2 py-1 border shrink-0 ${priorityMeta.bg} ${priorityMeta.text} ${priorityMeta.border}`}
+                    >
+                      {DEFAULT_PRIORITIES.map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Phone Row with Click-to-Call + WhatsApp */}
+                  <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 truncate min-w-0">
+                      <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{lead.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href={`tel:${lead.phone}`}
+                        className="inline-flex items-center justify-center p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs border border-emerald-200 min-h-[40px] min-w-[40px]"
+                        title={`Call ${lead.phone}`}
+                      >
+                        <Phone className="h-4 w-4" />
+                      </a>
+                      <WhatsAppButton
+                        phone={lead.phone}
+                        leadId={lead.id}
+                        leadName={lead.contactPerson || lead.companyName}
+                        size="sm"
+                        showText={false}
+                        className="min-h-[40px] min-w-[40px]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pipeline & Outcome Dropdowns */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Pipeline Stage
+                      </label>
+                      <select
+                        value={lead.pipelineStage}
+                        onChange={(e) => handlePipelineChange(lead, e.target.value)}
+                        className={`w-full text-xs font-bold rounded-lg px-2.5 py-2 border cursor-pointer ${getPipelineBadgeColor(
+                          lead.pipelineStage
+                        )}`}
+                      >
+                        {PIPELINE_STAGE_LIST.map((stage) => (
+                          <option key={stage} value={stage}>{stage}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Last Call Outcome
+                      </label>
+                      <select
+                        value={lead.lastCallOutcome || ''}
+                        onChange={(e) => handleOutcomeChange(lead, e.target.value)}
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 font-semibold cursor-pointer"
+                      >
+                        <option value="">-- Select Outcome --</option>
+                        {TELECALLER_CALL_OUTCOMES.map((oc) => (
+                          <option key={oc} value={oc}>{oc}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Next Action & Follow-up */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Next Action
+                      </label>
+                      <input
+                        type="text"
+                        defaultValue={lead.nextAction || ''}
+                        onBlur={(e) => handleNextActionBlur(lead, e.target.value)}
+                        placeholder="Next action..."
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Follow-up Due
+                      </label>
+                      <input
+                        type="datetime-local"
+                        defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
+                        onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
+                        className={`w-full text-xs border rounded-lg px-2.5 py-2 font-semibold ${
+                          isOverdue ? 'border-rose-300 bg-rose-50 text-rose-800 font-bold' : 'border-slate-200 bg-slate-50'
+                        }`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mobile Actions: Call, Closed, Not Closed, Details */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => {
+                        setSelectedLeadForCall(lead);
+                        setIsCallModalOpen(true);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold flex items-center gap-1 min-h-[38px] cursor-pointer"
+                    >
+                      <PhoneCall className="h-3.5 w-3.5" />
+                      <span>Log Call</span>
+                    </button>
+                    <button
+                      onClick={() => setCompletionTarget({ lead, mode: 'CLOSED' })}
+                      className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold min-h-[38px] cursor-pointer"
+                    >
+                      Closed
+                    </button>
+                    <button
+                      onClick={() => setCompletionTarget({ lead, mode: 'NOT_CLOSED' })}
+                      className="px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold min-h-[38px] cursor-pointer"
+                    >
+                      Not Closed
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDrawerLeadId(lead.id);
+                        setIsDrawerOpen(true);
+                      }}
+                      className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold min-h-[38px] cursor-pointer"
+                    >
+                      Details
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Follow-up Table (Desktop & Tablet) */}
+        <div className="hidden md:flex bg-white rounded-xl border border-slate-200 shadow-soft-sm overflow-hidden flex-col">
           <div className="overflow-x-auto max-h-[72vh] scrollbar-thin">
             <table className="w-full text-left text-xs border-collapse">
               {/* Sticky Header */}
@@ -824,16 +1043,25 @@ export default function TelecallerTodayPage() {
                           {lead.contactPerson || '-'}
                         </td>
 
-                        {/* Phone with Click-to-Call */}
-                        <td className="w-36 min-w-[140px] p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <a
-                            href={`tel:${lead.phone}`}
-                            className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5"
-                            title={`Call ${lead.phone}`}
-                          >
-                            <Phone className="h-3 w-3 shrink-0" />
-                            <span>{lead.phone}</span>
-                          </a>
+                        {/* Phone with Click-to-Call & WhatsApp */}
+                        <td className="w-40 min-w-[160px] p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={`tel:${lead.phone}`}
+                              className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5"
+                              title={`Call ${lead.phone}`}
+                            >
+                              <Phone className="h-3 w-3 shrink-0" />
+                              <span>{lead.phone}</span>
+                            </a>
+                            <WhatsAppButton
+                              phone={lead.phone}
+                              leadId={lead.id}
+                              leadName={lead.contactPerson || lead.companyName}
+                              size="sm"
+                              showText={false}
+                            />
+                          </div>
                         </td>
 
                         {/* Priority Dropdown */}
@@ -932,8 +1160,8 @@ export default function TelecallerTodayPage() {
                           />
                         </td>
 
-                        {/* Actions (Call, Closed, Not Closed, Details) */}
-                        <td className="w-48 min-w-[190px] p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        {/* Actions (Call, WhatsApp, Closed, Not Closed, Details) */}
+                        <td className="w-56 min-w-[220px] p-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1">
                             {/* Call Button */}
                             <button
@@ -946,6 +1174,15 @@ export default function TelecallerTodayPage() {
                             >
                               <PhoneCall className="h-3.5 w-3.5" />
                             </button>
+
+                            {/* WhatsApp Button */}
+                            <WhatsAppButton
+                              phone={lead.phone}
+                              leadId={lead.id}
+                              leadName={lead.contactPerson || lead.companyName}
+                              size="sm"
+                              showText={false}
+                            />
 
                             {/* Closed Button */}
                             <button
@@ -1123,6 +1360,53 @@ export default function TelecallerTodayPage() {
             mutateLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? updated : l)) : [updated]));
           }}
         />
+
+        {/* WhatsApp Auto-Suggestion Prompt when "Details Requested" is chosen */}
+        {whatsAppPromptLead && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-soft-2xl border border-slate-200 w-full max-w-sm p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                  <WhatsAppIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-900">Open WhatsApp now?</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {whatsAppPromptLead.companyName} requested details.
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-600 bg-emerald-50/60 p-3 rounded-xl border border-emerald-100">
+                A pre-filled greeting message will be prepared with the prospect&apos;s phone number (
+                <strong className="text-emerald-900">{whatsAppPromptLead.phone}</strong>).
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setWhatsAppPromptLead(null)}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 min-h-[40px] cursor-pointer"
+                >
+                  Later
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const l = whatsAppPromptLead;
+                    setWhatsAppPromptLead(null);
+                    openWhatsAppChat(l.phone, {
+                      leadId: l.id,
+                      telecallerName: user?.name,
+                    });
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-soft-sm min-h-[40px] flex items-center gap-1.5 cursor-pointer"
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  <span>Open WhatsApp</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

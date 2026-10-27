@@ -1,7 +1,12 @@
 import './globals.css';
 import { ReactNode } from 'react';
 import { AuthProvider } from '@/lib/authContext';
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   title: 'TenderProcure CRM | Enterprise Lead Management',
@@ -12,6 +17,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

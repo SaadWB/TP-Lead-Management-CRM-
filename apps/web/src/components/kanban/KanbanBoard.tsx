@@ -153,7 +153,7 @@ export function KanbanBoard({ leads, onLeadsChange, onCardClick, customColumns }
         onDragEnd={handleDragEnd}
       >
         {/* Horizontal scrollable columns container */}
-        <div className="flex-1 flex gap-4 overflow-x-auto pb-4 kanban-scroll items-start">
+        <div className="flex-1 flex gap-4 overflow-x-auto pb-4 kanban-scroll items-start snap-x snap-mandatory sm:snap-none -mx-3 px-3 sm:mx-0 sm:px-0">
           {[
             ...TELECALLER_KANBAN_COLUMNS,
             ...(customColumns || []).filter(

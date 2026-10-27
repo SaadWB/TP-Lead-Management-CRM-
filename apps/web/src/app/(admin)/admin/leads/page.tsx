@@ -30,6 +30,7 @@ import {
   X,
   AlertTriangle,
 } from 'lucide-react';
+import { WhatsAppButton } from '@/components/leads/WhatsAppButton';
 
 const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
   ssr: false,
@@ -444,7 +445,153 @@ function AdminLeadsContent() {
           <span>Showing {filteredLeads.length} leads</span>
         </div>
 
-        <Card className="border border-slate-200/90 shadow-soft-sm overflow-hidden">
+        {/* Mobile Cards View (< md) */}
+        <div className="md:hidden space-y-3">
+          {loading ? (
+            <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
+              Loading leads...
+            </div>
+          ) : filteredLeads.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
+              No leads found matching current query.
+            </div>
+          ) : (
+            filteredLeads.map((lead, index) => {
+              const priority = getPriorityColor(lead.priority);
+              const stage = getStageColor(lead.pipelineStage);
+              const isSelected = selectedLeadIds.includes(lead.id);
+
+              return (
+                <div
+                  key={lead.id}
+                  className={`bg-white rounded-xl border shadow-soft-sm p-4 space-y-3 transition-colors ${
+                    isSelected ? 'border-sky-400 ring-2 ring-sky-200 bg-sky-50/20' : 'border-slate-200'
+                  }`}
+                >
+                  {/* Top row: Checkbox, # Serial, Company Name, Priority */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleSelectLead(lead.id);
+                        }}
+                        className="p-1 rounded text-slate-400 hover:text-sky-600 shrink-0 mt-0.5"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="h-5 w-5 text-sky-600" />
+                        ) : (
+                          <Square className="h-5 w-5 text-slate-300" />
+                        )}
+                      </button>
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-black text-xs shrink-0">
+                        #{index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <h3
+                          onClick={() => {
+                            setSelectedLeadId(lead.id);
+                            setIsDrawerOpen(true);
+                          }}
+                          className="font-extrabold text-sm text-slate-900 truncate hover:text-sky-600 cursor-pointer"
+                        >
+                          {lead.companyName}
+                        </h3>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 truncate">
+                          <span className="font-semibold text-slate-700">{lead.contactPerson || 'No contact'}</span>
+                          {lead.serviceProduct && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">{lead.serviceProduct}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Priority Dropdown */}
+                    <select
+                      value={lead.priority}
+                      onChange={(e) => handleSinglePriorityUpdate(lead.id, e.target.value as Priority)}
+                      className={`text-[11px] font-bold rounded-lg px-2 py-1 border shrink-0 ${priority.bg} ${priority.text} ${priority.border}`}
+                    >
+                      <option value="LOW">LOW</option>
+                      <option value="MEDIUM">MEDIUM</option>
+                      <option value="HIGH">HIGH</option>
+                      <option value="URGENT">URGENT</option>
+                    </select>
+                  </div>
+
+                  {/* Phone Row with Click-to-Call + WhatsApp */}
+                  <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 truncate min-w-0">
+                      <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{lead.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href={`tel:${lead.phone}`}
+                        className="inline-flex items-center justify-center p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs border border-emerald-200 min-h-[40px] min-w-[40px]"
+                        title={`Call ${lead.phone}`}
+                      >
+                        <Phone className="h-4 w-4" />
+                      </a>
+                      <WhatsAppButton
+                        phone={lead.phone}
+                        leadId={lead.id}
+                        leadName={lead.contactPerson || lead.companyName}
+                        size="sm"
+                        showText={false}
+                        className="min-h-[40px] min-w-[40px]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Pipeline Stage & Last Outcome Badges */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${stage.bg} ${stage.text} ${stage.border}`}>
+                      {lead.pipelineStage}
+                    </span>
+                    {lead.lastCallOutcome && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                        {lead.lastCallOutcome}
+                      </span>
+                    )}
+                    {lead.assignedTelecaller && (
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        Telecaller: <strong className="text-slate-800">{lead.assignedTelecaller.name}</strong>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Footer Row: Details & Delete */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <button
+                      onClick={() => setDeleteTarget(lead)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold flex items-center gap-1 min-h-[36px]"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                      <span className="text-rose-600">Delete</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedLeadId(lead.id);
+                        setIsDrawerOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 font-bold text-xs transition-colors cursor-pointer min-h-[36px]"
+                    >
+                      View Details →
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table Container */}
+        <Card className="hidden md:block border border-slate-200/90 shadow-soft-sm overflow-hidden">
           <CardContent className="p-0">
             {/* Horizontal scroll container strictly bounded within card */}
             <div className="overflow-x-auto relative">
@@ -588,16 +735,24 @@ function AdminLeadsContent() {
                           </td>
 
                           {/* Phone */}
-                          <td className="w-36 min-w-[140px] max-w-[150px] p-3 whitespace-nowrap">
-                            <a
-                              href={`tel:${lead.phone}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 whitespace-nowrap"
-                              title={`Call ${lead.phone}`}
-                            >
-                              <Phone className="h-3 w-3 shrink-0" />
-                              <span>{lead.phone}</span>
-                            </a>
+                          <td className="w-40 min-w-[160px] max-w-[170px] p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1.5">
+                              <a
+                                href={`tel:${lead.phone}`}
+                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 whitespace-nowrap"
+                                title={`Call ${lead.phone}`}
+                              >
+                                <Phone className="h-3 w-3 shrink-0" />
+                                <span>{lead.phone}</span>
+                              </a>
+                              <WhatsAppButton
+                                phone={lead.phone}
+                                leadId={lead.id}
+                                leadName={lead.contactPerson || lead.companyName}
+                                size="sm"
+                                showText={false}
+                              />
+                            </div>
                           </td>
 
                           {/* Priority with inline Admin dropdown */}
@@ -699,8 +854,77 @@ function AdminLeadsContent() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
         </Card>
+
+        {/* Sticky Mobile Bulk Action Bar */}
+        {selectedLeadIds.length > 0 && (
+          <div className="md:hidden fixed bottom-0 inset-x-0 bg-slate-900 border-t border-slate-800 p-3 z-40 shadow-soft-2xl animate-slide-up flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-sky-300">
+                {selectedLeadIds.length} {selectedLeadIds.length === 1 ? 'lead' : 'leads'} selected
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedLeadIds([])}
+                className="text-xs text-slate-400 hover:text-white underline cursor-pointer"
+              >
+                Clear Selection
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1">
+                <select
+                  value={bulkPriority}
+                  onChange={(e) => setBulkPriority(e.target.value as Priority)}
+                  className="w-full text-xs bg-slate-800 border border-slate-700 rounded-lg p-2 text-white min-h-[40px] focus:outline-none"
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleBulkPriority}
+                  disabled={bulkUpdatingPriority}
+                  className="px-2.5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg min-h-[40px] shrink-0"
+                >
+                  Set
+                </button>
+              </div>
+              <div className="flex items-center gap-1">
+                <select
+                  value={targetTelecallerId}
+                  onChange={(e) => setTargetTelecallerId(e.target.value)}
+                  className="w-full text-xs bg-slate-800 border border-slate-700 rounded-lg p-2 text-white min-h-[40px] focus:outline-none"
+                >
+                  <option value="">Telecaller</option>
+                  {telecallers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleBulkAssign}
+                  disabled={!targetTelecallerId || bulkAssigning}
+                  className="px-2.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg disabled:opacity-40 min-h-[40px] shrink-0"
+                >
+                  Assign
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowBulkDeleteConfirm(true)}
+              className="w-full py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 min-h-[40px] cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete Selected ({selectedLeadIds.length})</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Single Lead Delete Confirmation Modal */}

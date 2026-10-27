@@ -14,6 +14,7 @@ import {
   completeFollowUp,
   getCustomOptions,
   addCustomOption,
+  logWhatsAppActivity,
 } from './leadController';
 import { authenticate, requireRole } from '../../middleware/auth';
 import { USER_ROLES } from '@crm/shared';
@@ -36,5 +37,6 @@ router.post('/bulk-delete', requireRole([USER_ROLES.SUPER_ADMIN]), bulkDeleteLea
 router.post('/:id/stage', updateLeadStage);
 router.patch('/:id/sales-stage', updateSalesStage);
 router.post('/:id/follow-up-completion', completeFollowUp);
+router.post('/:id/whatsapp-log', logWhatsAppActivity);
 
 export default router;

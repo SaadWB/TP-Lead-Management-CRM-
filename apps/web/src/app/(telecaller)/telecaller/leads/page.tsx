@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { AppLayout } from '@/components/layout/AppLayout';
 import {
@@ -14,6 +15,7 @@ import {
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { useSWRData } from '@/lib/apiCache';
+import { useAuth } from '@/lib/authContext';
 import {
   Clock,
   RefreshCw,
@@ -31,8 +33,14 @@ import {
   ArrowDown,
   Sparkles,
   Plus,
+  Search,
+  MessageSquare,
 } from 'lucide-react';
 import { formatDate, formatDateTime, getPriorityColor } from '@/lib/utils';
+import { WhatsAppButton, WhatsAppIcon } from '@/components/leads/WhatsAppButton';
+import { openWhatsAppChat } from '@/lib/whatsapp';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 
 // Dynamic imports for heavy modals
 const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
@@ -175,6 +183,30 @@ export default function TelecallerMyLeadsPage() {
   const [promptInputDate, setPromptInputDate] = useState<string>('');
   const [promptInputReason, setPromptInputReason] = useState<string>('');
   const [promptInputNextAction, setPromptInputNextAction] = useState<string>('');
+
+  // User & URL query parameters sync
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+
+  // WhatsApp auto-suggestion modal target
+  const [whatsAppPromptLead, setWhatsAppPromptLead] = useState<Lead | null>(null);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+
+  // Sync URL query params if present (from report cards click)
+  useEffect(() => {
+    if (!searchParams) return;
+    const oc = searchParams.get('lastCallOutcome') || searchParams.get('outcome');
+    const pl = searchParams.get('pipelineStage') || searchParams.get('pipeline');
+    const pr = searchParams.get('priority');
+    const q = searchParams.get('search');
+    const rg = searchParams.get('range');
+
+    if (oc) setOutcomeFilter(oc);
+    if (pl) setPipelineFilter(pl);
+    if (pr) setPriorityFilter(pr);
+    if (q) setSearchTerm(q);
+    if (rg) setDatePreset(rg);
+  }, [searchParams]);
 
   // Persist filters to localStorage
   useEffect(() => {
@@ -571,6 +603,9 @@ export default function TelecallerMyLeadsPage() {
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
         triggerSaveNotice(`Saved: ${newOutcome}`);
         triggerUndo(previousLead, `Logged outcome "${newOutcome}" for ${lead.companyName}`);
+        if (newOutcome === 'Details Requested') {
+          setWhatsAppPromptLead(res.data);
+        }
       } else {
         throw new Error(res.message || 'Failed to save outcome');
       }
@@ -736,8 +771,8 @@ export default function TelecallerMyLeadsPage() {
       searchPlaceholder="Search company, contact person, phone, email..."
     >
       <div className="space-y-4 max-w-[1600px] mx-auto">
-        {/* Floating Top Notifications */}
-        <div className="fixed top-16 right-6 z-50 flex flex-col gap-2 pointer-events-none">
+        {/* Floating Notifications (safe positioning on mobile) */}
+        <div className="fixed bottom-16 sm:bottom-auto sm:top-16 right-3 sm:right-6 z-50 flex flex-col gap-2 pointer-events-none">
           {saveSuccessNotice && (
             <div className="bg-emerald-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-soft-lg flex items-center gap-2 pointer-events-auto animate-fade-in">
               <CheckCircle2 className="h-4 w-4" />
@@ -755,7 +790,7 @@ export default function TelecallerMyLeadsPage() {
               </div>
               <button
                 onClick={handleUndo}
-                className="ml-2 px-2.5 py-1 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                className="ml-2 px-2.5 py-1 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded-lg flex items-center gap-1 transition-colors cursor-pointer min-h-[36px]"
               >
                 <Undo2 className="h-3.5 w-3.5" />
                 <span>Undo</span>
@@ -764,14 +799,26 @@ export default function TelecallerMyLeadsPage() {
           )}
         </div>
 
+        {/* Mobile Search Bar (Always visible on mobile) */}
+        <div className="md:hidden relative">
+          <Search className="h-4 w-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search company, phone, contact..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-soft-xs min-h-[44px]"
+          />
+        </div>
+
         {/* 7 Filter Chips Above Table (Counts for All + 6 Playbook Stages) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-thin -mx-2 px-2 sm:mx-0 sm:px-0">
           <button
             onClick={() => {
               setPipelineFilter('ALL');
               setCurrentPage(1);
             }}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
               pipelineFilter === 'ALL'
                 ? 'bg-slate-900 text-white border-slate-900 shadow-soft-sm'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -797,7 +844,7 @@ export default function TelecallerMyLeadsPage() {
                   setPipelineFilter(isSelected ? 'ALL' : stageName);
                   setCurrentPage(1);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
                   isSelected
                     ? 'bg-sky-600 text-white border-sky-600 shadow-soft-sm'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -816,8 +863,34 @@ export default function TelecallerMyLeadsPage() {
           })}
         </div>
 
-        {/* Toolbar: Date Filter, Outcomes, Priority, and Results Count */}
-        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-soft-sm flex flex-wrap items-center justify-between gap-3">
+        {/* Mobile-Only Filter Bar Trigger */}
+        <div className="md:hidden flex items-center justify-between gap-2 bg-white p-3 rounded-xl border border-slate-200 shadow-soft-sm">
+          <button
+            onClick={() => setIsMobileFiltersOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-sky-50 text-sky-800 font-bold text-xs border border-sky-200 min-h-[40px] cursor-pointer"
+          >
+            <Filter className="h-3.5 w-3.5 text-sky-600" />
+            <span>
+              Filters{' '}
+              {Boolean(outcomeFilter || priorityFilter || datePreset !== 'ALL') ? `(Active)` : ''}
+            </span>
+          </button>
+
+          <span className="text-xs font-bold text-slate-500">
+            {sortedLeads.length} {sortedLeads.length === 1 ? 'lead' : 'leads'}
+          </span>
+
+          <button
+            onClick={() => refreshLeads()}
+            className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
+            title="Refresh leads"
+          >
+            <RefreshCw className={`h-4 w-4 ${swrLoading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {/* Desktop Toolbar: Date Filter, Outcomes, Priority, and Results Count */}
+        <div className="hidden md:flex bg-white p-3 rounded-xl border border-slate-200 shadow-soft-sm items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Date Filter Menu Dropdown */}
             <div className="relative">
@@ -1002,8 +1075,173 @@ export default function TelecallerMyLeadsPage() {
           </div>
         </div>
 
-        {/* Table View Only */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-soft-sm overflow-hidden flex flex-col">
+        {/* Mobile Cards View (< md) */}
+        <div className="md:hidden space-y-3">
+          {paginatedLeads.length === 0 ? (
+            <div className="p-8 bg-white rounded-xl border border-slate-200 text-center text-slate-400">
+              <AlertTriangle className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+              <span className="font-bold text-sm text-slate-700 block">No leads match current filters</span>
+              <span className="text-xs text-slate-400">Try adjusting your search query, date filter, or pipeline chips.</span>
+            </div>
+          ) : (
+            paginatedLeads.map((lead, idx) => {
+              const rowNumber = pageSize === 0 ? idx + 1 : (currentPage - 1) * pageSize + idx + 1;
+              const priorityMeta = getPriorityColor(lead.priority);
+              const isOpenLead = lead.pipelineStage !== 'Closed';
+              const isMissingAction = isOpenLead && !lead.nextAction?.trim();
+              const isMissingFollowUp = isOpenLead && !lead.nextFollowUpDate;
+
+              return (
+                <div
+                  key={lead.id}
+                  className="bg-white rounded-xl border border-slate-200 shadow-soft-sm p-4 space-y-3"
+                >
+                  {/* Top row: # Serial, Company Name, Contact, Priority */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-black text-xs shrink-0">
+                        #{rowNumber}
+                      </span>
+                      <div className="min-w-0">
+                        <h3
+                          onClick={() => {
+                            setSelectedLeadId(lead.id);
+                            setIsDrawerOpen(true);
+                          }}
+                          className="font-extrabold text-sm text-slate-900 truncate hover:text-sky-600 cursor-pointer"
+                        >
+                          {lead.companyName}
+                        </h3>
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5 truncate">
+                          <span className="font-semibold text-slate-700">{lead.contactPerson || 'No contact'}</span>
+                          {lead.serviceProduct && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">{lead.serviceProduct}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Priority Select */}
+                    <select
+                      value={lead.priority}
+                      onChange={(e) => handlePriorityChange(lead, e.target.value as Priority)}
+                      className={`text-[11px] font-bold rounded-lg px-2 py-1 border shrink-0 ${priorityMeta.bg} ${priorityMeta.text} ${priorityMeta.border}`}
+                    >
+                      {allPriorities.map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Phone Row with Click-to-Call + WhatsApp */}
+                  <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 truncate min-w-0">
+                      <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{lead.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <a
+                        href={`tel:${lead.phone}`}
+                        className="inline-flex items-center justify-center p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs border border-emerald-200 min-h-[40px] min-w-[40px]"
+                        title={`Call ${lead.phone}`}
+                      >
+                        <Phone className="h-4 w-4" />
+                      </a>
+                      <WhatsAppButton phone={lead.phone} leadId={lead.id} size="sm" showText={false} className="min-h-[40px] min-w-[40px]" />
+                    </div>
+                  </div>
+
+                  {/* Pipeline & Outcome Dropdowns */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Pipeline Stage
+                      </label>
+                      <select
+                        value={lead.pipelineStage}
+                        onChange={(e) => handlePipelineChange(lead, e.target.value)}
+                        className={`w-full text-xs font-bold rounded-lg px-2.5 py-2 border cursor-pointer ${getPipelineBadgeColor(
+                          lead.pipelineStage
+                        )}`}
+                      >
+                        {PIPELINE_STAGE_LIST.map((stage) => (
+                          <option key={stage} value={stage}>{stage}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Last Call Outcome
+                      </label>
+                      <select
+                        value={lead.lastCallOutcome || ''}
+                        onChange={(e) => handleOutcomeChange(lead, e.target.value)}
+                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 font-semibold cursor-pointer"
+                      >
+                        <option value="">-- Select Outcome --</option>
+                        {allOutcomes.map((oc) => (
+                          <option key={oc} value={oc}>{oc}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Next Action & Follow-up Date */}
+                  <div className="space-y-2 pt-1 border-t border-slate-100">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                          Next Action
+                        </label>
+                        <input
+                          type="text"
+                          defaultValue={lead.nextAction || ''}
+                          onBlur={(e) => handleNextActionBlur(lead, e.target.value)}
+                          placeholder="e.g. Call back for details"
+                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 font-medium"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                          Next Follow-up
+                        </label>
+                        <input
+                          type="datetime-local"
+                          defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
+                          onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
+                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer Row: Details Button */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <span className="text-[11px] text-slate-400">
+                      Updated: {formatDate(lead.lastActivityAt || lead.updatedAt)}
+                    </span>
+                    <button
+                      onClick={() => {
+                        setSelectedLeadId(lead.id);
+                        setIsDrawerOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 font-bold text-xs transition-colors cursor-pointer min-h-[36px]"
+                    >
+                      View Details →
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Table View (Desktop & Tablet) */}
+        <div className="hidden md:flex bg-white rounded-xl border border-slate-200 shadow-soft-sm overflow-hidden flex-col">
           {/* Scrollable Container with Fixed Columns */}
           <div className="overflow-x-auto max-h-[72vh] scrollbar-thin">
             <table className="w-full text-left text-xs border-collapse">
@@ -1147,9 +1385,9 @@ export default function TelecallerMyLeadsPage() {
                           </div>
                         </td>
 
-                        {/* Phone with Click-to-Call */}
-                        <td className="w-36 min-w-[140px] p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-1.5">
+                        {/* Phone with Click-to-Call & WhatsApp */}
+                        <td className="w-40 min-w-[160px] p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center gap-2">
                             <a
                               href={`tel:${lead.phone}`}
                               className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5"
@@ -1158,6 +1396,13 @@ export default function TelecallerMyLeadsPage() {
                               <Phone className="h-3 w-3 shrink-0" />
                               <span>{lead.phone}</span>
                             </a>
+                            <WhatsAppButton
+                              phone={lead.phone}
+                              leadId={lead.id}
+                              leadName={lead.contactPerson || lead.companyName}
+                              size="sm"
+                              showText={false}
+                            />
                             <button
                               onClick={() => {
                                 setActiveCallLead(lead);
@@ -1276,14 +1521,28 @@ export default function TelecallerMyLeadsPage() {
                         </td>
 
                         {/* Action Buttons */}
-                        <td className="w-24 min-w-[90px] p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="w-32 min-w-[120px] p-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
+                            <a
+                              href={`tel:${lead.phone}`}
+                              className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                              title={`Call ${lead.phone}`}
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                            </a>
+                            <WhatsAppButton
+                              phone={lead.phone}
+                              leadId={lead.id}
+                              leadName={lead.contactPerson || lead.companyName}
+                              size="sm"
+                              showText={false}
+                            />
                             <button
                               onClick={() => {
                                 setSelectedLeadId(lead.id);
                                 setIsDrawerOpen(true);
                               }}
-                              className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
+                              className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
                               title="Open Full Details"
                             >
                               Details
@@ -1489,6 +1748,167 @@ export default function TelecallerMyLeadsPage() {
             }
           }}
         />
+
+        {/* WhatsApp Auto-Suggestion Prompt when "Details Requested" is chosen */}
+        {whatsAppPromptLead && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-soft-2xl border border-slate-200 w-full max-w-sm p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                  <WhatsAppIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-slate-900">Open WhatsApp now?</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {whatsAppPromptLead.companyName} requested details.
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-slate-600 bg-emerald-50/60 p-3 rounded-xl border border-emerald-100">
+                A pre-filled greeting message will be prepared with the prospect&apos;s phone number (
+                <strong className="text-emerald-900">{whatsAppPromptLead.phone}</strong>).
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setWhatsAppPromptLead(null)}
+                  className="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 min-h-[40px] cursor-pointer"
+                >
+                  Later
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const l = whatsAppPromptLead;
+                    setWhatsAppPromptLead(null);
+                    openWhatsAppChat(l.phone, {
+                      leadId: l.id,
+                      telecallerName: user?.name,
+                    });
+                  }}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-soft-sm min-h-[40px] flex items-center gap-1.5 cursor-pointer"
+                >
+                  <WhatsAppIcon className="h-4 w-4" />
+                  <span>Open WhatsApp</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Filters Modal / Bottom Sheet */}
+        <Modal
+          isOpen={isMobileFiltersOpen}
+          onClose={() => setIsMobileFiltersOpen(false)}
+          title="Filter Leads"
+          size="md"
+        >
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Date Range</label>
+              <div className="grid grid-cols-2 gap-2">
+                {DATE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => setDatePreset(preset.id)}
+                    className={`px-3 py-2 text-xs font-semibold rounded-xl border text-left min-h-[40px] ${
+                      datePreset === preset.id
+                        ? 'bg-sky-600 text-white border-sky-600'
+                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {datePreset === 'CUSTOM' && (
+              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">From</label>
+                  <input
+                    type="date"
+                    value={customFromDate}
+                    onChange={(e) => setCustomFromDate(e.target.value)}
+                    className="w-full text-base sm:text-xs bg-white border border-slate-200 rounded-lg p-2 min-h-[44px] sm:min-h-0"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">To</label>
+                  <input
+                    type="date"
+                    value={customToDate}
+                    onChange={(e) => setCustomToDate(e.target.value)}
+                    className="w-full text-base sm:text-xs bg-white border border-slate-200 rounded-lg p-2 min-h-[44px] sm:min-h-0"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Call Outcome</label>
+              <select
+                value={outcomeFilter}
+                onChange={(e) => setOutcomeFilter(e.target.value)}
+                className="w-full text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 min-h-[44px] sm:min-h-0"
+              >
+                <option value="">All Call Outcomes</option>
+                {allOutcomes.map((oc) => (
+                  <option key={oc} value={oc}>
+                    {oc}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Priority</label>
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value)}
+                className="w-full text-base sm:text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 min-h-[44px] sm:min-h-0"
+              >
+                <option value="">All Priorities</option>
+                {allPriorities.map((p) => (
+                  <option key={p} value={p}>
+                    {p} Priority
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setPipelineFilter('ALL');
+                  setOutcomeFilter('');
+                  setPriorityFilter('');
+                  setDatePreset('ALL');
+                  setCustomFromDate('');
+                  setCustomToDate('');
+                  setCurrentPage(1);
+                  setIsMobileFiltersOpen(false);
+                }}
+                className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 border border-slate-200 rounded-xl min-h-[44px]"
+              >
+                Clear All
+              </button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setCurrentPage(1);
+                  setIsMobileFiltersOpen(false);
+                }}
+                className="min-h-[44px] px-6"
+              >
+                Apply Filters
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </AppLayout>
   );

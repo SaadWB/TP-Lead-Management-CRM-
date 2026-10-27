@@ -32,7 +32,7 @@ export function CardHeader({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn('px-5 py-4 border-b border-slate-100 flex items-center justify-between', className)}
+      className={cn('px-4 sm:px-5 py-3.5 sm:py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3', className)}
       {...props}
     >
       {children}

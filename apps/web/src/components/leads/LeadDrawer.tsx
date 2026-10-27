@@ -32,6 +32,7 @@ import { HandoverModal } from '../kanban/HandoverModal';
 import { UpdateSalesStageModal } from './UpdateSalesStageModal';
 import { ScheduleFollowUpModal } from '../kanban/ScheduleFollowUpModal';
 import { useAuth } from '@/lib/authContext';
+import { WhatsAppButton } from './WhatsAppButton';
 
 interface LeadDrawerProps {
   leadId: string | null;
@@ -185,10 +186,10 @@ export function LeadDrawer({
         onClick={onClose}
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
         <div className="w-screen max-w-2xl bg-white shadow-soft-xl border-l border-slate-200 flex flex-col z-10 animate-fade-in">
           {/* Header */}
-          <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+          <div className="px-5 sm:px-6 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-lg bg-sky-600 text-white flex items-center justify-center font-bold text-sm shrink-0">
                 {lead?.companyName?.charAt(0) || 'L'}
@@ -210,7 +211,7 @@ export function LeadDrawer({
             <div className="flex items-center gap-2">
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -220,16 +221,25 @@ export function LeadDrawer({
           {lead && (
             <>
               {/* Quick Action Bar */}
-              <div className="px-6 py-2.5 bg-white border-b border-slate-100 flex items-center justify-between gap-2 overflow-x-auto">
+              <div className="px-5 sm:px-6 py-2.5 bg-white border-b border-slate-100 flex items-center justify-between gap-2 overflow-x-auto">
                 <div className="flex items-center gap-2 shrink-0">
                   {/* Click-to-call */}
                   <a
                     href={`tel:${lead.phone}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold text-xs border border-emerald-200 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold text-xs border border-emerald-200 transition-colors cursor-pointer min-h-[36px]"
                     title="Click-to-call using system dialer"
                   >
                     <Phone className="h-3.5 w-3.5" /> Call ({lead.phone})
                   </a>
+
+                  {/* WhatsApp button */}
+                  <WhatsAppButton
+                    phone={lead.phone}
+                    leadId={lead.id}
+                    size="sm"
+                    showText={true}
+                    className="px-3 py-1.5 min-h-[36px]"
+                  />
 
                   <Button
                     size="sm"
