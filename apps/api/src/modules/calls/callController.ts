@@ -30,9 +30,20 @@ export async function logCall(req: Request, res: Response, next: NextFunction): 
     const data = logCallSchema.parse(req.body);
     const outcome = normalizeCallOutcome(data.outcome);
 
-    // Validate follow-up date and time for Callback Requested and Demo Requested
+    const matchedOutcome = dbStore.store.callOutcomeOptions?.find(
+      (o) => o.name.toLowerCase() === outcome.toLowerCase() || o.name.toLowerCase() === (data.outcome || '').toLowerCase()
+    );
+
+    // Validate follow-up date and time
     let followUpDate: string | undefined = undefined;
-    if (outcome === 'Callback Requested' || outcome === 'Demo Requested') {
+    const requiresDateTime =
+      matchedOutcome?.flags?.requiresDateTime ||
+      outcome === 'Callback Requested' ||
+      outcome === 'Demo Requested' ||
+      outcome === 'Call Back Later' ||
+      outcome === 'Demo Scheduled';
+
+    if (requiresDateTime) {
       if (!data.nextFollowUpDate) {
         throw new BadRequestError(`Date and time are required when selecting "${outcome}".`);
       }
@@ -53,6 +64,7 @@ export async function logCall(req: Request, res: Response, next: NextFunction): 
         followUpDate = data.nextFollowUpDate;
       }
     }
+
 
     // 1. Create CallLog entry
     const callLog = await callLogRepository.create({

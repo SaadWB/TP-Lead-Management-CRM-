@@ -66,8 +66,12 @@ export default function LoginPage() {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md z-10 text-center">
         {/* Brand Logo */}
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-sky-600 text-white font-black text-xl shadow-soft-lg mb-3">
-          TP
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white p-2 shadow-soft-lg mb-3 border border-slate-800/80">
+          <img
+            src="/tenderprocure-logo.png"
+            alt="TenderProcure Logo"
+            className="w-full h-full object-contain"
+          />
         </div>
         <h2 className="text-2xl font-black tracking-tight text-white">TenderProcure CRM</h2>
         <p className="mt-1 text-xs text-slate-400">

@@ -265,3 +265,35 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([userId, createdAt])
 }
+
+model PipelineStageOption {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, order])
+}
+
+model CallOutcomeOption {
+  id                     String   @id @default(cuid())
+  name                   String   @unique
+  color                  String?
+  suggestedPipelineStage String?
+  requiresDateTime       Boolean  @default(false)
+  requiresNextFollowUp   Boolean  @default(false)
+  closesLead             Boolean  @default(false)
+  autoReturnNewLeadsDays Int?
+  isDefault              Boolean  @default(false)
+  isActive               Boolean  @default(true)
+  order                  Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([isActive, order])
+}
+

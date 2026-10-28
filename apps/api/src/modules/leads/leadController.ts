@@ -340,10 +340,34 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       throw new BadRequestError('Assigning to Salesman requires selecting an active Sales Closer.');
     }
 
-    // Rules for dates:
-    // Call Back Later and Demo Scheduled: date and time is required (past dates not allowed)
+    // Dynamic & Fallback Rules for outcome flags:
     let followUpDate: string | undefined = data.nextFollowUpDate || (data as any).meetingDate || (req.body as any).followUpDate;
-    if (targetOutcome === 'Call Back Later' || targetOutcome === 'Demo Scheduled') {
+    const outcomeOption = targetOutcome
+      ? dbStore.store.callOutcomeOptions?.find((o) => o.name.toLowerCase() === targetOutcome.toLowerCase())
+      : null;
+
+    if (outcomeOption?.suggestedPipelineStage && !data.pipelineStage) {
+      targetPipeline = outcomeOption.suggestedPipelineStage;
+    }
+
+    const requiresDateTime =
+      outcomeOption?.flags?.requiresDateTime ||
+      targetOutcome === 'Call Back Later' ||
+      targetOutcome === 'Demo Scheduled';
+
+    const requiresNextFollowUp =
+      outcomeOption?.flags?.requiresNextFollowUp ||
+      targetOutcome === 'Demo Interested' ||
+      targetOutcome === 'Details Requested' ||
+      targetOutcome === 'Demo Completed' ||
+      targetOutcome === 'Decision Pending';
+
+    const closesLead =
+      outcomeOption?.flags?.closesLead ||
+      targetOutcome === 'Not Interested' ||
+      targetOutcome === 'Wrong Number';
+
+    if (requiresDateTime) {
       if (!followUpDate) {
         throw new BadRequestError(`Date and time are required when selecting "${targetOutcome}".`);
       }
@@ -351,21 +375,17 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       if (isNaN(parsedTime) || parsedTime < Date.now() - 60000) {
         throw new BadRequestError('Date and time cannot be in the past.');
       }
-    } else if (
-      targetOutcome === 'Demo Interested' ||
-      targetOutcome === 'Details Requested' ||
-      targetOutcome === 'Demo Completed' ||
-      targetOutcome === 'Decision Pending'
-    ) {
-      // Demo Interested, Details Requested, Demo Completed, Decision Pending: Next Follow-up date is required
+    } else if (requiresNextFollowUp) {
       if (!followUpDate && !lead.nextFollowUpDate) {
         throw new BadRequestError(`Next follow-up date is required for "${targetOutcome}".`);
       }
-    } else if (targetOutcome === 'Not Interested' || targetOutcome === 'Wrong Number') {
-      // Not Interested and Wrong Number set Pipeline to Closed, no follow-up date
-      targetPipeline = 'Closed';
+    }
+
+    if (closesLead) {
+      targetPipeline = outcomeOption?.suggestedPipelineStage || 'Closed';
       followUpDate = undefined;
     }
+
 
     const now = new Date();
     const updatePayload: any = {
@@ -708,11 +728,26 @@ export async function completeFollowUp(req: Request, res: Response, next: NextFu
 }
 
 /**
- * Requirement 4: Custom Options for Priority and Last Call Outcome
+ * Requirement 4 & Round 10: Dynamic Options for Pipeline and Call Outcome
  */
 export async function getCustomOptions(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const opts = dbStore.store.customOptions || { priorities: [], callOutcomes: [] };
+    const store = dbStore.store;
+    const activeOutcomes = (store.callOutcomeOptions || [])
+      .filter((o) => o.isActive)
+      .sort((a, b) => a.order - b.order)
+      .map((o) => o.name);
+
+    const activeStages = (store.pipelineStageOptions || [])
+      .filter((s) => s.isActive)
+      .sort((a, b) => a.order - b.order)
+      .map((s) => s.name);
+
+    const opts = {
+      priorities: store.customOptions?.priorities || [],
+      callOutcomes: activeOutcomes.length > 0 ? activeOutcomes : (store.customOptions?.callOutcomes || []),
+      pipelineStages: activeStages,
+    };
     sendSuccess(res, opts);
   } catch (error) {
     next(error);

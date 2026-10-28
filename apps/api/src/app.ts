@@ -17,6 +17,7 @@ import importRoutes from './modules/imports/importRoutes';
 import notificationRoutes from './modules/notifications/notificationRoutes';
 import reportRoutes from './modules/reports/reportRoutes';
 import activityRoutes from './modules/activities/activityRoutes';
+import optionRoutes from './modules/options/optionRoutes';
 
 export function createApp(): Application {
   const app = express();
@@ -62,6 +63,7 @@ export function createApp(): Application {
   apiV1.use('/notifications', notificationRoutes);
   apiV1.use('/reports', reportRoutes);
   apiV1.use('/activities', activityRoutes);
+  apiV1.use('/options', optionRoutes);
 
   app.use('/api/v1', apiV1);
 

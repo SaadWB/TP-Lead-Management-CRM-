@@ -17,6 +17,7 @@ import {
   ChevronRight,
   CheckSquare,
   Table,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,7 @@ export function Sidebar({ onClose, className = '', isMobileDrawer = false }: Sid
     { title: 'Upload & Assign', href: '/admin/import', icon: FileSpreadsheet, badge: 'Wizard' },
     { title: 'User Management', href: '/admin/users', icon: Users },
     { title: 'Reports & Funnels', href: '/admin/reports', icon: BarChart3 },
+    { title: 'Pipeline & Outcomes', href: '/admin/settings/options', icon: SlidersHorizontal },
   ];
 
   const telecallerNav: NavItem[] = [
@@ -106,8 +108,12 @@ export function Sidebar({ onClose, className = '', isMobileDrawer = false }: Sid
       {/* Brand Header */}
       <div className="h-16 px-5 flex items-center justify-between border-b border-slate-800/80 bg-slate-950/40">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-sky-500 flex items-center justify-center font-black text-white text-base shadow-soft-sm shrink-0">
-            TP
+          <div className="w-9 h-9 rounded-lg bg-white p-1 flex items-center justify-center shadow-soft-sm shrink-0 border border-slate-700/60">
+            <img
+              src="/tenderprocure-logo.png"
+              alt="TenderProcure"
+              className="w-full h-full object-contain"
+            />
           </div>
           <div className="min-w-0">
             <span className="font-extrabold text-sm tracking-tight text-white block truncate">

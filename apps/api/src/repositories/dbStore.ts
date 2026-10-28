@@ -17,6 +17,9 @@ import {
   TaskStatus,
   ActivityType,
   normalizeCallOutcome,
+  PipelineStageOption,
+  CallOutcomeOption,
+  AuditLogItem,
 } from '@crm/shared';
 
 export interface CustomOptions {
@@ -33,7 +36,41 @@ export interface DataStore {
   followUpTasks: FollowUpTask[];
   notifications: NotificationItem[];
   customOptions: CustomOptions;
+  pipelineStageOptions: PipelineStageOption[];
+  callOutcomeOptions: CallOutcomeOption[];
+  auditLogs: AuditLogItem[];
 }
+
+export function getDefaultPipelineStageOptions(): PipelineStageOption[] {
+  const now = new Date().toISOString();
+  return [
+    { id: 'stg_new_lead', name: 'New Lead', color: 'blue', isDefault: true, isActive: true, order: 0, createdAt: now, updatedAt: now },
+    { id: 'stg_attempting_contact', name: 'Attempting Contact', color: 'amber', isDefault: true, isActive: true, order: 1, createdAt: now, updatedAt: now },
+    { id: 'stg_connected', name: 'Connected', color: 'sky', isDefault: true, isActive: true, order: 2, createdAt: now, updatedAt: now },
+    { id: 'stg_follow_up', name: 'Follow-up', color: 'purple', isDefault: true, isActive: true, order: 3, createdAt: now, updatedAt: now },
+    { id: 'stg_demo', name: 'Demo', color: 'indigo', isDefault: true, isActive: true, order: 4, createdAt: now, updatedAt: now },
+    { id: 'stg_closed', name: 'Closed', color: 'slate', isDefault: true, isActive: true, order: 5, createdAt: now, updatedAt: now },
+  ];
+}
+
+export function getDefaultCallOutcomeOptions(): CallOutcomeOption[] {
+  const now = new Date().toISOString();
+  return [
+    { id: 'outc_no_answer', name: 'No Answer', color: 'amber', suggestedPipelineStage: 'Attempting Contact', flags: { autoReturnNewLeadsDays: 3 }, isDefault: true, isActive: true, order: 0, createdAt: now, updatedAt: now },
+    { id: 'outc_busy', name: 'Busy', color: 'amber', suggestedPipelineStage: 'Follow-up', flags: {}, isDefault: true, isActive: true, order: 1, createdAt: now, updatedAt: now },
+    { id: 'outc_call_cut', name: 'Call Cut', color: 'rose', suggestedPipelineStage: 'Attempting Contact', flags: { autoReturnNewLeadsDays: 3 }, isDefault: true, isActive: true, order: 2, createdAt: now, updatedAt: now },
+    { id: 'outc_call_back_later', name: 'Call Back Later', color: 'purple', suggestedPipelineStage: 'Follow-up', flags: { requiresDateTime: true, requiresNextFollowUp: true }, isDefault: true, isActive: true, order: 3, createdAt: now, updatedAt: now },
+    { id: 'outc_connected_discussed', name: 'Connected – Discussed', color: 'sky', suggestedPipelineStage: 'Connected', flags: {}, isDefault: true, isActive: true, order: 4, createdAt: now, updatedAt: now },
+    { id: 'outc_details_requested', name: 'Details Requested', color: 'blue', suggestedPipelineStage: 'Follow-up', flags: { requiresNextFollowUp: true }, isDefault: true, isActive: true, order: 5, createdAt: now, updatedAt: now },
+    { id: 'outc_demo_interested', name: 'Demo Interested', color: 'indigo', suggestedPipelineStage: 'Follow-up', flags: { requiresNextFollowUp: true }, isDefault: true, isActive: true, order: 6, createdAt: now, updatedAt: now },
+    { id: 'outc_demo_scheduled', name: 'Demo Scheduled', color: 'indigo', suggestedPipelineStage: 'Demo', flags: { requiresDateTime: true, requiresNextFollowUp: true }, isDefault: true, isActive: true, order: 7, createdAt: now, updatedAt: now },
+    { id: 'outc_demo_completed', name: 'Demo Completed', color: 'teal', suggestedPipelineStage: 'Follow-up', flags: { requiresNextFollowUp: true }, isDefault: true, isActive: true, order: 8, createdAt: now, updatedAt: now },
+    { id: 'outc_decision_pending', name: 'Decision Pending', color: 'amber', suggestedPipelineStage: 'Follow-up', flags: { requiresNextFollowUp: true }, isDefault: true, isActive: true, order: 9, createdAt: now, updatedAt: now },
+    { id: 'outc_not_interested', name: 'Not Interested', color: 'rose', suggestedPipelineStage: 'Closed', flags: { closesLead: true }, isDefault: true, isActive: true, order: 10, createdAt: now, updatedAt: now },
+    { id: 'outc_wrong_number', name: 'Wrong Number', color: 'rose', suggestedPipelineStage: 'Closed', flags: { closesLead: true }, isDefault: true, isActive: true, order: 11, createdAt: now, updatedAt: now },
+  ];
+}
+
 
 const DATA_DIR = path.resolve(__dirname, '../../../../.data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
@@ -521,6 +558,9 @@ function generateInitialSeed(): DataStore {
       priorities: [],
       callOutcomes: [],
     },
+    pipelineStageOptions: getDefaultPipelineStageOptions(),
+    callOutcomeOptions: getDefaultCallOutcomeOptions(),
+    auditLogs: [],
   };
 }
 
@@ -620,6 +660,86 @@ class StoreManager {
             }
           }
         }
+
+        // Round 10 Migration: Pipeline Stage and Call Outcome Options + Audit Logs
+        if (!Array.isArray(store.pipelineStageOptions) || store.pipelineStageOptions.length === 0) {
+          store.pipelineStageOptions = getDefaultPipelineStageOptions();
+          migrated = true;
+        }
+
+        if (!Array.isArray(store.callOutcomeOptions) || store.callOutcomeOptions.length === 0) {
+          store.callOutcomeOptions = getDefaultCallOutcomeOptions();
+          if (Array.isArray(store.customOptions?.callOutcomes)) {
+            for (const cust of store.customOptions.callOutcomes) {
+              const clean = cust.trim();
+              if (
+                clean &&
+                !clean.toLowerCase().includes('special inquiry') &&
+                !store.callOutcomeOptions.some((o) => o.name.toLowerCase() === clean.toLowerCase())
+              ) {
+                store.callOutcomeOptions.push({
+                  id: `outc_cust_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                  name: clean,
+                  color: 'indigo',
+                  suggestedPipelineStage: 'Follow-up',
+                  flags: { requiresNextFollowUp: true },
+                  isDefault: false,
+                  isActive: true,
+                  order: store.callOutcomeOptions.length,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              }
+            }
+          }
+          migrated = true;
+        }
+
+        // Preserve any custom stage or outcome from existing leads
+        if (Array.isArray(store.leads)) {
+          for (const lead of store.leads) {
+            if (
+              lead.pipelineStage &&
+              !store.pipelineStageOptions.some((s) => s.name.toLowerCase() === lead.pipelineStage.toLowerCase())
+            ) {
+              store.pipelineStageOptions.push({
+                id: `stg_cust_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                name: lead.pipelineStage,
+                color: 'slate',
+                isDefault: false,
+                isActive: true,
+                order: store.pipelineStageOptions.length,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+              migrated = true;
+            }
+            if (
+              lead.lastCallOutcome &&
+              !store.callOutcomeOptions.some((o) => o.name.toLowerCase() === lead.lastCallOutcome!.toLowerCase())
+            ) {
+              store.callOutcomeOptions.push({
+                id: `outc_cust_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                name: lead.lastCallOutcome,
+                color: 'slate',
+                suggestedPipelineStage: 'Follow-up',
+                flags: {},
+                isDefault: false,
+                isActive: true,
+                order: store.callOutcomeOptions.length,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+              migrated = true;
+            }
+          }
+        }
+
+        if (!Array.isArray(store.auditLogs)) {
+          store.auditLogs = [];
+          migrated = true;
+        }
+
         if (migrated) {
           this.saveData(store);
         }
@@ -634,8 +754,8 @@ class StoreManager {
   }
 
   /**
-   * Rule 5: Automatic Follow-up & Return-to-Fresh Rules
-   * - No Answer / Ringing or Busy / Declined returns to New Fresh Leads on 3rd calendar day after call
+   * Rule 5 & Round 10: Automatic Follow-up & Return-to-Fresh Rules
+   * - Checks outcome flags for autoReturnNewLeadsDays (default: 3 days for retry outcomes)
    */
   public processAutomaticRules(): boolean {
     const now = Date.now();
@@ -652,20 +772,29 @@ class StoreManager {
     for (const lead of this.data.leads) {
       if (lead.archivedAt) continue;
 
-      const isRetryOutcome =
+      let returnDays: number | null = null;
+      const matchedOutcome = this.data.callOutcomeOptions?.find(
+        (o) => o.name.toLowerCase() === (lead.lastCallOutcome || '').toLowerCase()
+      );
+      if (matchedOutcome?.flags?.autoReturnNewLeadsDays != null) {
+        returnDays = matchedOutcome.flags.autoReturnNewLeadsDays;
+      } else if (
         lead.lastCallOutcome === 'No Answer' ||
         lead.lastCallOutcome === 'Busy' ||
         lead.lastCallOutcome === 'Call Cut' ||
         lead.pipelineStage === 'No Answer / Ringing' ||
-        lead.pipelineStage === 'Busy / Declined';
+        lead.pipelineStage === 'Busy / Declined'
+      ) {
+        returnDays = 3;
+      }
 
-      if (isRetryOutcome && lead.lastContactDate && lead.pipelineStage !== 'New Lead' && lead.pipelineStage !== 'Closed') {
+      if (returnDays !== null && lead.lastContactDate && lead.pipelineStage !== 'New Lead' && lead.pipelineStage !== 'Closed') {
         const callDate = new Date(lead.lastContactDate);
         const callDateStr = callDate.toISOString().split('T')[0];
         const diffMs = new Date(todayStr).getTime() - new Date(callDateStr).getTime();
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-        if (diffDays >= 3) {
+        if (diffDays >= returnDays) {
           const oldStage = lead.pipelineStage;
           lead.pipelineStage = 'New Lead';
           lead.isRetry = true;

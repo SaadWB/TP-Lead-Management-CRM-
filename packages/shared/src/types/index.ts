@@ -274,3 +274,48 @@ export interface DashboardMetrics {
   recentActivities: LeadActivity[];
   inactiveLeadsCount?: number;
 }
+
+export interface OutcomeBehaviorFlags {
+  requiresDateTime?: boolean;
+  requiresNextFollowUp?: boolean;
+  closesLead?: boolean;
+  autoReturnNewLeadsDays?: number | null;
+}
+
+export interface PipelineStageOption {
+  id: string;
+  name: string;
+  color?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  order: number;
+  leadCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CallOutcomeOption {
+  id: string;
+  name: string;
+  color?: string;
+  suggestedPipelineStage?: string;
+  flags: OutcomeBehaviorFlags;
+  isDefault: boolean;
+  isActive: boolean;
+  order: number;
+  leadCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuditLogItem {
+  id: string;
+  userId?: string | null;
+  user?: { id: string; name: string; email: string; role?: string } | null;
+  action: string;
+  entity: string;
+  entityId?: string | null;
+  details?: Record<string, any> | null;
+  createdAt: string;
+}
+

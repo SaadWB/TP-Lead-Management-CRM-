@@ -25,7 +25,7 @@ router.use(authenticate);
 
 router.get('/', listLeads);
 router.get('/custom-options', getCustomOptions);
-router.post('/custom-options', addCustomOption);
+router.post('/custom-options', requireRole([USER_ROLES.SUPER_ADMIN]), addCustomOption);
 router.get('/check-duplicate', checkDuplicates);
 router.get('/:id', getLeadById);
 router.post('/', requireRole([USER_ROLES.SUPER_ADMIN]), createLead);
