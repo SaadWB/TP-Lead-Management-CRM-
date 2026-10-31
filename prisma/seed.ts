@@ -1,153 +1,100 @@
-import { PrismaClient, Role, Priority, TaskType } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load environment variables from apps/api/.env or root .env
+dotenv.config({ path: path.resolve(__dirname, '../apps/api/.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('🌱 Starting TenderProcure CRM Prisma Database Seed...');
-  const passwordHash = await bcrypt.hash('Password@123', 10);
+const DEFAULT_PIPELINE_STAGES = [
+  { name: 'New Lead', color: 'blue', order: 0, isDefault: true },
+  { name: 'Attempting Contact', color: 'amber', order: 1, isDefault: true },
+  { name: 'Connected', color: 'sky', order: 2, isDefault: true },
+  { name: 'Follow-up', color: 'purple', order: 3, isDefault: true },
+  { name: 'Demo', color: 'indigo', order: 4, isDefault: true },
+  { name: 'Closed', color: 'slate', order: 5, isDefault: true },
+];
 
-  // 1. Seed Super Admin
+const DEFAULT_CALL_OUTCOMES = [
+  { name: 'No Answer', color: 'amber', suggestedPipelineStage: 'Attempting Contact', autoReturnNewLeadsDays: 3, isDefault: true, order: 0 },
+  { name: 'Busy', color: 'amber', suggestedPipelineStage: 'Follow-up', isDefault: true, order: 1 },
+  { name: 'Call Cut', color: 'rose', suggestedPipelineStage: 'Attempting Contact', autoReturnNewLeadsDays: 3, isDefault: true, order: 2 },
+  { name: 'Call Back Later', color: 'purple', suggestedPipelineStage: 'Follow-up', requiresDateTime: true, requiresNextFollowUp: true, isDefault: true, order: 3 },
+  { name: 'Connected – Discussed', color: 'sky', suggestedPipelineStage: 'Connected', isDefault: true, order: 4 },
+  { name: 'Details Requested', color: 'blue', suggestedPipelineStage: 'Follow-up', requiresNextFollowUp: true, isDefault: true, order: 5 },
+  { name: 'Demo Interested', color: 'indigo', suggestedPipelineStage: 'Follow-up', requiresNextFollowUp: true, isDefault: true, order: 6 },
+  { name: 'Demo Scheduled', color: 'indigo', suggestedPipelineStage: 'Demo', requiresDateTime: true, requiresNextFollowUp: true, isDefault: true, order: 7 },
+  { name: 'Demo Completed', color: 'teal', suggestedPipelineStage: 'Follow-up', requiresNextFollowUp: true, isDefault: true, order: 8 },
+  { name: 'Decision Pending', color: 'amber', suggestedPipelineStage: 'Follow-up', requiresNextFollowUp: true, isDefault: true, order: 9 },
+  { name: 'Not Interested', color: 'rose', suggestedPipelineStage: 'Closed', closesLead: true, isDefault: true, order: 10 },
+  { name: 'Wrong Number', color: 'rose', suggestedPipelineStage: 'Closed', closesLead: true, isDefault: true, order: 11 },
+];
+
+async function main() {
+  console.log('🌱 Starting TenderProcure CRM Production Seed...');
+
+  const adminEmail = process.env.INITIAL_ADMIN_EMAIL || 'admin@tenderprocure.com';
+  const rawAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+
+  if (!rawAdminPassword || rawAdminPassword.trim().length < 10) {
+    throw new Error(
+      'INITIAL_ADMIN_PASSWORD environment variable is missing or less than 10 characters long. ' +
+      'Please configure a strong password in apps/api/.env before running database seed.'
+    );
+  }
+
+  // Cost factor 12 for bcrypt
+  const passwordHash = await bcrypt.hash(rawAdminPassword.trim(), 12);
+
+  // 1. Seed or update required first Super Admin user
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@tenderprocure.com' },
-    update: {},
+    where: { email: adminEmail },
+    update: {
+      isActive: true,
+      role: Role.SUPER_ADMIN,
+    },
     create: {
-      name: 'Alexander Vance (Super Admin)',
-      email: 'admin@tenderprocure.com',
+      name: process.env.INITIAL_ADMIN_NAME || 'Super Administrator',
+      email: adminEmail,
       passwordHash,
       role: Role.SUPER_ADMIN,
-      phone: '+1-555-0100',
+      phone: null,
       isActive: true,
+      mustChangePassword: true, // Force password change on first login
     },
   });
 
-  // 2. Seed Telecallers
-  const telecaller1 = await prisma.user.upsert({
-    where: { email: 'telecaller1@tenderprocure.com' },
-    update: {},
-    create: {
-      name: 'Priya Sharma',
-      email: 'telecaller1@tenderprocure.com',
-      passwordHash,
-      role: Role.TELECALLER,
-      phone: '+1-555-0101',
-      isActive: true,
-    },
-  });
+  console.log(`✅ Admin user verified: ${admin.email} (ID: ${admin.id}, mustChangePassword: true)`);
 
-  const telecaller2 = await prisma.user.upsert({
-    where: { email: 'telecaller2@tenderprocure.com' },
-    update: {},
-    create: {
-      name: 'Rahul Verma',
-      email: 'telecaller2@tenderprocure.com',
-      passwordHash,
-      role: Role.TELECALLER,
-      phone: '+1-555-0102',
-      isActive: true,
-    },
-  });
+  // 2. Initialize default pipeline stages
+  for (const stage of DEFAULT_PIPELINE_STAGES) {
+    await prisma.pipelineStageOption.upsert({
+      where: { name: stage.name },
+      update: {},
+      create: stage,
+    });
+  }
+  console.log(`✅ Default pipeline stages initialized (${DEFAULT_PIPELINE_STAGES.length} stages)`);
 
-  // 3. Seed Salesmen
-  const salesman1 = await prisma.user.upsert({
-    where: { email: 'sales1@tenderprocure.com' },
-    update: {},
-    create: {
-      name: 'David Kim',
-      email: 'sales1@tenderprocure.com',
-      passwordHash,
-      role: Role.SALESMAN,
-      phone: '+1-555-0103',
-      isActive: true,
-    },
-  });
+  // 3. Initialize default call outcomes
+  for (const outcome of DEFAULT_CALL_OUTCOMES) {
+    await prisma.callOutcomeOption.upsert({
+      where: { name: outcome.name },
+      update: {},
+      create: outcome,
+    });
+  }
+  console.log(`✅ Default call outcome options initialized (${DEFAULT_CALL_OUTCOMES.length} options)`);
 
-  const salesman2 = await prisma.user.upsert({
-    where: { email: 'sales2@tenderprocure.com' },
-    update: {},
-    create: {
-      name: 'Ananya Patel',
-      email: 'sales2@tenderprocure.com',
-      passwordHash,
-      role: Role.SALESMAN,
-      phone: '+1-555-0104',
-      isActive: true,
-    },
-  });
-
-  // 4. Seed Leads
-  const lead1 = await prisma.lead.create({
-    data: {
-      companyName: 'Apex Industrial Solvents',
-      serviceProduct: 'Government Tender Procurement SaaS',
-      contactPerson: 'Robert Sterling',
-      phone: '+1-555-234-5678',
-      email: 'r.sterling@apexind.com',
-      city: 'Chicago',
-      state: 'IL',
-      priority: Priority.HIGH,
-      pipelineStage: 'CONNECTED',
-      callAttempts: 2,
-      lastCallOutcome: 'CONNECTED',
-      lastContactDate: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      nextFollowUpDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      nextAction: 'Send technical compliance proposal and pricing sheet',
-      notes: 'Actively bidding on 3 defense sector tenders. Needs automated bid tracking.',
-      leadSource: 'Import - Q4 Manufacturing List',
-      assignedTelecallerId: telecaller1.id,
-      createdById: admin.id,
-    },
-  });
-
-  const lead2 = await prisma.lead.create({
-    data: {
-      companyName: 'Fortress Cyber Defense Ltd',
-      serviceProduct: 'Federal Security Tender Automation',
-      contactPerson: 'Nathan Drake',
-      phone: '+1-555-789-0123',
-      email: 'nathan@fortressdefense.gov.mock',
-      city: 'Washington',
-      state: 'DC',
-      priority: Priority.URGENT,
-      pipelineStage: 'ASSIGNED_TO_SALESMAN',
-      callAttempts: 5,
-      lastCallOutcome: 'CONNECTED',
-      notes: 'Qualified by Priya. High-value opportunity with $80k annual estimated license.',
-      leadSource: 'GovTech Summit',
-      assignedTelecallerId: telecaller1.id,
-      assignedSalesmanId: salesman1.id,
-      createdById: admin.id,
-    },
-  });
-
-  // 5. Seed CallLog & Task
-  await prisma.callLog.create({
-    data: {
-      leadId: lead1.id,
-      userId: telecaller1.id,
-      outcome: 'CONNECTED',
-      notes: 'Spoke with Robert. He handles civil supply bids. Very open to our compliance auto-check.',
-      durationSeconds: 380,
-    },
-  });
-
-  await prisma.followUpTask.create({
-    data: {
-      leadId: lead1.id,
-      assignedUserId: telecaller1.id,
-      taskType: TaskType.CALL,
-      dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      dueTime: '11:00',
-      notes: 'Discuss technical proposal with Robert.',
-    },
-  });
-
-  console.log('✅ Seed completed successfully with Admin, Telecallers, Salesmen, Leads, Call Logs, and Tasks!');
+  console.log('🎉 Production seed completed successfully! No demo data created.');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('❌ Database seed failed:', e);
     process.exit(1);
   })
   .finally(async () => {

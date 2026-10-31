@@ -13,14 +13,12 @@
     "build": "npm run build --workspaces --if-present",
     "postinstall": "npm run build --workspace=@crm/shared",
     "test": "npm run test --workspaces --if-present",
-    "prisma:generate": "npx prisma generate",
-    "prisma:migrate": "npx prisma migrate dev",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma db push",
+    "prisma:seed": "sucrase-node prisma/seed.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.5"
-  },
-  "dependencies": {
-    "@share-crm/sharecrm-cli": "^1.1.17"
   }
 }

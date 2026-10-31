@@ -1,4 +1,8 @@
+# Dependencies
 node_modules/
+.pnpm-store/
+
+# Builds & Outputs
 .next/
 apps/api/dist/
 apps/web/dist/
@@ -6,7 +10,30 @@ dist/
 !packages/shared/dist/
 !packages/shared/dist/**
 build/
+
+# Environment Variables & Secrets
 .env
 .env.*
+!.env.example
+apps/api/.env
+apps/api/.env.*
+!apps/api/.env.example
+apps/web/.env
+apps/web/.env.*
+!apps/web/.env.example
+
+# Local Data, Uploads & Database Dumps
+.data/
+uploads/
+*.sql
+*.dump
+*.tar.gz
+*.bak
+
+# Logs & Temporary Files
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .DS_Store
+Thumbs.db
