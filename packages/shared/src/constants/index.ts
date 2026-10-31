@@ -205,12 +205,28 @@ export const ACTIVITY_TYPES = {
 
 export type ActivityType = (typeof ACTIVITY_TYPES)[keyof typeof ACTIVITY_TYPES];
 
+export const DEFAULT_LEAD_SOURCES = [
+  'Website',
+  'Referral',
+  'Cold Call',
+  'WhatsApp',
+  'Social Media (Facebook / LinkedIn / Instagram)',
+  'Exhibition / Event',
+  'Tender Portal',
+  'Existing Customer',
+  'Other',
+] as const;
+
+export type LeadSource = (typeof DEFAULT_LEAD_SOURCES)[number] | string;
+export const DEFAULT_LEAD_SOURCE_LIST = Object.values(DEFAULT_LEAD_SOURCES);
+
 export const IMPORT_TEMPLATE_COLUMNS = [
   'Company',
   'Service / Product',
   'Contact Person',
   'Phone',
   'Email',
+  'Lead Source',
   'Priority',
   'Pipeline Stage',
   'Call Attempts',

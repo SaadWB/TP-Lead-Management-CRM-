@@ -76,6 +76,7 @@ export function ImportWizard() {
         'Contact Person': 'Robert Sterling',
         Phone: '+1-555-234-5678',
         Email: 'r.sterling@apexind.com',
+        'Lead Source': 'Website',
         Priority: 'HIGH',
         'Pipeline Stage': 'NEW',
         'Call Attempts': 0,
@@ -91,6 +92,7 @@ export function ImportWizard() {
         'Contact Person': 'Elena Rostova',
         Phone: '+1-555-345-6789',
         Email: 'elena@bluepeakhealth.org',
+        'Lead Source': 'Referral',
         Priority: 'URGENT',
         'Pipeline Stage': 'NEW',
         'Call Attempts': 0,
@@ -367,9 +369,10 @@ export function ImportWizard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {[
                   { key: 'companyName', label: 'Company Name', required: true },
-                  { key: 'contactPerson', label: 'Contact Person', required: true },
+                  { key: 'contactPerson', label: 'Contact Person' },
                   { key: 'phone', label: 'Phone Number', required: true },
                   { key: 'serviceProduct', label: 'Service / Product', required: true },
+                  { key: 'leadSource', label: 'Lead Source' },
                   { key: 'email', label: 'Email Address' },
                   { key: 'priority', label: 'Priority (LOW, MEDIUM, HIGH, URGENT)' },
                   { key: 'pipelineStage', label: 'Pipeline Stage' },

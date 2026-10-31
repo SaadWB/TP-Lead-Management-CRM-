@@ -66,6 +66,8 @@ function AdminLeadsContent() {
   const [salesStageFilter, setSalesStageFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [telecallerFilter, setTelecallerFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
+  const [sourceOptions, setSourceOptions] = useState<string[]>([]);
 
   // Bulk selection
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
@@ -99,7 +101,19 @@ function AdminLeadsContent() {
   useEffect(() => {
     fetchLeads();
     loadTelecallers();
-  }, [stageFilter, outcomeFilter, salesStageFilter, priorityFilter, telecallerFilter, currentKpi]);
+    loadSources();
+  }, [stageFilter, outcomeFilter, salesStageFilter, priorityFilter, telecallerFilter, sourceFilter, currentKpi]);
+
+  async function loadSources() {
+    try {
+      const res = await api.get<{ leadSources?: { name: string; isActive: boolean }[] }>('/options');
+      if (res.success && res.data?.leadSources) {
+        setSourceOptions(res.data.leadSources.filter((s) => s.isActive).map((s) => s.name));
+      }
+    } catch {
+      // ignore
+    }
+  }
 
   async function fetchLeads() {
     setLoading(true);
@@ -111,6 +125,7 @@ function AdminLeadsContent() {
       if (salesStageFilter) params.salesStage = salesStageFilter;
       if (priorityFilter) params.priority = priorityFilter;
       if (telecallerFilter) params.assignedTelecallerId = telecallerFilter;
+      if (sourceFilter) params.leadSource = sourceFilter;
 
       const res = await api.get<Lead[]>('/leads', params);
       if (res.success && res.data) {
@@ -360,7 +375,20 @@ function AdminLeadsContent() {
               ))}
             </select>
 
-            {(stageFilter || outcomeFilter || salesStageFilter || priorityFilter || telecallerFilter) && (
+            <select
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
+            >
+              <option value="">All Lead Sources</option>
+              {sourceOptions.map((src) => (
+                <option key={src} value={src}>
+                  {src}
+                </option>
+              ))}
+            </select>
+
+            {(stageFilter || outcomeFilter || salesStageFilter || priorityFilter || telecallerFilter || sourceFilter) && (
               <button
                 onClick={() => {
                   setStageFilter('');
@@ -368,6 +396,7 @@ function AdminLeadsContent() {
                   setSalesStageFilter('');
                   setPriorityFilter('');
                   setTelecallerFilter('');
+                  setSourceFilter('');
                 }}
                 className="text-xs text-slate-500 hover:text-slate-800 font-semibold px-2 py-1 underline cursor-pointer"
               >
@@ -565,6 +594,17 @@ function AdminLeadsContent() {
                     )}
                   </div>
 
+                  {/* Lead Source in Mobile Card */}
+                  {lead.leadSource && (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                      <span className="text-slate-400 font-medium">Source:</span>
+                      <span className="font-semibold text-slate-800 truncate">{lead.leadSource}</span>
+                      {lead.leadSource === 'Other' && lead.leadSourceOther && (
+                        <span className="text-slate-500 text-[11px] truncate">({lead.leadSourceOther})</span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Footer Row: Details & Delete */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                     <button
@@ -622,6 +662,7 @@ function AdminLeadsContent() {
                     <th className="w-40 min-w-[150px] max-w-[170px] p-3">Assigned Telecaller</th>
                     <th className="w-36 min-w-[140px] max-w-[160px] p-3">Sales Closer</th>
                     <th className="w-40 min-w-[150px] max-w-[170px] p-3">Sales Stage</th>
+                    <th className="w-36 min-w-[130px] max-w-[150px] p-3">Lead Source</th>
                     <th className="w-28 min-w-[110px] max-w-[120px] p-3">Created</th>
 
                     {/* Sticky Actions */}
@@ -651,6 +692,7 @@ function AdminLeadsContent() {
                         <td className="w-40 min-w-[150px] max-w-[170px] p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
                         <td className="w-36 min-w-[140px] max-w-[160px] p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
                         <td className="w-40 min-w-[150px] max-w-[170px] p-3"><div className="w-20 h-4 bg-slate-200 rounded" /></td>
+                        <td className="w-36 min-w-[130px] max-w-[150px] p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
                         <td className="w-28 min-w-[110px] max-w-[120px] p-3"><div className="w-16 h-3 bg-slate-200 rounded" /></td>
                         <td className="w-20 min-w-[80px] max-w-[80px] p-3 text-right sticky right-0 z-10 bg-white">
                           <div className="w-6 h-6 bg-slate-200 rounded ml-auto" />
@@ -824,6 +866,21 @@ function AdminLeadsContent() {
                               </span>
                             ) : (
                               <span className="text-slate-400 italic text-[11px]">-</span>
+                            )}
+                          </td>
+
+                          {/* Lead Source */}
+                          <td className="w-36 min-w-[130px] max-w-[150px] p-3 min-w-0">
+                            {lead.leadSource ? (
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 truncate max-w-full"
+                                title={lead.leadSource === 'Other' && lead.leadSourceOther ? `Other: ${lead.leadSourceOther}` : lead.leadSource}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+                                <span className="truncate">{lead.leadSource}</span>
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-normal italic text-xs">-</span>
                             )}
                           </td>
 

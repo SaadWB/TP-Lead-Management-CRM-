@@ -1,17 +1,43 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.bulkDeleteSchema = exports.bulkPrioritySchema = exports.importCommitSchema = exports.bulkAssignLeadsSchema = exports.assignLeadSchema = exports.updateFollowUpTaskSchema = exports.createFollowUpTaskSchema = exports.logCallSchema = exports.updateSalesStageSchema = exports.updateStageSchema = exports.updateLeadSchema = exports.createLeadSchema = exports.updateUserSchema = exports.createUserSchema = exports.loginSchema = void 0;
+exports.createSourceSchema = exports.bulkDeleteSchema = exports.bulkPrioritySchema = exports.importCommitSchema = exports.bulkAssignLeadsSchema = exports.assignLeadSchema = exports.updateFollowUpTaskSchema = exports.createFollowUpTaskSchema = exports.logCallSchema = exports.updateSalesStageSchema = exports.updateStageSchema = exports.updateLeadSchema = exports.createLeadSchema = exports.updateUserSchema = exports.createUserSchema = exports.changePasswordSchema = exports.loginSchema = exports.passwordPolicySchema = void 0;
 const zod_1 = require("zod");
 const constants_1 = require("../constants");
-// Authentication
+const COMMON_PASSWORDS = new Set([
+    'password',
+    'password123',
+    'password@123',
+    'admin',
+    'admin123',
+    'admin12345',
+    '1234567890',
+    '123456789',
+    '12345678',
+    'qwertyuiop',
+    'letmein123',
+    'welcome123',
+    'tenderprocure',
+    'tpadmin123',
+]);
+exports.passwordPolicySchema = zod_1.z
+    .string()
+    .min(10, 'Password must be at least 10 characters long')
+    .refine((val) => /[A-Za-z]/.test(val), 'Password must contain at least one letter')
+    .refine((val) => /\d/.test(val), 'Password must contain at least one number')
+    .refine((val) => !COMMON_PASSWORDS.has(val.toLowerCase().trim()), 'This password is too common and insecure');
+// Authentication Schemas
 exports.loginSchema = zod_1.z.object({
     email: zod_1.z.string().email('Please enter a valid email address'),
-    password: zod_1.z.string().min(6, 'Password must be at least 6 characters'),
+    password: zod_1.z.string().min(1, 'Password is required'),
+});
+exports.changePasswordSchema = zod_1.z.object({
+    currentPassword: zod_1.z.string().min(1, 'Current password is required'),
+    newPassword: exports.passwordPolicySchema,
 });
 exports.createUserSchema = zod_1.z.object({
     name: zod_1.z.string().min(2, 'Name must be at least 2 characters'),
     email: zod_1.z.string().email('Invalid email address'),
-    password: zod_1.z.string().min(6, 'Password must be at least 6 characters'),
+    password: exports.passwordPolicySchema,
     role: zod_1.z.enum([constants_1.USER_ROLES.SUPER_ADMIN, constants_1.USER_ROLES.TELECALLER, constants_1.USER_ROLES.SALESMAN]),
     phone: zod_1.z.string().optional().nullable(),
     isActive: zod_1.z.boolean().default(true),
@@ -19,12 +45,13 @@ exports.createUserSchema = zod_1.z.object({
 exports.updateUserSchema = zod_1.z.object({
     name: zod_1.z.string().min(2).optional(),
     email: zod_1.z.string().email().optional(),
-    password: zod_1.z.string().min(6).optional(),
+    password: exports.passwordPolicySchema.optional(),
     role: zod_1.z.enum([constants_1.USER_ROLES.SUPER_ADMIN, constants_1.USER_ROLES.TELECALLER, constants_1.USER_ROLES.SALESMAN]).optional(),
     phone: zod_1.z.string().optional().nullable(),
     isActive: zod_1.z.boolean().optional(),
 });
 // Lead Schemas
+// In Single-Lead creation: State and City removed; Lead Source & Lead Source Other added
 exports.createLeadSchema = zod_1.z.object({
     companyName: zod_1.z.string().min(2, 'Company name is required'),
     serviceProduct: zod_1.z.string().min(1, 'Service or product is required'),
@@ -33,8 +60,6 @@ exports.createLeadSchema = zod_1.z.object({
     email: zod_1.z.string().email('Invalid email').optional().nullable(),
     alternatePhone: zod_1.z.string().optional().nullable(),
     website: zod_1.z.string().url('Invalid website URL').or(zod_1.z.literal('')).optional().nullable(),
-    city: zod_1.z.string().optional().nullable(),
-    state: zod_1.z.string().optional().nullable(),
     priority: zod_1.z.string().default(constants_1.PRIORITIES.MEDIUM),
     pipelineStage: zod_1.z.string().default('New Lead'),
     lastCallOutcome: zod_1.z.string().optional().nullable(),
@@ -42,10 +67,14 @@ exports.createLeadSchema = zod_1.z.object({
     nextAction: zod_1.z.string().optional().nullable(),
     notes: zod_1.z.string().optional().nullable(),
     leadSource: zod_1.z.string().optional().nullable(),
+    leadSourceOther: zod_1.z.string().max(100, 'Other details must be at most 100 characters').optional().nullable(),
     assignedTelecallerId: zod_1.z.string().optional().nullable(),
     assignedSalesmanId: zod_1.z.string().optional().nullable(),
 });
-exports.updateLeadSchema = exports.createLeadSchema.partial();
+exports.updateLeadSchema = exports.createLeadSchema.partial().extend({
+    city: zod_1.z.string().optional().nullable(),
+    state: zod_1.z.string().optional().nullable(),
+});
 exports.updateStageSchema = zod_1.z.object({
     pipelineStage: zod_1.z.string().optional(),
     lastCallOutcome: zod_1.z.string().optional().nullable(),
@@ -133,6 +162,8 @@ exports.importCommitSchema = zod_1.z.object({
         website: zod_1.z.string().optional().nullable(),
         city: zod_1.z.string().optional().nullable(),
         state: zod_1.z.string().optional().nullable(),
+        leadSource: zod_1.z.string().optional().nullable(),
+        leadSourceOther: zod_1.z.string().optional().nullable(),
         priority: zod_1.z.string().default(constants_1.PRIORITIES.MEDIUM),
         pipelineStage: zod_1.z.string().default(constants_1.CALL_OUTCOMES.NEW_LEAD),
         callAttempts: zod_1.z.number().default(0),
@@ -141,7 +172,6 @@ exports.importCommitSchema = zod_1.z.object({
         nextFollowUpDate: zod_1.z.string().optional().nullable(),
         nextAction: zod_1.z.string().optional().nullable(),
         notes: zod_1.z.string().optional().nullable(),
-        leadSource: zod_1.z.string().optional().nullable(),
         assignedTelecallerId: zod_1.z.string().optional().nullable(),
         action: zod_1.z.enum(['IMPORT', 'UPDATE', 'SKIP']).default('IMPORT'),
         matchedExistingId: zod_1.z.string().optional(),
@@ -155,4 +185,8 @@ exports.bulkPrioritySchema = zod_1.z.object({
 });
 exports.bulkDeleteSchema = zod_1.z.object({
     leadIds: zod_1.z.array(zod_1.z.string()).min(1, 'At least one lead ID is required'),
+});
+exports.createSourceSchema = zod_1.z.object({
+    name: zod_1.z.string().min(1, 'Source name cannot be empty').max(100),
+    color: zod_1.z.string().optional().nullable(),
 });

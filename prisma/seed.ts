@@ -33,11 +33,23 @@ const DEFAULT_CALL_OUTCOMES = [
   { name: 'Wrong Number', color: 'rose', suggestedPipelineStage: 'Closed', closesLead: true, isDefault: true, order: 11 },
 ];
 
+export const DEFAULT_LEAD_SOURCES = [
+  { name: 'Website', color: 'blue', order: 0, isDefault: true },
+  { name: 'Referral', color: 'emerald', order: 1, isDefault: true },
+  { name: 'Cold Call', color: 'amber', order: 2, isDefault: true },
+  { name: 'WhatsApp', color: 'teal', order: 3, isDefault: true },
+  { name: 'Social Media (Facebook / LinkedIn / Instagram)', color: 'indigo', order: 4, isDefault: true },
+  { name: 'Exhibition / Event', color: 'purple', order: 5, isDefault: true },
+  { name: 'Tender Portal', color: 'sky', order: 6, isDefault: true },
+  { name: 'Existing Customer', color: 'cyan', order: 7, isDefault: true },
+  { name: 'Other', color: 'slate', order: 8, isDefault: true },
+];
+
 async function main() {
-  console.log('🌱 Starting TenderProcure CRM Production Seed...');
+  console.log('🌱 Starting TenderProcure CRM Production Database Seed...');
 
   const adminEmail = process.env.INITIAL_ADMIN_EMAIL || 'admin@tenderprocure.com';
-  const rawAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+  const rawAdminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'InitialAdminStrongPassword123!';
 
   if (!rawAdminPassword || rawAdminPassword.trim().length < 10) {
     throw new Error(
@@ -89,7 +101,17 @@ async function main() {
   }
   console.log(`✅ Default call outcome options initialized (${DEFAULT_CALL_OUTCOMES.length} options)`);
 
-  console.log('🎉 Production seed completed successfully! No demo data created.');
+  // 4. Initialize default lead sources (9 options)
+  for (const source of DEFAULT_LEAD_SOURCES) {
+    await prisma.leadSourceOption.upsert({
+      where: { name: source.name },
+      update: {},
+      create: source,
+    });
+  }
+  console.log(`✅ Default lead sources initialized (${DEFAULT_LEAD_SOURCES.length} sources)`);
+
+  console.log('🎉 Production seed completed successfully! Remote MySQL is ready.');
 }
 
 main()

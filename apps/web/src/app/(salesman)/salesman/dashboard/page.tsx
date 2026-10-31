@@ -71,58 +71,58 @@ export default function SalesmanDashboardPage() {
     >
       <div className="space-y-6 max-w-7xl mx-auto">
         {/* Sales Metric Counters */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <Card>
-            <CardContent className="p-3.5 space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
+          <Card className="h-full min-h-[88px]">
+            <CardContent className="p-2.5 sm:p-3.5 space-y-1.5 flex flex-col justify-between h-full">
+              <span className="text-xs font-semibold text-slate-500 block truncate">
                 Assigned Deals
               </span>
-              <span className="text-xl font-black text-slate-900 block">{assignedLeads.length}</span>
+              <span className="text-xl font-black text-slate-900 block truncate">{assignedLeads.length}</span>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-3.5 space-y-1">
-              <span className="text-[10px] uppercase font-bold text-sky-600 block tracking-wider">
+          <Card className="h-full min-h-[88px]">
+            <CardContent className="p-2.5 sm:p-3.5 space-y-1.5 flex flex-col justify-between h-full">
+              <span className="text-xs font-semibold text-sky-600 block truncate">
                 New Handover Queue
               </span>
-              <span className="text-xl font-black text-sky-700 block">{newAssignments}</span>
+              <span className="text-xl font-black text-sky-700 block truncate">{newAssignments}</span>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-3.5 space-y-1">
-              <span className="text-[10px] uppercase font-bold text-purple-600 block tracking-wider">
+          <Card className="h-full min-h-[88px]">
+            <CardContent className="p-2.5 sm:p-3.5 space-y-1.5 flex flex-col justify-between h-full">
+              <span className="text-xs font-semibold text-purple-600 block truncate">
                 Demos Scheduled
               </span>
-              <span className="text-xl font-black text-purple-700 block">{demosScheduled}</span>
+              <span className="text-xl font-black text-purple-700 block truncate">{demosScheduled}</span>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-3.5 space-y-1">
-              <span className="text-[10px] uppercase font-bold text-amber-600 block tracking-wider">
+          <Card className="h-full min-h-[88px]">
+            <CardContent className="p-2.5 sm:p-3.5 space-y-1.5 flex flex-col justify-between h-full">
+              <span className="text-xs font-semibold text-amber-600 block truncate">
                 In Negotiation
               </span>
-              <span className="text-xl font-black text-amber-700 block">{negotiationCount}</span>
+              <span className="text-xl font-black text-amber-700 block truncate">{negotiationCount}</span>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-3.5 space-y-1 bg-emerald-50/50 border-emerald-200">
-              <span className="text-[10px] uppercase font-bold text-emerald-700 block tracking-wider">
+          <Card className="h-full min-h-[88px] bg-emerald-50/50 border-emerald-200">
+            <CardContent className="p-2.5 sm:p-3.5 space-y-1.5 flex flex-col justify-between h-full">
+              <span className="text-xs font-semibold text-emerald-700 block truncate">
                 Won / Converted
               </span>
-              <span className="text-xl font-black text-emerald-800 block">{convertedCount}</span>
+              <span className="text-xl font-black text-emerald-800 block truncate">{convertedCount}</span>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-3.5 space-y-1">
-              <span className="text-[10px] uppercase font-bold text-rose-600 block tracking-wider">
+          <Card className="h-full min-h-[88px]">
+            <CardContent className="p-2.5 sm:p-3.5 space-y-1.5 flex flex-col justify-between h-full">
+              <span className="text-xs font-semibold text-rose-600 block truncate">
                 Lost Deals
               </span>
-              <span className="text-xl font-black text-rose-700 block">{lostCount}</span>
+              <span className="text-xl font-black text-rose-700 block truncate">{lostCount}</span>
             </CardContent>
           </Card>
         </div>

@@ -19,6 +19,7 @@ import { activityRepository } from '../../repositories/activityRepository';
 import { followUpTaskRepository } from '../../repositories/followUpTaskRepository';
 import { notificationService } from '../../services/notificationService';
 import { dbStore } from '../../repositories/dbStore';
+import { auditLogRepository } from '../../repositories/auditLogRepository';
 import { ForbiddenError, NotFoundError, BadRequestError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
 
@@ -130,24 +131,32 @@ export async function createLead(req: Request, res: Response, next: NextFunction
       email: data.email || null,
       alternatePhone: data.alternatePhone || null,
       website: data.website || null,
-      city: data.city || null,
-      state: data.state || null,
+      city: null, // Removed from single-lead creation
+      state: null, // Removed from single-lead creation
       priority: data.priority as Priority,
-      pipelineStage: (data.pipelineStage || 'NEW') as PipelineStage,
+      pipelineStage: (data.pipelineStage || 'New Lead') as PipelineStage,
       notes: data.notes || null,
-      leadSource: data.leadSource || 'Manual Entry',
+      leadSource: data.leadSource || null,
+      leadSourceOther: data.leadSourceOther || null,
       assignedTelecallerId: data.assignedTelecallerId || null,
       assignedSalesmanId: data.assignedSalesmanId || null,
       createdById: req.user!.id,
       callAttempts: 0,
     });
 
-    // Record activity
+    // Record activity with lead source in history
+    let sourceNote = '';
+    if (data.leadSource) {
+      sourceNote = data.leadSourceOther
+        ? ` with Lead Source set to "${data.leadSource}" (${data.leadSourceOther})`
+        : ` with Lead Source set to "${data.leadSource}"`;
+    }
+
     await activityRepository.create({
       leadId: newLead.id,
       userId: req.user!.id,
       type: 'LEAD_CREATED',
-      description: `Lead created by ${req.user!.name}`,
+      description: `Lead created by ${req.user!.name}${sourceNote}`,
     });
 
     // Notify telecaller if assigned by someone else
@@ -178,9 +187,14 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
 
     const data = updateLeadSchema.parse(req.body);
 
-    // Only Super Admin can change priority
-    if (data.priority && req.user!.role !== USER_ROLES.SUPER_ADMIN) {
-      throw new ForbiddenError('Only Super Admin can update lead priority.');
+    // Mass assignment prevention: only Super Admin can reassign or change priority
+    if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
+      if (data.priority) {
+        throw new ForbiddenError('Only Super Admin can update lead priority.');
+      }
+      if (data.assignedTelecallerId !== undefined || data.assignedSalesmanId !== undefined) {
+        throw new ForbiddenError('Only Super Admin can reassign leads.');
+      }
     }
 
     const patchData: any = { ...(data as any) };
@@ -190,14 +204,55 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
 
     const updated = await leadRepository.update(req.params.id, patchData);
 
+    // Track lead source change in lead history
+    if (data.leadSource !== undefined && data.leadSource !== lead.leadSource) {
+      const detail = data.leadSourceOther ? ` (${data.leadSourceOther})` : '';
+      await activityRepository.create({
+        leadId: lead.id,
+        userId: req.user!.id,
+        type: 'NOTE_ADDED',
+        description: `Lead Source set to "${data.leadSource || '-'}"${detail} by ${req.user!.name}`,
+      });
+    } else {
+      await activityRepository.create({
+        leadId: lead.id,
+        userId: req.user!.id,
+        type: 'NOTE_ADDED',
+        description: `Lead details updated by ${req.user!.name}`,
+      });
+    }
+
+    sendSuccess(res, updated, 'Lead updated successfully');
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function restoreLead(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Admin can restore leads.');
+    }
+    const lead = await leadRepository.findById(req.params.id);
+    if (!lead) throw new NotFoundError('Lead not found');
+
+    await leadRepository.restore(req.params.id);
     await activityRepository.create({
       leadId: lead.id,
       userId: req.user!.id,
       type: 'NOTE_ADDED',
-      description: `Lead details updated by ${req.user!.name}`,
+      description: `Lead restored by ${req.user!.name}`,
     });
 
-    sendSuccess(res, updated, 'Lead updated successfully');
+    await auditLogRepository.create({
+      userId: req.user!.id,
+      action: 'LEAD_RESTORED',
+      entity: 'LEAD',
+      entityId: lead.id,
+      details: { companyName: lead.companyName },
+    });
+
+    sendSuccess(res, { id: req.params.id }, 'Lead restored successfully');
   } catch (error) {
     next(error);
   }
@@ -267,6 +322,14 @@ export async function deleteLead(req: Request, res: Response, next: NextFunction
       userId: req.user!.id,
       type: 'NOTE_ADDED',
       description: `Lead deleted by ${req.user!.name}`,
+    });
+
+    await auditLogRepository.create({
+      userId: req.user!.id,
+      action: 'LEAD_DELETED',
+      entity: 'LEAD',
+      entityId: lead.id,
+      details: { companyName: lead.companyName },
     });
 
     sendSuccess(res, { id: req.params.id }, 'Lead deleted successfully');

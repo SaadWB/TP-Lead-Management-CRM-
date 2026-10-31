@@ -181,6 +181,17 @@ export default function SalesmanLeadsPage() {
                     </select>
                   </div>
 
+                  {/* Lead Source */}
+                  {lead.leadSource && (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                      <span className="text-slate-400 font-semibold text-[11px]">Source:</span>
+                      <span className="font-bold text-slate-800 truncate">{lead.leadSource}</span>
+                      {lead.leadSource === 'Other' && lead.leadSourceOther && (
+                        <span className="text-slate-500 text-[11px] truncate">({lead.leadSourceOther})</span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Follow-up date & Quick Action Buttons */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2 flex-wrap">
                     {lead.nextFollowUpDate ? (
@@ -244,6 +255,7 @@ export default function SalesmanLeadsPage() {
                     <th className="p-3.5">Priority</th>
                     <th className="p-3.5">Call Outcome</th>
                     <th className="p-3.5">Sales Stage</th>
+                    <th className="p-3.5 hidden lg:table-cell">Lead Source</th>
                     <th className="p-3.5">Follow-up / Last Contact</th>
                     <th className="p-3.5 text-right">Quick Actions</th>
                   </tr>
@@ -322,6 +334,20 @@ export default function SalesmanLeadsPage() {
                                 </option>
                               ))}
                             </select>
+                          </td>
+                          {/* Lead Source */}
+                          <td className="p-3.5 hidden lg:table-cell min-w-0" onClick={(e) => e.stopPropagation()}>
+                            {lead.leadSource ? (
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 truncate max-w-full"
+                                title={lead.leadSource === 'Other' && lead.leadSourceOther ? `Other: ${lead.leadSourceOther}` : lead.leadSource}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+                                <span className="truncate">{lead.leadSource}</span>
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-normal italic text-xs">-</span>
+                            )}
                           </td>
                           <td className="p-3.5 text-slate-500 font-mono text-[11px]">
                             {lead.nextFollowUpDate ? (

@@ -20,6 +20,7 @@ import {
   CalendarPlus,
   Pencil,
   Check,
+  Compass,
 } from 'lucide-react';
 import { Lead, TELECALLER_KANBAN_COLUMNS, Priority, PRIORITIES, SalesStage, SALES_STAGE_OPTIONS } from '@crm/shared';
 import { api } from '@/lib/apiClient';
@@ -550,15 +551,30 @@ export function LeadDrawer({
                           </div>
                         </div>
 
+                        {/* Lead Source */}
                         <div className="flex items-start gap-2.5">
-                          <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
+                          <Compass className="h-4 w-4 text-slate-400 mt-0.5" />
                           <div>
-                            <span className="text-[11px] text-slate-400 block">Location</span>
+                            <span className="text-[11px] text-slate-400 block">Lead Source</span>
                             <span className="text-xs font-semibold text-slate-800">
-                              {lead.city || lead.state ? `${lead.city || ''}, ${lead.state || ''}` : 'Not specified'}
+                              {lead.leadSource || 'Unspecified'}
+                              {lead.leadSource === 'Other' && lead.leadSourceOther ? ` (${lead.leadSourceOther})` : ''}
                             </span>
                           </div>
                         </div>
+
+                        {/* Location (read-only for existing leads with historical data) */}
+                        {(lead.city || lead.state) && (
+                          <div className="flex items-start gap-2.5">
+                            <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block">Location (Historical)</span>
+                              <span className="text-xs font-semibold text-slate-800">
+                                {[lead.city, lead.state].filter(Boolean).join(', ')}
+                              </span>
+                            </div>
+                          </div>
+                        )}
 
                         <div className="flex items-start gap-2.5">
                           <Clock className="h-4 w-4 text-slate-400 mt-0.5" />

@@ -285,6 +285,12 @@ export class LeadRepository {
     if (options.priority) {
       filtered = filtered.filter((l) => l.priority === options.priority);
     }
+
+    if (options.leadSource) {
+      filtered = filtered.filter(
+        (l) => l.leadSource && l.leadSource.toLowerCase() === options.leadSource!.toLowerCase()
+      );
+    }
     if (options.assignedTelecallerId) {
       filtered = filtered.filter((l) => l.assignedTelecallerId === options.assignedTelecallerId);
     }
@@ -419,9 +425,11 @@ export class LeadRepository {
       updatedAt: new Date().toISOString(),
       lastActivityAt: new Date().toISOString(),
       callAttempts: leadData.callAttempts || 0,
+      isDeleted: false,
     };
     dbStore.store.leads.push(newLead);
     dbStore.persist();
+    dbStore.syncLeadToDatabase(newLead).catch(console.error);
     return this.enrichLead(newLead);
   }
 
@@ -436,6 +444,7 @@ export class LeadRepository {
       lastActivityAt: updateData.lastActivityAt || new Date().toISOString(),
     };
     dbStore.persist();
+    dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
     return this.enrichLead(dbStore.store.leads[index]);
   }
 
@@ -450,9 +459,11 @@ export class LeadRepository {
         updatedAt: now,
         lastActivityAt: now,
         callAttempts: data.callAttempts || 0,
+        isDeleted: false,
       };
       dbStore.store.leads.push(item);
       created.push(item);
+      dbStore.syncLeadToDatabase(item).catch(console.error);
     }
     dbStore.persist();
     return created.map((l) => this.enrichLead(l));
@@ -461,9 +472,27 @@ export class LeadRepository {
   async delete(id: string): Promise<boolean> {
     const index = dbStore.store.leads.findIndex((l) => l.id === id);
     if (index === -1) return false;
-    dbStore.store.leads[index].archivedAt = new Date().toISOString();
-    dbStore.store.leads[index].updatedAt = new Date().toISOString();
+    const now = new Date().toISOString();
+    dbStore.store.leads[index].archivedAt = now;
+    dbStore.store.leads[index].isDeleted = true;
+    dbStore.store.leads[index].deletedAt = now;
+    dbStore.store.leads[index].updatedAt = now;
     dbStore.persist();
+    dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
+    return true;
+  }
+
+  async restore(id: string): Promise<boolean> {
+    const index = dbStore.store.leads.findIndex((l) => l.id === id);
+    if (index === -1) return false;
+    const now = new Date().toISOString();
+    dbStore.store.leads[index].archivedAt = null;
+    dbStore.store.leads[index].isDeleted = false;
+    dbStore.store.leads[index].deletedAt = null;
+    dbStore.store.leads[index].deletedById = null;
+    dbStore.store.leads[index].updatedAt = now;
+    dbStore.persist();
+    dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
     return true;
   }
 
@@ -474,7 +503,10 @@ export class LeadRepository {
       const index = dbStore.store.leads.findIndex((l) => l.id === id);
       if (index !== -1 && !dbStore.store.leads[index].archivedAt) {
         dbStore.store.leads[index].archivedAt = now;
+        dbStore.store.leads[index].isDeleted = true;
+        dbStore.store.leads[index].deletedAt = now;
         dbStore.store.leads[index].updatedAt = now;
+        dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
         count++;
       }
     }
@@ -490,6 +522,7 @@ export class LeadRepository {
       if (index !== -1 && !dbStore.store.leads[index].archivedAt) {
         dbStore.store.leads[index].priority = priority;
         dbStore.store.leads[index].updatedAt = now;
+        dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
         count++;
       }
     }

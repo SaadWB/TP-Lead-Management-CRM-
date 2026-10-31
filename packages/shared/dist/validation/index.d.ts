@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export declare const passwordPolicySchema: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodString, string, string>, string, string>, string, string>;
 export declare const loginSchema: z.ZodObject<{
     email: z.ZodString;
     password: z.ZodString;
@@ -9,10 +10,20 @@ export declare const loginSchema: z.ZodObject<{
     email: string;
     password: string;
 }>;
+export declare const changePasswordSchema: z.ZodObject<{
+    currentPassword: z.ZodString;
+    newPassword: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodString, string, string>, string, string>, string, string>;
+}, "strip", z.ZodTypeAny, {
+    currentPassword: string;
+    newPassword: string;
+}, {
+    currentPassword: string;
+    newPassword: string;
+}>;
 export declare const createUserSchema: z.ZodObject<{
     name: z.ZodString;
     email: z.ZodString;
-    password: z.ZodString;
+    password: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodString, string, string>, string, string>, string, string>;
     role: z.ZodEnum<["SUPER_ADMIN", "TELECALLER", "SALESMAN"]>;
     phone: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     isActive: z.ZodDefault<z.ZodBoolean>;
@@ -34,7 +45,7 @@ export declare const createUserSchema: z.ZodObject<{
 export declare const updateUserSchema: z.ZodObject<{
     name: z.ZodOptional<z.ZodString>;
     email: z.ZodOptional<z.ZodString>;
-    password: z.ZodOptional<z.ZodString>;
+    password: z.ZodOptional<z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodString, string, string>, string, string>, string, string>>;
     role: z.ZodOptional<z.ZodEnum<["SUPER_ADMIN", "TELECALLER", "SALESMAN"]>>;
     phone: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     isActive: z.ZodOptional<z.ZodBoolean>;
@@ -61,8 +72,6 @@ export declare const createLeadSchema: z.ZodObject<{
     email: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     alternatePhone: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     website: z.ZodNullable<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>>;
-    city: z.ZodNullable<z.ZodOptional<z.ZodString>>;
-    state: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     priority: z.ZodDefault<z.ZodString>;
     pipelineStage: z.ZodDefault<z.ZodString>;
     lastCallOutcome: z.ZodNullable<z.ZodOptional<z.ZodString>>;
@@ -70,6 +79,7 @@ export declare const createLeadSchema: z.ZodObject<{
     nextAction: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     notes: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     leadSource: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    leadSourceOther: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     assignedTelecallerId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     assignedSalesmanId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
@@ -82,13 +92,12 @@ export declare const createLeadSchema: z.ZodObject<{
     email?: string | null | undefined;
     alternatePhone?: string | null | undefined;
     website?: string | null | undefined;
-    city?: string | null | undefined;
-    state?: string | null | undefined;
     lastCallOutcome?: string | null | undefined;
     nextFollowUpDate?: string | null | undefined;
     nextAction?: string | null | undefined;
     notes?: string | null | undefined;
     leadSource?: string | null | undefined;
+    leadSourceOther?: string | null | undefined;
     assignedTelecallerId?: string | null | undefined;
     assignedSalesmanId?: string | null | undefined;
 }, {
@@ -100,14 +109,13 @@ export declare const createLeadSchema: z.ZodObject<{
     pipelineStage?: string | undefined;
     alternatePhone?: string | null | undefined;
     website?: string | null | undefined;
-    city?: string | null | undefined;
-    state?: string | null | undefined;
     priority?: string | undefined;
     lastCallOutcome?: string | null | undefined;
     nextFollowUpDate?: string | null | undefined;
     nextAction?: string | null | undefined;
     notes?: string | null | undefined;
     leadSource?: string | null | undefined;
+    leadSourceOther?: string | null | undefined;
     assignedTelecallerId?: string | null | undefined;
     assignedSalesmanId?: string | null | undefined;
 }>;
@@ -119,8 +127,6 @@ export declare const updateLeadSchema: z.ZodObject<{
     email: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     alternatePhone: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     website: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>>>;
-    city: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
-    state: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     priority: z.ZodOptional<z.ZodDefault<z.ZodString>>;
     pipelineStage: z.ZodOptional<z.ZodDefault<z.ZodString>>;
     lastCallOutcome: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
@@ -128,8 +134,12 @@ export declare const updateLeadSchema: z.ZodObject<{
     nextAction: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     notes: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     leadSource: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+    leadSourceOther: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     assignedTelecallerId: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     assignedSalesmanId: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+} & {
+    city: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    state: z.ZodNullable<z.ZodOptional<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     email?: string | null | undefined;
     phone?: string | undefined;
@@ -147,6 +157,7 @@ export declare const updateLeadSchema: z.ZodObject<{
     nextAction?: string | null | undefined;
     notes?: string | null | undefined;
     leadSource?: string | null | undefined;
+    leadSourceOther?: string | null | undefined;
     assignedTelecallerId?: string | null | undefined;
     assignedSalesmanId?: string | null | undefined;
 }, {
@@ -166,6 +177,7 @@ export declare const updateLeadSchema: z.ZodObject<{
     nextAction?: string | null | undefined;
     notes?: string | null | undefined;
     leadSource?: string | null | undefined;
+    leadSourceOther?: string | null | undefined;
     assignedTelecallerId?: string | null | undefined;
     assignedSalesmanId?: string | null | undefined;
 }>;
@@ -344,6 +356,8 @@ export declare const importCommitSchema: z.ZodObject<{
         website: z.ZodNullable<z.ZodOptional<z.ZodString>>;
         city: z.ZodNullable<z.ZodOptional<z.ZodString>>;
         state: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+        leadSource: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+        leadSourceOther: z.ZodNullable<z.ZodOptional<z.ZodString>>;
         priority: z.ZodDefault<z.ZodString>;
         pipelineStage: z.ZodDefault<z.ZodString>;
         callAttempts: z.ZodDefault<z.ZodNumber>;
@@ -352,7 +366,6 @@ export declare const importCommitSchema: z.ZodObject<{
         nextFollowUpDate: z.ZodNullable<z.ZodOptional<z.ZodString>>;
         nextAction: z.ZodNullable<z.ZodOptional<z.ZodString>>;
         notes: z.ZodNullable<z.ZodOptional<z.ZodString>>;
-        leadSource: z.ZodNullable<z.ZodOptional<z.ZodString>>;
         assignedTelecallerId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
         action: z.ZodDefault<z.ZodEnum<["IMPORT", "UPDATE", "SKIP"]>>;
         matchedExistingId: z.ZodOptional<z.ZodString>;
@@ -376,6 +389,7 @@ export declare const importCommitSchema: z.ZodObject<{
         nextAction?: string | null | undefined;
         notes?: string | null | undefined;
         leadSource?: string | null | undefined;
+        leadSourceOther?: string | null | undefined;
         assignedTelecallerId?: string | null | undefined;
         matchedExistingId?: string | undefined;
     }, {
@@ -397,6 +411,7 @@ export declare const importCommitSchema: z.ZodObject<{
         nextAction?: string | null | undefined;
         notes?: string | null | undefined;
         leadSource?: string | null | undefined;
+        leadSourceOther?: string | null | undefined;
         assignedTelecallerId?: string | null | undefined;
         action?: "IMPORT" | "SKIP" | "UPDATE" | undefined;
         matchedExistingId?: string | undefined;
@@ -425,6 +440,7 @@ export declare const importCommitSchema: z.ZodObject<{
         nextAction?: string | null | undefined;
         notes?: string | null | undefined;
         leadSource?: string | null | undefined;
+        leadSourceOther?: string | null | undefined;
         assignedTelecallerId?: string | null | undefined;
         matchedExistingId?: string | undefined;
     }[];
@@ -451,6 +467,7 @@ export declare const importCommitSchema: z.ZodObject<{
         nextAction?: string | null | undefined;
         notes?: string | null | undefined;
         leadSource?: string | null | undefined;
+        leadSourceOther?: string | null | undefined;
         assignedTelecallerId?: string | null | undefined;
         action?: "IMPORT" | "SKIP" | "UPDATE" | undefined;
         matchedExistingId?: string | undefined;
@@ -474,4 +491,14 @@ export declare const bulkDeleteSchema: z.ZodObject<{
     leadIds: string[];
 }, {
     leadIds: string[];
+}>;
+export declare const createSourceSchema: z.ZodObject<{
+    name: z.ZodString;
+    color: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+}, "strip", z.ZodTypeAny, {
+    name: string;
+    color?: string | null | undefined;
+}, {
+    name: string;
+    color?: string | null | undefined;
 }>;

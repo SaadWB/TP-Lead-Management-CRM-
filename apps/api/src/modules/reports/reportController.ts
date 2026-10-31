@@ -9,6 +9,9 @@ import { dbStore } from '../../repositories/dbStore';
 import { activityRepository } from '../../repositories/activityRepository';
 import { sendSuccess } from '../../utils/response';
 
+import { sanitizeForFormulaInjection } from '../../utils/security';
+import { prisma } from '../../config/prisma';
+
 export async function getDashboardMetrics(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const user = req.user!;
@@ -205,27 +208,40 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
 
 export async function exportLeadsCsv(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const leads = dbStore.store.leads.filter((l) => !l.archivedAt);
+    const leads = dbStore.store.leads.filter((l) => !l.archivedAt && !l.isDeleted);
     const rows = leads.map((l) => ({
-      'Lead ID': l.id,
-      Company: l.companyName,
-      'Contact Person': l.contactPerson || '-',
-      Phone: l.phone,
-      Email: l.email || '',
-      'Service/Product': l.serviceProduct,
-      Priority: l.priority,
-      'Pipeline Stage': l.pipelineStage,
+      'Lead ID': sanitizeForFormulaInjection(l.id),
+      Company: sanitizeForFormulaInjection(l.companyName),
+      'Contact Person': sanitizeForFormulaInjection(l.contactPerson || '-'),
+      Phone: sanitizeForFormulaInjection(l.phone),
+      Email: sanitizeForFormulaInjection(l.email || ''),
+      'Service/Product': sanitizeForFormulaInjection(l.serviceProduct),
+      Priority: sanitizeForFormulaInjection(l.priority),
+      'Pipeline Stage': sanitizeForFormulaInjection(l.pipelineStage),
       'Call Attempts': l.callAttempts,
-      'Last Outcome': l.lastCallOutcome || '',
-      'Next Follow-Up': l.nextFollowUpDate || '',
-      'Next Action': l.nextAction || '',
-      'Lead Source': l.leadSource || '',
-      'Assigned Telecaller': l.assignedTelecaller?.name || '',
-      'Assigned Salesman': l.assignedSalesman?.name || '',
+      'Last Outcome': sanitizeForFormulaInjection(l.lastCallOutcome || ''),
+      'Next Follow-Up': sanitizeForFormulaInjection(l.nextFollowUpDate || ''),
+      'Next Action': sanitizeForFormulaInjection(l.nextAction || ''),
+      'Lead Source': sanitizeForFormulaInjection(l.leadSource || ''),
+      'Lead Source Detail': sanitizeForFormulaInjection(l.leadSourceOther || ''),
+      'Assigned Telecaller': sanitizeForFormulaInjection(l.assignedTelecaller?.name || ''),
+      'Assigned Salesman': sanitizeForFormulaInjection(l.assignedSalesman?.name || ''),
       'Created Date': l.createdAt,
     }));
 
-    res.setHeader('Content-Type', 'text/csv');
+    if (req.user?.id) {
+      await dbStore.syncAuditLogToDatabase({
+        id: `audit_export_${Date.now()}`,
+        userId: req.user.id,
+        action: 'EXPORT_LEADS_CSV',
+        entity: 'Lead',
+        entityId: null,
+        details: { count: rows.length },
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="leads_export.csv"');
 
     const headers = Object.keys(rows[0] || {}).join(',');
@@ -233,12 +249,73 @@ export async function exportLeadsCsv(req: Request, res: Response, next: NextFunc
       headers,
       ...rows.map((r) =>
         Object.values(r)
-          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
           .join(',')
       ),
     ].join('\n');
 
     res.status(200).send(csvContent);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getAuditLogs(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 25));
+    const skip = (page - 1) * limit;
+
+    const action = req.query.action as string | undefined;
+    const entity = req.query.entity as string | undefined;
+
+    try {
+      const where: any = {};
+      if (action) where.action = action;
+      if (entity) where.entity = entity;
+
+      const [total, logs] = await Promise.all([
+        prisma.auditLog.count({ where }),
+        prisma.auditLog.findMany({
+          where,
+          include: { user: { select: { id: true, name: true, email: true, role: true } } },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+      ]);
+
+      if (logs.length > 0) {
+        sendSuccess(res, {
+          logs,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          },
+        });
+        return;
+      }
+    } catch {
+      // Fallback to store
+    }
+
+    let logs = dbStore.store.auditLogs || [];
+    if (action) logs = logs.filter((l) => l.action === action);
+    if (entity) logs = logs.filter((l) => l.entity === entity);
+    const total = logs.length;
+    const paginated = logs.slice(skip, skip + limit);
+
+    sendSuccess(res, {
+      logs: paginated,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     next(error);
   }

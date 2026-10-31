@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.IMPORT_TEMPLATE_COLUMNS = exports.ACTIVITY_TYPES = exports.LOST_REASONS = exports.TASK_STATUSES = exports.TASK_TYPES = exports.TELECALLER_KANBAN_COLUMNS = exports.SALES_STAGE_OPTIONS = exports.SALES_STAGES = exports.PRIORITIES = exports.CALL_OUTCOME_LIST = exports.TELECALLER_CALL_OUTCOMES = exports.CALL_OUTCOMES = exports.PIPELINE_STAGE_LIST = exports.PIPELINE_STAGES = exports.USER_ROLES = void 0;
+exports.IMPORT_TEMPLATE_COLUMNS = exports.DEFAULT_LEAD_SOURCE_LIST = exports.DEFAULT_LEAD_SOURCES = exports.ACTIVITY_TYPES = exports.LOST_REASONS = exports.TASK_STATUSES = exports.TASK_TYPES = exports.TELECALLER_KANBAN_COLUMNS = exports.SALES_STAGE_OPTIONS = exports.SALES_STAGES = exports.PRIORITIES = exports.CALL_OUTCOME_LIST = exports.TELECALLER_CALL_OUTCOMES = exports.CALL_OUTCOMES = exports.PIPELINE_STAGE_LIST = exports.PIPELINE_STAGES = exports.USER_ROLES = void 0;
 exports.getSuggestedPipelineForOutcome = getSuggestedPipelineForOutcome;
 exports.normalizeCallOutcome = normalizeCallOutcome;
 exports.USER_ROLES = {
@@ -191,12 +191,25 @@ exports.ACTIVITY_TYPES = {
     LEAD_CONVERTED: 'LEAD_CONVERTED',
     LEAD_LOST: 'LEAD_LOST',
 };
+exports.DEFAULT_LEAD_SOURCES = [
+    'Website',
+    'Referral',
+    'Cold Call',
+    'WhatsApp',
+    'Social Media (Facebook / LinkedIn / Instagram)',
+    'Exhibition / Event',
+    'Tender Portal',
+    'Existing Customer',
+    'Other',
+];
+exports.DEFAULT_LEAD_SOURCE_LIST = Object.values(exports.DEFAULT_LEAD_SOURCES);
 exports.IMPORT_TEMPLATE_COLUMNS = [
     'Company',
     'Service / Product',
     'Contact Person',
     'Phone',
     'Email',
+    'Lead Source',
     'Priority',
     'Pipeline Stage',
     'Call Attempts',

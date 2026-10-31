@@ -53,67 +53,67 @@ export default function TelecallerDashboardPage() {
         {activeTab === 'OVERVIEW' && (
           <div className="space-y-6 animate-fade-in">
             {/* Metric Cards Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
+              <Card className="h-full min-h-[88px]">
+                <CardContent className="p-2.5 sm:p-4 flex items-center justify-between h-full">
+                  <div className="min-w-0 pr-1.5">
+                    <span className="text-xs font-semibold text-slate-500 truncate block">
                       Assigned Leads
                     </span>
-                    <span className="text-2xl font-black text-slate-900 mt-0.5 block">
+                    <span className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 block truncate">
                       {metrics?.totalLeads || 0}
                     </span>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <PhoneCall className="h-5 w-5" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <PhoneCall className="h-4 sm:h-5 w-4 sm:w-5" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                      Interested Prospects
+              <Card className="h-full min-h-[88px]">
+                <CardContent className="p-2.5 sm:p-4 flex items-center justify-between h-full">
+                  <div className="min-w-0 pr-1.5">
+                    <span className="text-xs font-semibold text-slate-500 truncate block">
+                      Interested
                     </span>
-                    <span className="text-2xl font-black text-emerald-600 mt-0.5 block">
+                    <span className="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5 block truncate">
                       {metrics?.interestedLeads || 0}
                     </span>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                    <ThumbsUp className="h-5 w-5" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <ThumbsUp className="h-4 sm:h-5 w-4 sm:w-5" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+              <Card className="h-full min-h-[88px]">
+                <CardContent className="p-2.5 sm:p-4 flex items-center justify-between h-full">
+                  <div className="min-w-0 pr-1.5">
+                    <span className="text-xs font-semibold text-slate-500 truncate block">
                       Follow-ups Today
                     </span>
-                    <span className="text-2xl font-black text-amber-600 mt-0.5 block">
+                    <span className="text-xl sm:text-2xl font-black text-amber-600 mt-0.5 block truncate">
                       {metrics?.followUpsDueToday || 0}
                     </span>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <CalendarCheck className="h-5 w-5" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <CalendarCheck className="h-4 sm:h-5 w-4 sm:w-5" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+              <Card className="h-full min-h-[88px]">
+                <CardContent className="p-2.5 sm:p-4 flex items-center justify-between h-full">
+                  <div className="min-w-0 pr-1.5">
+                    <span className="text-xs font-semibold text-slate-500 truncate block">
                       Sales Handovers
                     </span>
-                    <span className="text-2xl font-black text-teal-600 mt-0.5 block">
+                    <span className="text-xl sm:text-2xl font-black text-teal-600 mt-0.5 block truncate">
                       {metrics?.leadsAssignedToSalesmen || 0}
                     </span>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center">
-                    <Send className="h-5 w-5" />
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                    <Send className="h-4 sm:h-5 w-4 sm:w-5" />
                   </div>
                 </CardContent>
               </Card>

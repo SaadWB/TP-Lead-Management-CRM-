@@ -80,26 +80,26 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* 12 Metric Cards Grid */}
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
           {metricCards.map((m) => {
             const Icon = m.icon;
             return (
-              <Link key={m.title} href={m.href} className="group">
-                <Card hoverEffect className="h-full">
-                  <CardContent className="p-3.5 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider truncate">
+              <Link key={m.title} href={m.href} className="group block h-full">
+                <Card hoverEffect className="h-full min-h-[88px] flex flex-col justify-between">
+                  <CardContent className="p-2.5 sm:p-3.5 space-y-2 flex flex-col justify-between h-full">
+                    <div className="flex items-center justify-between gap-1.5 min-w-0">
+                      <span className="text-xs font-semibold text-slate-500 truncate min-w-0">
                         {m.title}
                       </span>
-                      <div className={`p-1.5 rounded-lg ${m.bg} ${m.color}`}>
+                      <div className={`p-1.5 rounded-lg ${m.bg} ${m.color} shrink-0`}>
                         <Icon className="h-3.5 w-3.5" />
                       </div>
                     </div>
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-xl font-black text-slate-900 tracking-tight">
+                    <div className="flex items-baseline justify-between min-w-0">
+                      <span className="text-lg sm:text-xl font-black text-slate-900 tracking-tight truncate">
                         {m.value}
                       </span>
-                      <ArrowRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-sky-600 transition-colors" />
+                      <ArrowRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-sky-600 transition-colors shrink-0" />
                     </div>
                   </CardContent>
                 </Card>

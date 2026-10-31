@@ -115,7 +115,10 @@ model Lead {
   nextFollowUpDate     DateTime?
   nextAction           String?      @db.Text
   notes                String?      @db.Text
+  
+  // Lead Source
   leadSource           String?      @db.VarChar(100)
+  leadSourceOther      String?      @db.VarChar(100)
   
   assignedTelecallerId String?      @db.VarChar(36)
   assignedTelecaller   User?        @relation("TelecallerLeads", fields: [assignedTelecallerId], references: [id], onDelete: SetNull)
@@ -149,6 +152,7 @@ model Lead {
 
   @@index([pipelineStage])
   @@index([salesStage])
+  @@index([leadSource])
   @@index([assignedTelecallerId])
   @@index([assignedSalesmanId])
   @@index([priority])
@@ -335,6 +339,19 @@ model CallOutcomeOption {
   order                  Int      @default(0)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+
+  @@index([isActive, order])
+}
+
+model LeadSourceOption {
+  id        String   @id @default(cuid()) @db.VarChar(36)
+  name      String   @unique @db.VarChar(100)
+  color     String?  @db.VarChar(50)
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive, order])
 }

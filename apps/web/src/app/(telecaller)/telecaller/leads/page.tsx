@@ -1219,6 +1219,17 @@ export default function TelecallerMyLeadsPage() {
                     </div>
                   </div>
 
+                  {/* Lead Source */}
+                  {lead.leadSource && (
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">
+                      <span className="text-slate-400 font-semibold text-[11px]">Source:</span>
+                      <span className="font-bold text-slate-800 truncate">{lead.leadSource}</span>
+                      {lead.leadSource === 'Other' && lead.leadSourceOther && (
+                        <span className="text-slate-500 text-[11px] truncate">({lead.leadSourceOther})</span>
+                      )}
+                    </div>
+                  )}
+
                   {/* Footer Row: Details Button */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                     <span className="text-[11px] text-slate-400">
@@ -1315,6 +1326,9 @@ export default function TelecallerMyLeadsPage() {
 
                   {/* Notes (Editable) */}
                   <th className="w-64 min-w-[240px] p-3">Notes</th>
+
+                  {/* Lead Source (Read-only) */}
+                  <th className="w-36 min-w-[130px] p-3 hidden lg:table-cell">Lead Source</th>
 
                   {/* Action Buttons */}
                   <th className="w-24 min-w-[90px] p-3 text-center">Actions</th>
@@ -1518,6 +1532,21 @@ export default function TelecallerMyLeadsPage() {
                             placeholder="Add brief note..."
                             className="w-full text-xs bg-slate-50/80 hover:bg-white focus:bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-700 font-normal focus:outline-none focus:ring-1 focus:ring-sky-500"
                           />
+                        </td>
+
+                        {/* Lead Source (Read-only, hidden on small screens) */}
+                        <td className="w-36 min-w-[130px] p-3 hidden lg:table-cell min-w-0" onClick={(e) => e.stopPropagation()}>
+                          {lead.leadSource ? (
+                            <span
+                              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 truncate max-w-full"
+                              title={lead.leadSource === 'Other' && lead.leadSourceOther ? `Other: ${lead.leadSourceOther}` : lead.leadSource}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
+                              <span className="truncate">{lead.leadSource}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-normal italic text-xs">-</span>
+                          )}
                         </td>
 
                         {/* Action Buttons */}

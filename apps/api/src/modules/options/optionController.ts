@@ -3,7 +3,7 @@ import { dbStore } from '../../repositories/dbStore';
 import { auditLogRepository } from '../../repositories/auditLogRepository';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
-import { USER_ROLES, PipelineStageOption, CallOutcomeOption } from '@crm/shared';
+import { USER_ROLES, PipelineStageOption, CallOutcomeOption, LeadSourceOption } from '@crm/shared';
 
 /**
  * List Pipeline and Outcome options
@@ -17,10 +17,12 @@ export async function listOptions(req: Request, res: Response, next: NextFunctio
 
     let stages = [...(store.pipelineStageOptions || [])];
     let outcomes = [...(store.callOutcomeOptions || [])];
+    let sources = [...(store.leadSourceOptions || [])];
 
     if (!includeInactive) {
       stages = stages.filter((s) => s.isActive);
       outcomes = outcomes.filter((o) => o.isActive);
+      sources = sources.filter((s) => s.isActive);
     }
 
     // Attach lead counts
@@ -39,9 +41,17 @@ export async function listOptions(req: Request, res: Response, next: NextFunctio
         leadCount: leads.filter((l) => l.lastCallOutcome?.toLowerCase() === o.name.toLowerCase()).length,
       }));
 
+    const enrichedSources = sources
+      .sort((a, b) => a.order - b.order)
+      .map((s) => ({
+        ...s,
+        leadCount: leads.filter((l) => l.leadSource?.toLowerCase() === s.name.toLowerCase()).length,
+      }));
+
     sendSuccess(res, {
       pipelineStages: enrichedStages,
       callOutcomes: enrichedOutcomes,
+      leadSources: enrichedSources,
     });
   } catch (error) {
     next(error);
@@ -512,13 +522,234 @@ export async function reorderCallOutcomes(req: Request, res: Response, next: Nex
 }
 
 /**
+ * Create a new Lead Source (Admin only)
+ */
+export async function createLeadSource(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { name, color } = req.body;
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      throw new BadRequestError('Lead source name cannot be empty.');
+    }
+    const cleanName = name.trim();
+
+    const store = dbStore.store;
+    if (!store.leadSourceOptions) store.leadSourceOptions = [];
+
+    const isDuplicate = store.leadSourceOptions.some(
+      (s) => s.name.toLowerCase() === cleanName.toLowerCase()
+    );
+    if (isDuplicate) {
+      throw new BadRequestError(`Lead source "${cleanName}" already exists.`);
+    }
+
+    const maxOrder = store.leadSourceOptions.reduce((max, s) => Math.max(max, s.order ?? 0), -1);
+    const now = new Date().toISOString();
+    const newSource: LeadSourceOption = {
+      id: `src_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: cleanName,
+      color: color || 'blue',
+      isDefault: false,
+      isActive: true,
+      order: maxOrder + 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    store.leadSourceOptions.push(newSource);
+    dbStore.persist();
+    dbStore.syncLeadSourceToDatabase(newSource).catch(console.error);
+
+    await auditLogRepository.create({
+      userId: req.user!.id,
+      action: 'CREATE_LEAD_SOURCE',
+      entity: 'LEAD_SOURCE',
+      entityId: newSource.id,
+      details: { name: cleanName, color: newSource.color },
+    });
+
+    sendSuccess(res, newSource, `Lead source "${cleanName}" created successfully.`);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Update / Rename / Toggle Lead Source (Admin only)
+ */
+export async function updateLeadSource(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { name, color, isActive } = req.body;
+
+    const store = dbStore.store;
+    const source = store.leadSourceOptions?.find((s) => s.id === id);
+    if (!source) {
+      throw new NotFoundError('Lead source not found.');
+    }
+
+    const oldName = source.name;
+    let nameChanged = false;
+    let updatedLeadsCount = 0;
+
+    if (name !== undefined) {
+      if (typeof name !== 'string' || !name.trim()) {
+        throw new BadRequestError('Lead source name cannot be empty.');
+      }
+      const cleanName = name.trim();
+      const isDuplicate = store.leadSourceOptions?.some(
+        (s) => s.id !== id && s.name.toLowerCase() === cleanName.toLowerCase()
+      );
+      if (isDuplicate) {
+        throw new BadRequestError(`Lead source "${cleanName}" already exists.`);
+      }
+
+      if (cleanName.toLowerCase() !== source.name.toLowerCase()) {
+        nameChanged = true;
+        source.name = cleanName;
+
+        // Cascade rename to existing leads in memory and sync to DB
+        if (Array.isArray(store.leads)) {
+          for (const lead of store.leads) {
+            if (lead.leadSource?.toLowerCase() === oldName.toLowerCase()) {
+              lead.leadSource = cleanName;
+              lead.updatedAt = new Date().toISOString();
+              updatedLeadsCount++;
+              dbStore.syncLeadToDatabase(lead).catch(console.error);
+            }
+          }
+        }
+      } else {
+        source.name = cleanName;
+      }
+    }
+
+    if (color !== undefined) {
+      source.color = color;
+    }
+
+    if (isActive !== undefined) {
+      source.isActive = Boolean(isActive);
+    }
+
+    source.updatedAt = new Date().toISOString();
+    dbStore.persist();
+    dbStore.syncLeadSourceToDatabase(source).catch(console.error);
+
+    await auditLogRepository.create({
+      userId: req.user!.id,
+      action: 'UPDATE_LEAD_SOURCE',
+      entity: 'LEAD_SOURCE',
+      entityId: source.id,
+      details: {
+        oldName: nameChanged ? oldName : undefined,
+        newName: nameChanged ? source.name : undefined,
+        updatedLeadsCount: nameChanged ? updatedLeadsCount : undefined,
+        color: source.color,
+        isActive: source.isActive,
+      },
+    });
+
+    sendSuccess(
+      res,
+      source,
+      nameChanged && updatedLeadsCount > 0
+        ? `Lead source renamed to "${source.name}". Updated ${updatedLeadsCount} existing leads.`
+        : `Lead source "${source.name}" updated.`
+    );
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Delete Lead Source (Admin only)
+ * NEVER hard-delete if used by leads.
+ */
+export async function deleteLeadSource(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const store = dbStore.store;
+    const index = store.leadSourceOptions?.findIndex((s) => s.id === id);
+    if (index === undefined || index === -1) {
+      throw new NotFoundError('Lead source not found.');
+    }
+
+    const source = store.leadSourceOptions[index];
+    const usedCount = (store.leads || []).filter(
+      (l) => l.leadSource?.toLowerCase() === source.name.toLowerCase()
+    ).length;
+
+    if (usedCount > 0) {
+      throw new BadRequestError(
+        `Cannot delete source "${source.name}" because it is currently used by ${usedCount} lead(s). Deactivate it instead.`
+      );
+    }
+
+    store.leadSourceOptions.splice(index, 1);
+    dbStore.persist();
+
+    // Remove from database
+    import('../../config/prisma').then(({ prisma }) => {
+      prisma.leadSourceOption.delete({ where: { id } }).catch(() => {});
+    });
+
+    await auditLogRepository.create({
+      userId: req.user!.id,
+      action: 'DELETE_LEAD_SOURCE',
+      entity: 'LEAD_SOURCE',
+      entityId: source.id,
+      details: { name: source.name },
+    });
+
+    sendSuccess(res, { id }, `Lead source "${source.name}" deleted.`);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Reorder Lead Sources (Admin only)
+ */
+export async function reorderLeadSources(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { orderedIds } = req.body;
+    if (!Array.isArray(orderedIds)) {
+      throw new BadRequestError('orderedIds must be an array of string IDs.');
+    }
+
+    const store = dbStore.store;
+    orderedIds.forEach((id: string, index: number) => {
+      const source = store.leadSourceOptions?.find((s) => s.id === id);
+      if (source) {
+        source.order = index;
+        source.updatedAt = new Date().toISOString();
+        dbStore.syncLeadSourceToDatabase(source).catch(console.error);
+      }
+    });
+
+    dbStore.persist();
+
+    await auditLogRepository.create({
+      userId: req.user!.id,
+      action: 'REORDER_LEAD_SOURCES',
+      entity: 'LEAD_SOURCE',
+      details: { orderedIds },
+    });
+
+    sendSuccess(res, store.leadSourceOptions, 'Lead sources reordered.');
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * List Options Audit Logs (Admin only)
  */
 export async function getOptionsAuditLogs(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const logs = await auditLogRepository.list({ limit: 100 });
     const optionLogs = logs.filter(
-      (l) => l.entity === 'PIPELINE_STAGE' || l.entity === 'CALL_OUTCOME'
+      (l) => l.entity === 'PIPELINE_STAGE' || l.entity === 'CALL_OUTCOME' || l.entity === 'LEAD_SOURCE'
     );
     sendSuccess(res, optionLogs);
   } catch (error) {

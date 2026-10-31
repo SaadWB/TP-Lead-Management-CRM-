@@ -9,16 +9,45 @@ import {
   LOST_REASONS,
 } from '../constants';
 
-// Authentication
+const COMMON_PASSWORDS = new Set([
+  'password',
+  'password123',
+  'password@123',
+  'admin',
+  'admin123',
+  'admin12345',
+  '1234567890',
+  '123456789',
+  '12345678',
+  'qwertyuiop',
+  'letmein123',
+  'welcome123',
+  'tenderprocure',
+  'tpadmin123',
+]);
+
+export const passwordPolicySchema = z
+  .string()
+  .min(10, 'Password must be at least 10 characters long')
+  .refine((val) => /[A-Za-z]/.test(val), 'Password must contain at least one letter')
+  .refine((val) => /\d/.test(val), 'Password must contain at least one number')
+  .refine((val) => !COMMON_PASSWORDS.has(val.toLowerCase().trim()), 'This password is too common and insecure');
+
+// Authentication Schemas
 export const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required'),
+  newPassword: passwordPolicySchema,
 });
 
 export const createUserSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: passwordPolicySchema,
   role: z.enum([USER_ROLES.SUPER_ADMIN, USER_ROLES.TELECALLER, USER_ROLES.SALESMAN]),
   phone: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
@@ -27,13 +56,14 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   name: z.string().min(2).optional(),
   email: z.string().email().optional(),
-  password: z.string().min(6).optional(),
+  password: passwordPolicySchema.optional(),
   role: z.enum([USER_ROLES.SUPER_ADMIN, USER_ROLES.TELECALLER, USER_ROLES.SALESMAN]).optional(),
   phone: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
 });
 
 // Lead Schemas
+// In Single-Lead creation: State and City removed; Lead Source & Lead Source Other added
 export const createLeadSchema = z.object({
   companyName: z.string().min(2, 'Company name is required'),
   serviceProduct: z.string().min(1, 'Service or product is required'),
@@ -42,8 +72,6 @@ export const createLeadSchema = z.object({
   email: z.string().email('Invalid email').optional().nullable(),
   alternatePhone: z.string().optional().nullable(),
   website: z.string().url('Invalid website URL').or(z.literal('')).optional().nullable(),
-  city: z.string().optional().nullable(),
-  state: z.string().optional().nullable(),
   priority: z.string().default(PRIORITIES.MEDIUM),
   pipelineStage: z.string().default('New Lead'),
   lastCallOutcome: z.string().optional().nullable(),
@@ -51,11 +79,15 @@ export const createLeadSchema = z.object({
   nextAction: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   leadSource: z.string().optional().nullable(),
+  leadSourceOther: z.string().max(100, 'Other details must be at most 100 characters').optional().nullable(),
   assignedTelecallerId: z.string().optional().nullable(),
   assignedSalesmanId: z.string().optional().nullable(),
 });
 
-export const updateLeadSchema = createLeadSchema.partial();
+export const updateLeadSchema = createLeadSchema.partial().extend({
+  city: z.string().optional().nullable(),
+  state: z.string().optional().nullable(),
+});
 
 export const updateStageSchema = z.object({
   pipelineStage: z.string().optional(),
@@ -125,7 +157,6 @@ export const updateFollowUpTaskSchema = z.object({
   outcomeNotes: z.string().optional(),
 });
 
-
 export const assignLeadSchema = z.object({
   assignedUserId: z.string().min(1, 'Assignee ID is required'),
   roleType: z.enum(['TELECALLER', 'SALESMAN']),
@@ -153,6 +184,8 @@ export const importCommitSchema = z.object({
       website: z.string().optional().nullable(),
       city: z.string().optional().nullable(),
       state: z.string().optional().nullable(),
+      leadSource: z.string().optional().nullable(),
+      leadSourceOther: z.string().optional().nullable(),
       priority: z.string().default(PRIORITIES.MEDIUM),
       pipelineStage: z.string().default(CALL_OUTCOMES.NEW_LEAD),
       callAttempts: z.number().default(0),
@@ -161,7 +194,6 @@ export const importCommitSchema = z.object({
       nextFollowUpDate: z.string().optional().nullable(),
       nextAction: z.string().optional().nullable(),
       notes: z.string().optional().nullable(),
-      leadSource: z.string().optional().nullable(),
       assignedTelecallerId: z.string().optional().nullable(),
       action: z.enum(['IMPORT', 'UPDATE', 'SKIP']).default('IMPORT'),
       matchedExistingId: z.string().optional(),
@@ -180,3 +212,7 @@ export const bulkDeleteSchema = z.object({
   leadIds: z.array(z.string()).min(1, 'At least one lead ID is required'),
 });
 
+export const createSourceSchema = z.object({
+  name: z.string().min(1, 'Source name cannot be empty').max(100),
+  color: z.string().optional().nullable(),
+});

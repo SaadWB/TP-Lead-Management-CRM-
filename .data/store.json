@@ -10445,5 +10445,97 @@
       "updatedAt": "2026-10-28T07:23:15.403Z"
     }
   ],
-  "auditLogs": []
+  "auditLogs": [],
+  "leadSourceOptions": [
+    {
+      "id": "src_website",
+      "name": "Website",
+      "color": "blue",
+      "isDefault": true,
+      "isActive": true,
+      "order": 0,
+      "createdAt": "2026-10-31T15:18:31.641Z",
+      "updatedAt": "2026-10-31T15:18:31.641Z"
+    },
+    {
+      "id": "src_referral",
+      "name": "Referral",
+      "color": "emerald",
+      "isDefault": true,
+      "isActive": true,
+      "order": 1,
+      "createdAt": "2026-10-31T15:18:31.641Z",
+      "updatedAt": "2026-10-31T15:18:31.641Z"
+    },
+    {
+      "id": "src_cold_call",
+      "name": "Cold Call",
+      "color": "amber",
+      "isDefault": true,
+      "isActive": true,
+      "order": 2,
+      "createdAt": "2026-10-31T15:18:31.641Z",
+      "updatedAt": "2026-10-31T15:18:31.641Z"
+    },
+    {
+      "id": "src_whatsapp",
+      "name": "WhatsApp",
+      "color": "teal",
+      "isDefault": true,
+      "isActive": true,
+      "order": 3,
+      "createdAt": "2026-10-31T15:18:31.641Z",
+      "updatedAt": "2026-10-31T15:18:31.641Z"
+    },
+    {
+      "id": "src_social_media",
+      "name": "Social Media (Facebook / LinkedIn / Instagram)",
+      "color": "indigo",
+      "isDefault": true,
+      "isActive": true,
+      "order": 4,
+      "createdAt": "2026-10-31T15:18:31.641Z",
+      "updatedAt": "2026-10-31T15:18:31.641Z"
+    },
+    {
+      "id": "src_exhibition_event",
+      "name": "Exhibition / Event",
+      "color": "purple",
+      "isDefault": true,
+      "isActive": true,
+      "order": 5,
+      "createdAt": "2026-10-31T15:18:31.641Z",
+      "updatedAt": "2026-10-31T15:18:31.641Z"
+    },
+    {
+      "id": "src_tender_portal",
+      "name": "Tender Portal",
+      "color": "sky",
+      "isDefault": true,
+      "isActive": true,
+      "order": 6,
+      "createdAt": "2026-10-31T15:18:31.641Z",
+      "updatedAt": "2026-10-31T15:18:31.641Z"
+    },
+    {
+      "id": "src_existing_customer",
+      "name": "Existing Customer",
+      "color": "cyan",
+      "isDefault": true,
+      "isActive": true,
+      "order": 7,
+      "createdAt": "2026-10-31T15:18:31.641Z",
+      "updatedAt": "2026-10-31T15:18:31.641Z"
+    },
+    {
+      "id": "src_other",
+      "name": "Other",
+      "color": "slate",
+      "isDefault": true,
+      "isActive": true,
+      "order": 8,
+      "createdAt": "2026-10-31T15:18:31.641Z",
+      "updatedAt": "2026-10-31T15:18:31.641Z"
+    }
+  ]
 }

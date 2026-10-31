@@ -9,7 +9,7 @@ export function errorHandler(
   res: Response,
   _next: NextFunction
 ): void {
-  // Zod validation errors
+  // 1. Zod input validation errors
   if (err instanceof ZodError) {
     const formattedErrors = err.errors.map((e) => ({
       field: e.path.join('.'),
@@ -19,14 +19,27 @@ export function errorHandler(
     return;
   }
 
-  // App specific operational errors
+  // 2. Controlled operational application errors
   if (err instanceof AppError) {
     sendError(res, err.message, err.statusCode, err.errors);
     return;
   }
 
-  // Unexpected errors
-  console.error('[UNHANDLED ERROR]', err);
+  // 3. Database / Prisma driver errors
+  if (err.name === 'PrismaClientKnownRequestError' || err.name === 'PrismaClientValidationError') {
+    console.error('[DATABASE ERROR]', err);
+    sendError(
+      res,
+      process.env.NODE_ENV === 'production'
+        ? 'A database error occurred. Please try again later.'
+        : `Database Error: ${err.message}`,
+      500
+    );
+    return;
+  }
+
+  // 4. Unexpected server exceptions
+  console.error('[UNHANDLED SERVER ERROR]', err);
   sendError(
     res,
     process.env.NODE_ENV === 'production'

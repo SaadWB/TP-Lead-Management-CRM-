@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
-import { PRIORITIES, Priority, Lead } from '@crm/shared';
+import { Priority, Lead, DEFAULT_LEAD_SOURCES } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Plus } from 'lucide-react';
 
@@ -22,11 +22,34 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [priority, setPriority] = useState<Priority>('MEDIUM');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
+  const [leadSource, setLeadSource] = useState<string>('');
+  const [leadSourceOther, setLeadSourceOther] = useState('');
+  const [sourceOptions, setSourceOptions] = useState<{ value: string; label: string }[]>(
+    DEFAULT_LEAD_SOURCES.map((s) => ({ value: s, label: s }))
+  );
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    // Fetch live options from server so newly configured sources appear immediately
+    api.get<{ leadSources?: { name: string; isActive: boolean; order: number }[] }>('/options')
+      .then((res) => {
+        if (res.success && res.data?.leadSources) {
+          const activeSources = res.data.leadSources
+            .filter((s) => s.isActive)
+            .sort((a, b) => a.order - b.order)
+            .map((s) => ({ value: s.name, label: s.name }));
+          if (activeSources.length > 0) {
+            setSourceOptions(activeSources);
+          }
+        }
+      })
+      .catch(() => {
+        // Fallback to default lead sources
+      });
+  }, [isOpen]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,11 +66,11 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
         serviceProduct: serviceProduct.trim(),
         contactPerson: contactPerson.trim() || undefined,
         phone: phone.trim(),
-        email: email || undefined,
+        email: email.trim() || undefined,
         priority,
-        city: city || undefined,
-        state: state || undefined,
-        notes: notes || undefined,
+        leadSource: leadSource || undefined,
+        leadSourceOther: leadSource === 'Other' ? leadSourceOther.trim() || undefined : undefined,
+        notes: notes.trim() || undefined,
       });
 
       if (res.success && res.data) {
@@ -59,6 +82,9 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
         setContactPerson('');
         setPhone('');
         setEmail('');
+        setPriority('MEDIUM');
+        setLeadSource('');
+        setLeadSourceOther('');
         setNotes('');
       }
     } catch (err: any) {
@@ -123,7 +149,7 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Select
             label="Priority Level"
             value={priority}
@@ -135,19 +161,28 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
               { value: 'URGENT', label: 'Urgent Priority' },
             ]}
           />
-          <Input
-            label="City"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="Chicago"
-          />
-          <Input
-            label="State / Region"
-            value={state}
-            onChange={(e) => setState(e.target.value)}
-            placeholder="IL"
+          <Select
+            label="Lead Source"
+            value={leadSource}
+            onChange={(e) => setLeadSource(e.target.value)}
+            options={[
+              { value: '', label: 'Select lead source' },
+              ...sourceOptions,
+            ]}
           />
         </div>
+
+        {leadSource === 'Other' && (
+          <div className="animate-in fade-in duration-200">
+            <Input
+              label="Lead Source Details"
+              value={leadSourceOther}
+              onChange={(e) => setLeadSourceOther(e.target.value)}
+              placeholder="e.g. Partner introduction, newspaper ad (max 100 characters)"
+              maxLength={100}
+            />
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold text-slate-700">Initial Notes & Requirements</label>

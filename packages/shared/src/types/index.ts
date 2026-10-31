@@ -31,6 +31,11 @@ export interface User {
   role: UserRole;
   phone?: string | null;
   isActive: boolean;
+  mustChangePassword?: boolean;
+  failedLoginAttempts?: number;
+  lockoutUntil?: string | null;
+  lastLoginAt?: string | null;
+  lastActiveAt?: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -43,6 +48,7 @@ export interface User {
 export interface AuthSession {
   user: User;
   token: string;
+  refreshToken?: string;
 }
 
 export interface Lead {
@@ -69,6 +75,10 @@ export interface Lead {
   nextAction?: string | null;
   notes?: string | null;
   leadSource?: string | null;
+  leadSourceOther?: string | null;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  deletedById?: string | null;
   assignedTelecallerId?: string | null;
   assignedSalesmanId?: string | null;
   createdById?: string | null;
@@ -300,6 +310,18 @@ export interface CallOutcomeOption {
   color?: string;
   suggestedPipelineStage?: string;
   flags: OutcomeBehaviorFlags;
+  isDefault: boolean;
+  isActive: boolean;
+  order: number;
+  leadCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadSourceOption {
+  id: string;
+  name: string;
+  color?: string | null;
   isDefault: boolean;
   isActive: boolean;
   order: number;

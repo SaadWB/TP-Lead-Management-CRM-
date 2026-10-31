@@ -1,10 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { createUserSchema, updateUserSchema, UserRole } from '@crm/shared';
 import { userRepository } from '../../repositories/userRepository';
 import { leadRepository } from '../../repositories/leadRepository';
-import { BadRequestError, NotFoundError } from '../../utils/errors';
+import { BadRequestError, NotFoundError, UnauthorizedError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
+import { revokeAllUserRefreshTokens } from '../../utils/tokens';
+import { dbStore } from '../../repositories/dbStore';
 
 export async function listUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -40,7 +43,8 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       throw new BadRequestError('User with this email already exists');
     }
 
-    const passwordHash = bcrypt.hashSync(data.password, 10);
+    // Cost factor 12 for strong password hashing
+    const passwordHash = await bcrypt.hash(data.password, 12);
     const createdUser = await userRepository.create({
       name: data.name,
       email: data.email,
@@ -48,7 +52,20 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       role: data.role,
       phone: data.phone,
       isActive: data.isActive,
+      mustChangePassword: true, // Force user to set their password on initial login
     });
+
+    if (req.user?.id) {
+      await dbStore.syncAuditLogToDatabase({
+        id: `audit_usr_create_${Date.now()}`,
+        userId: req.user.id,
+        action: 'USER_CREATED',
+        entity: 'User',
+        entityId: createdUser.id,
+        details: { name: createdUser.name, email: createdUser.email, role: createdUser.role },
+        createdAt: new Date().toISOString(),
+      });
+    }
 
     sendSuccess(res, createdUser, 'User created successfully', 201);
   } catch (error) {
@@ -75,11 +92,29 @@ export async function updateUser(req: Request, res: Response, next: NextFunction
 
     const updatePayload: any = { ...data };
     if (data.password) {
-      updatePayload.passwordHash = bcrypt.hashSync(data.password, 10);
+      updatePayload.passwordHash = await bcrypt.hash(data.password, 12);
       delete updatePayload.password;
     }
 
     const updated = await userRepository.update(userId, updatePayload);
+
+    // If user was deactivated, revoke all refresh tokens immediately
+    if (data.isActive === false) {
+      await revokeAllUserRefreshTokens(userId);
+    }
+
+    if (req.user?.id) {
+      await dbStore.syncAuditLogToDatabase({
+        id: `audit_usr_update_${Date.now()}`,
+        userId: req.user.id,
+        action: 'USER_UPDATED',
+        entity: 'User',
+        entityId: userId,
+        details: { fields: Object.keys(data) },
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     sendSuccess(res, updated, 'User updated successfully');
   } catch (error) {
     next(error);
@@ -104,7 +139,6 @@ export async function toggleUserStatus(req: Request, res: Response, next: NextFu
       });
 
       if (total > 0 && req.query.force !== 'true') {
-        // Return informative warning with lead count
         sendSuccess(res, {
           user: existing,
           requiresReassignment: true,
@@ -113,10 +147,100 @@ export async function toggleUserStatus(req: Request, res: Response, next: NextFu
         });
         return;
       }
+
+      // Revoke all tokens for deactivated user
+      await revokeAllUserRefreshTokens(userId);
     }
 
     const updated = await userRepository.update(userId, { isActive: newStatus });
+
+    if (req.user?.id) {
+      await dbStore.syncAuditLogToDatabase({
+        id: `audit_usr_toggle_${Date.now()}`,
+        userId: req.user.id,
+        action: newStatus ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+        entity: 'User',
+        entityId: userId,
+        details: { email: existing.email, newStatus },
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     sendSuccess(res, updated, `User account ${newStatus ? 'activated' : 'deactivated'} successfully`);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function adminResetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.params.id;
+    const existing = await userRepository.findById(userId);
+    if (!existing) {
+      throw new NotFoundError('User not found');
+    }
+
+    const newPassword = req.body.newPassword || `Pass@${crypto.randomBytes(4).toString('hex')}123`;
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    await userRepository.update(userId, {
+      passwordHash,
+      mustChangePassword: true,
+      failedLoginAttempts: 0,
+      lockoutUntil: null,
+    });
+
+    // Revoke all existing sessions for this user
+    await revokeAllUserRefreshTokens(userId);
+
+    if (req.user?.id) {
+      await dbStore.syncAuditLogToDatabase({
+        id: `audit_pwd_reset_${Date.now()}`,
+        userId: req.user.id,
+        action: 'ADMIN_RESET_PASSWORD',
+        entity: 'User',
+        entityId: userId,
+        details: { targetEmail: existing.email },
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    sendSuccess(res, {
+      message: 'Password reset successfully. The user must change password on next login.',
+      temporaryPassword: req.body.newPassword ? undefined : newPassword,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function forceLogout(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.params.id;
+    const existing = await userRepository.findById(userId);
+    if (!existing) {
+      throw new NotFoundError('User not found');
+    }
+
+    // Revoke all refresh tokens and reset last active timestamp
+    await revokeAllUserRefreshTokens(userId);
+    await userRepository.update(userId, {
+      lastActiveAt: new Date(0).toISOString(),
+    });
+
+    if (req.user?.id) {
+      await dbStore.syncAuditLogToDatabase({
+        id: `audit_force_logout_${Date.now()}`,
+        userId: req.user.id,
+        action: 'ADMIN_FORCE_LOGOUT',
+        entity: 'User',
+        entityId: userId,
+        details: { targetEmail: existing.email },
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    sendSuccess(res, { message: `All sessions for user ${existing.email} have been revoked.` });
   } catch (error) {
     next(error);
   }

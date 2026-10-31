@@ -114,4 +114,7 @@ export declare const ACTIVITY_TYPES: {
     readonly LEAD_LOST: "LEAD_LOST";
 };
 export type ActivityType = (typeof ACTIVITY_TYPES)[keyof typeof ACTIVITY_TYPES];
-export declare const IMPORT_TEMPLATE_COLUMNS: readonly ["Company", "Service / Product", "Contact Person", "Phone", "Email", "Priority", "Pipeline Stage", "Call Attempts", "Last Call Outcome", "Last Contact Date", "Next Follow-Up Date", "Next Action", "Notes/Objection"];
+export declare const DEFAULT_LEAD_SOURCES: readonly ["Website", "Referral", "Cold Call", "WhatsApp", "Social Media (Facebook / LinkedIn / Instagram)", "Exhibition / Event", "Tender Portal", "Existing Customer", "Other"];
+export type LeadSource = (typeof DEFAULT_LEAD_SOURCES)[number] | string;
+export declare const DEFAULT_LEAD_SOURCE_LIST: ("Website" | "Referral" | "Cold Call" | "WhatsApp" | "Social Media (Facebook / LinkedIn / Instagram)" | "Exhibition / Event" | "Tender Portal" | "Existing Customer" | "Other")[];
+export declare const IMPORT_TEMPLATE_COLUMNS: readonly ["Company", "Service / Product", "Contact Person", "Phone", "Email", "Lead Source", "Priority", "Pipeline Stage", "Call Attempts", "Last Call Outcome", "Last Contact Date", "Next Follow-Up Date", "Next Action", "Notes/Objection"];

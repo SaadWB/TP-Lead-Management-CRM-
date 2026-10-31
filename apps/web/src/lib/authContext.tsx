@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { useRouter, usePathname } from 'next/navigation';
 import { User, UserRole } from '@crm/shared';
 import { api } from './apiClient';
+import { ForcePasswordChangeModal } from '@/components/auth/ForcePasswordChangeModal';
 
 interface AuthContextType {
   user: User | null;
@@ -125,6 +126,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      {user?.mustChangePassword && (
+        <ForcePasswordChangeModal
+          isOpen={true}
+          user={user}
+          onSuccess={(updatedUser) => {
+            setUser({ ...updatedUser, mustChangePassword: false });
+            routeToRoleHome(updatedUser.role);
+          }}
+          onLogout={logout}
+        />
+      )}
     </AuthContext.Provider>
   );
 }

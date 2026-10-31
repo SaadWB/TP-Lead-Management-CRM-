@@ -12,24 +12,25 @@ import {
 import { leadRepository } from '../../repositories/leadRepository';
 import { userRepository } from '../../repositories/userRepository';
 import { activityRepository } from '../../repositories/activityRepository';
-import { notificationService } from '../../services/notificationService';
+import { auditLogRepository } from '../../repositories/auditLogRepository';
 import { dbStore } from '../../repositories/dbStore';
-import { BadRequestError } from '../../utils/errors';
+import { BadRequestError, ForbiddenError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
+import { sanitizeForFormulaInjection } from '../../utils/security';
 
-// Multer memory storage configuration
-const storage = multer.memoryStorage();
+// Configure Multer for in-memory processing
 export const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max file size
   fileFilter: (_req, file, cb) => {
-    if (
-      file.mimetype.includes('spreadsheetml') ||
+    const isAllowed =
+      file.mimetype.includes('spreadsheet') ||
       file.mimetype.includes('excel') ||
       file.mimetype.includes('csv') ||
       file.originalname.endsWith('.xlsx') ||
-      file.originalname.endsWith('.csv')
-    ) {
+      file.originalname.endsWith('.csv');
+
+    if (isAllowed) {
       cb(null, true);
     } else {
       cb(new Error('Invalid file type. Only .xlsx and .csv files are supported.'));
@@ -40,13 +41,13 @@ export const upload = multer({
 export async function parseUploadedFile(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.file) {
-      throw new BadRequestError('No file uploaded');
+      throw new BadRequestError('Please provide a spreadsheet or CSV file');
     }
 
     const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
     const sheetNames = workbook.SheetNames;
     if (sheetNames.length === 0) {
-      throw new BadRequestError('The uploaded workbook contains no sheets');
+      throw new BadRequestError('The uploaded file does not contain any readable sheets');
     }
 
     const selectedSheet = (req.query.sheet as string) || sheetNames[0];
@@ -58,6 +59,10 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
     const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
     if (rawRows.length === 0) {
       throw new BadRequestError('The uploaded sheet contains no data rows');
+    }
+
+    if (rawRows.length > 500) {
+      throw new BadRequestError('File contains more than 500 rows. Please cap bulk upload batches to 500 records.');
     }
 
     // Inspect headers
@@ -73,6 +78,7 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       else if (clean.includes('phone') && !clean.includes('alt')) normalizedHeaders['phone'] = h;
       else if (clean.includes('altphone')) normalizedHeaders['alternatePhone'] = h;
       else if (clean.includes('email') || clean.includes('mail')) normalizedHeaders['email'] = h;
+      else if (clean.includes('source')) normalizedHeaders['leadSource'] = h;
       else if (clean.includes('priority')) normalizedHeaders['priority'] = h;
       else if (clean.includes('stage') || clean.includes('pipeline')) normalizedHeaders['pipelineStage'] = h;
       else if (clean.includes('callattempt') || clean.includes('attempts')) normalizedHeaders['callAttempts'] = h;
@@ -82,9 +88,7 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       else if (clean.includes('nextaction') || clean.includes('action')) normalizedHeaders['nextAction'] = h;
       else if (clean.includes('note') || clean.includes('objection')) normalizedHeaders['notes'] = h;
       else if (clean.includes('website') || clean.includes('web')) normalizedHeaders['website'] = h;
-      else if (clean.includes('city')) normalizedHeaders['city'] = h;
-      else if (clean.includes('state')) normalizedHeaders['state'] = h;
-      else if (clean.includes('source')) normalizedHeaders['leadSource'] = h;
+      // Note: city and state from old templates are ignored silently
     });
 
     sendSuccess(res, {
@@ -94,7 +98,7 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       totalRows: rawRows.length,
       headers,
       suggestedMapping: normalizedHeaders,
-      previewRows: rawRows.slice(0, 10),
+      previewRows: rawRows.slice(0, 10).map((r) => sanitizeForFormulaInjection(r)),
     });
   } catch (error) {
     next(error);
@@ -108,8 +112,13 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
       throw new BadRequestError('Rows must be an array of objects');
     }
 
+    if (rows.length > 500) {
+      throw new BadRequestError('Cannot validate more than 500 rows per batch.');
+    }
+
     const existingLeads = dbStore.store.leads;
     const cleanPhone = (p: string) => (p || '').toString().replace(/\D/g, '');
+    const activeSources = (dbStore.store.leadSourceOptions || []).filter((s) => s.isActive);
 
     const validatedRows: any[] = [];
     const duplicates: any[] = [];
@@ -122,12 +131,13 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
     rows.forEach((row, idx) => {
       const getField = (fieldKey: string) => {
         const col = columnMapping[fieldKey];
-        return col !== undefined && row[col] !== undefined ? String(row[col]).trim() : '';
+        const val = col !== undefined && row[col] !== undefined ? String(row[col]).trim() : '';
+        return sanitizeForFormulaInjection(val);
       };
 
       const companyName = getField('companyName');
       const serviceProduct = getField('serviceProduct');
-      const contactPerson = getField('contactPerson');
+      const contactPerson = getField('contactPerson'); // Optional!
       const phone = getField('phone');
       const email = getField('email');
       const priority = (getField('priority').toUpperCase() || 'MEDIUM') as Priority;
@@ -138,13 +148,31 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
       const callAttempts = parseInt(getField('callAttempts') || '0', 10) || 0;
       const lastCallOutcome = getField('lastCallOutcome') || null;
       const website = getField('website') || null;
-      const city = getField('city') || null;
-      const state = getField('state') || null;
-      const leadSource = getField('leadSource') || 'Spreadsheet Import';
+
+      // Lead Source mapping:
+      const rawSource = getField('leadSource');
+      let leadSource = '';
+      let leadSourceOther = '';
+      let sourceWarning: string | null = null;
+
+      if (rawSource) {
+        const matched = activeSources.find(
+          (s) => s.name.toLowerCase() === rawSource.toLowerCase()
+        );
+        if (matched) {
+          leadSource = matched.name;
+        } else {
+          leadSource = 'Other';
+          leadSourceOther = rawSource.slice(0, 100);
+          sourceWarning = `Source "${rawSource}" not recognized; mapped to "Other" ("${leadSourceOther}")`;
+        }
+      }
 
       const errors: string[] = [];
+      const warnings: string[] = [];
+      if (sourceWarning) warnings.push(sourceWarning);
+
       if (!companyName) errors.push('Company name is required');
-      if (!contactPerson) errors.push('Contact person is required');
       if (!phone) errors.push('Phone number is required');
       else if (cleanPhone(phone).length < 7) errors.push('Phone number must have at least 7 digits');
 
@@ -198,22 +226,22 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
         mapped: {
           companyName,
           serviceProduct: serviceProduct || 'General Procurement',
-          contactPerson,
+          contactPerson: contactPerson || '',
           phone,
           email: email || null,
           priority: (Object.values(PRIORITIES) as string[]).includes(priority) ? priority : 'MEDIUM',
-          pipelineStage: normalizeCallOutcome(pipelineStage),
+          pipelineStage: normalizeCallOutcome(pipelineStage) || 'New Lead',
           callAttempts,
           lastCallOutcome,
           nextFollowUpDate: nextFollowUpDate || null,
           nextAction: nextAction || null,
           notes: notes || null,
           website,
-          city,
-          state,
-          leadSource,
+          leadSource: leadSource || null,
+          leadSourceOther: leadSourceOther || null,
         },
         errors,
+        warnings,
         isValid,
         hasDuplicate: !!duplicateMatch || !!matchingReason,
         duplicateMatch: duplicateMatch
@@ -274,6 +302,10 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
 
 export async function commitImport(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Admin can commit bulk imports.');
+    }
+
     const data = importCommitSchema.parse(req.body);
     const { fileName, records, distributionMethod, selectedTelecallerIds } = data;
 
@@ -308,6 +340,8 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
             serviceProduct: record.serviceProduct || existing.serviceProduct,
             contactPerson: record.contactPerson || existing.contactPerson,
             notes: record.notes ? `${existing.notes || ''}\n[Import Update]: ${record.notes}` : existing.notes,
+            leadSource: record.leadSource || existing.leadSource,
+            leadSourceOther: record.leadSourceOther || existing.leadSourceOther,
             lastActivityAt: new Date().toISOString(),
           });
           await activityRepository.create({
@@ -322,80 +356,59 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
       }
 
       // Assign telecaller
-      let assignedTelecallerId = record.assignedTelecallerId;
-      if (!assignedTelecallerId && telecallerPool.length > 0) {
-        if (distributionMethod === 'EVEN') {
-          assignedTelecallerId = telecallerPool[roundRobinIdx % telecallerPool.length];
-          roundRobinIdx++;
-        } else {
-          assignedTelecallerId = telecallerPool[0];
-        }
+      let assignedId: string | null = null;
+      if (distributionMethod === 'EVEN' && telecallerPool.length > 0) {
+        assignedId = telecallerPool[roundRobinIdx % telecallerPool.length];
+        roundRobinIdx++;
+        telecallerCounts[assignedId] = (telecallerCounts[assignedId] || 0) + 1;
+      } else if (record.assignedTelecallerId) {
+        assignedId = record.assignedTelecallerId;
       }
 
-      if (assignedTelecallerId) {
-        telecallerCounts[assignedTelecallerId] = (telecallerCounts[assignedTelecallerId] || 0) + 1;
-      }
-
-      const created = await leadRepository.create({
+      const newLead = await leadRepository.create({
         companyName: record.companyName,
         serviceProduct: record.serviceProduct,
-        contactPerson: record.contactPerson,
+        contactPerson: record.contactPerson || '',
         phone: record.phone,
         email: record.email || null,
         alternatePhone: record.alternatePhone || null,
         website: record.website || null,
-        city: record.city || null,
-        state: record.state || null,
-        priority: (record.priority as Priority) || 'MEDIUM',
-        pipelineStage: (record.pipelineStage as PipelineStage) || 'NEW',
+        priority: record.priority as Priority,
+        pipelineStage: (record.pipelineStage as PipelineStage) || 'New Lead',
         callAttempts: record.callAttempts || 0,
-        lastCallOutcome: (record.lastCallOutcome as any) || null,
+        lastCallOutcome: record.lastCallOutcome || null,
         lastContactDate: record.lastContactDate || null,
         nextFollowUpDate: record.nextFollowUpDate || null,
         nextAction: record.nextAction || null,
         notes: record.notes || null,
-        leadSource: record.leadSource || 'Bulk Import',
-        assignedTelecallerId: assignedTelecallerId || null,
+        leadSource: record.leadSource || null,
+        leadSourceOther: record.leadSourceOther || null,
+        assignedTelecallerId: assignedId,
         createdById: req.user!.id,
       });
 
-      // Assignment history
-      if (assignedTelecallerId) {
-        dbStore.store.assignmentHistories.push({
-          id: `asg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-          leadId: created.id,
-          assignedById: req.user!.id,
-          previousUserId: null,
-          newUserId: assignedTelecallerId,
-          roleType: 'TELECALLER',
-          handoverSummary: `Assigned during bulk import "${fileName}"`,
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      // Activity record
       await activityRepository.create({
-        leadId: created.id,
+        leadId: newLead.id,
         userId: req.user!.id,
         type: 'LEAD_IMPORTED',
-        description: `Imported via spreadsheet "${fileName}" by ${req.user!.name}`,
+        description: `Lead imported from file "${fileName}" by ${req.user!.name}`,
       });
 
       importedCount++;
     }
 
-    // Notify assigned telecallers
-    for (const [telecallerId, count] of Object.entries(telecallerCounts)) {
-      if (count > 0) {
-        await notificationService.notifyLeadAssignment(
-          telecallerId,
-          'import-batch',
-          `${count} New Leads (Batch Import)`,
-          'Import Distribution',
-          req.user!.name
-        );
-      }
-    }
+    await auditLogRepository.create({
+      userId: req.user!.id,
+      action: 'BULK_IMPORT',
+      entity: 'IMPORT_JOB',
+      details: {
+        fileName,
+        importedCount,
+        updatedCount,
+        skippedCount,
+        distributionMethod,
+      },
+    });
 
     sendSuccess(res, {
       fileName,
@@ -403,10 +416,7 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
       importedCount,
       updatedCount,
       skippedCount,
-      distribution: Object.entries(telecallerCounts).map(([telecallerId, count]) => {
-        const u = dbStore.store.users.find((user) => user.id === telecallerId);
-        return { telecallerId, name: u ? u.name : telecallerId, count };
-      }),
+      telecallerDistribution: telecallerCounts,
     });
   } catch (error) {
     next(error);

@@ -19,8 +19,10 @@ import {
   normalizeCallOutcome,
   PipelineStageOption,
   CallOutcomeOption,
+  LeadSourceOption,
   AuditLogItem,
 } from '@crm/shared';
+import { prisma } from '../config/prisma';
 
 export interface CustomOptions {
   priorities: string[];
@@ -38,6 +40,7 @@ export interface DataStore {
   customOptions: CustomOptions;
   pipelineStageOptions: PipelineStageOption[];
   callOutcomeOptions: CallOutcomeOption[];
+  leadSourceOptions: LeadSourceOption[];
   auditLogs: AuditLogItem[];
 }
 
@@ -68,6 +71,21 @@ export function getDefaultCallOutcomeOptions(): CallOutcomeOption[] {
     { id: 'outc_decision_pending', name: 'Decision Pending', color: 'amber', suggestedPipelineStage: 'Follow-up', flags: { requiresNextFollowUp: true }, isDefault: true, isActive: true, order: 9, createdAt: now, updatedAt: now },
     { id: 'outc_not_interested', name: 'Not Interested', color: 'rose', suggestedPipelineStage: 'Closed', flags: { closesLead: true }, isDefault: true, isActive: true, order: 10, createdAt: now, updatedAt: now },
     { id: 'outc_wrong_number', name: 'Wrong Number', color: 'rose', suggestedPipelineStage: 'Closed', flags: { closesLead: true }, isDefault: true, isActive: true, order: 11, createdAt: now, updatedAt: now },
+  ];
+}
+
+export function getDefaultLeadSourceOptions(): LeadSourceOption[] {
+  const now = new Date().toISOString();
+  return [
+    { id: 'src_website', name: 'Website', color: 'blue', isDefault: true, isActive: true, order: 0, createdAt: now, updatedAt: now },
+    { id: 'src_referral', name: 'Referral', color: 'emerald', isDefault: true, isActive: true, order: 1, createdAt: now, updatedAt: now },
+    { id: 'src_cold_call', name: 'Cold Call', color: 'amber', isDefault: true, isActive: true, order: 2, createdAt: now, updatedAt: now },
+    { id: 'src_whatsapp', name: 'WhatsApp', color: 'teal', isDefault: true, isActive: true, order: 3, createdAt: now, updatedAt: now },
+    { id: 'src_social_media', name: 'Social Media (Facebook / LinkedIn / Instagram)', color: 'indigo', isDefault: true, isActive: true, order: 4, createdAt: now, updatedAt: now },
+    { id: 'src_exhibition_event', name: 'Exhibition / Event', color: 'purple', isDefault: true, isActive: true, order: 5, createdAt: now, updatedAt: now },
+    { id: 'src_tender_portal', name: 'Tender Portal', color: 'sky', isDefault: true, isActive: true, order: 6, createdAt: now, updatedAt: now },
+    { id: 'src_existing_customer', name: 'Existing Customer', color: 'cyan', isDefault: true, isActive: true, order: 7, createdAt: now, updatedAt: now },
+    { id: 'src_other', name: 'Other', color: 'slate', isDefault: true, isActive: true, order: 8, createdAt: now, updatedAt: now },
   ];
 }
 
@@ -560,6 +578,7 @@ function generateInitialSeed(): DataStore {
     },
     pipelineStageOptions: getDefaultPipelineStageOptions(),
     callOutcomeOptions: getDefaultCallOutcomeOptions(),
+    leadSourceOptions: getDefaultLeadSourceOptions(),
     auditLogs: [],
   };
 }
@@ -735,6 +754,11 @@ class StoreManager {
           }
         }
 
+        if (!Array.isArray(store.leadSourceOptions) || store.leadSourceOptions.length === 0) {
+          store.leadSourceOptions = getDefaultLeadSourceOptions();
+          migrated = true;
+        }
+
         if (!Array.isArray(store.auditLogs)) {
           store.auditLogs = [];
           migrated = true;
@@ -853,6 +877,130 @@ class StoreManager {
     this.data = generateInitialSeed();
     this.persist();
     return this.data;
+  }
+
+  public async syncLeadToDatabase(lead: Lead): Promise<void> {
+    try {
+      await prisma.lead.upsert({
+        where: { id: lead.id },
+        update: {
+          companyName: lead.companyName,
+          serviceProduct: lead.serviceProduct,
+          contactPerson: lead.contactPerson || null,
+          phone: lead.phone,
+          email: lead.email || null,
+          alternatePhone: lead.alternatePhone || null,
+          website: lead.website || null,
+          city: lead.city || null,
+          state: lead.state || null,
+          priority: (lead.priority as any) || 'MEDIUM',
+          pipelineStage: lead.pipelineStage || 'New Lead',
+          salesStage: lead.salesStage || null,
+          callAttempts: lead.callAttempts || 0,
+          isRetry: lead.isRetry || false,
+          retryCount: lead.retryCount || 0,
+          lastCallOutcome: lead.lastCallOutcome || null,
+          lastContactDate: lead.lastContactDate ? new Date(lead.lastContactDate) : null,
+          lastStatusUpdatedAt: lead.lastStatusUpdatedAt ? new Date(lead.lastStatusUpdatedAt) : null,
+          nextFollowUpDate: lead.nextFollowUpDate ? new Date(lead.nextFollowUpDate) : null,
+          nextAction: lead.nextAction || null,
+          notes: lead.notes || null,
+          leadSource: lead.leadSource || null,
+          leadSourceOther: lead.leadSourceOther || null,
+          assignedTelecallerId: lead.assignedTelecallerId || null,
+          assignedSalesmanId: lead.assignedSalesmanId || null,
+          createdById: lead.createdById || null,
+          convertedAt: lead.convertedAt ? new Date(lead.convertedAt) : null,
+          dealValue: lead.dealValue || null,
+          lostReason: lead.lostReason || null,
+          lostNotes: lead.lostNotes || null,
+          archivedAt: lead.archivedAt ? new Date(lead.archivedAt) : null,
+          isDeleted: lead.isDeleted || false,
+          deletedAt: lead.deletedAt ? new Date(lead.deletedAt) : null,
+          deletedById: lead.deletedById || null,
+        },
+        create: {
+          id: lead.id,
+          companyName: lead.companyName,
+          serviceProduct: lead.serviceProduct,
+          contactPerson: lead.contactPerson || null,
+          phone: lead.phone,
+          email: lead.email || null,
+          alternatePhone: lead.alternatePhone || null,
+          website: lead.website || null,
+          city: lead.city || null,
+          state: lead.state || null,
+          priority: (lead.priority as any) || 'MEDIUM',
+          pipelineStage: lead.pipelineStage || 'New Lead',
+          salesStage: lead.salesStage || null,
+          callAttempts: lead.callAttempts || 0,
+          isRetry: lead.isRetry || false,
+          retryCount: lead.retryCount || 0,
+          lastCallOutcome: lead.lastCallOutcome || null,
+          lastContactDate: lead.lastContactDate ? new Date(lead.lastContactDate) : null,
+          lastStatusUpdatedAt: lead.lastStatusUpdatedAt ? new Date(lead.lastStatusUpdatedAt) : null,
+          nextFollowUpDate: lead.nextFollowUpDate ? new Date(lead.nextFollowUpDate) : null,
+          nextAction: lead.nextAction || null,
+          notes: lead.notes || null,
+          leadSource: lead.leadSource || null,
+          leadSourceOther: lead.leadSourceOther || null,
+          assignedTelecallerId: lead.assignedTelecallerId || null,
+          assignedSalesmanId: lead.assignedSalesmanId || null,
+          createdById: lead.createdById || null,
+          convertedAt: lead.convertedAt ? new Date(lead.convertedAt) : null,
+          dealValue: lead.dealValue || null,
+          lostReason: lead.lostReason || null,
+          lostNotes: lead.lostNotes || null,
+          archivedAt: lead.archivedAt ? new Date(lead.archivedAt) : null,
+          isDeleted: lead.isDeleted || false,
+          deletedAt: lead.deletedAt ? new Date(lead.deletedAt) : null,
+          deletedById: lead.deletedById || null,
+        },
+      });
+    } catch (err) {
+      console.error('[dbStore] Failed to sync lead to remote MySQL:', (err as Error).message);
+    }
+  }
+
+  public async syncAuditLogToDatabase(log: AuditLogItem): Promise<void> {
+    try {
+      await prisma.auditLog.create({
+        data: {
+          id: log.id,
+          userId: log.userId || null,
+          action: log.action,
+          entity: log.entity,
+          entityId: log.entityId || null,
+          details: log.details || undefined,
+          createdAt: log.createdAt ? new Date(log.createdAt) : new Date(),
+        },
+      });
+    } catch (err) {
+      console.error('[dbStore] Failed to sync audit log to remote MySQL:', (err as Error).message);
+    }
+  }
+
+  public async syncLeadSourceToDatabase(src: LeadSourceOption): Promise<void> {
+    try {
+      await prisma.leadSourceOption.upsert({
+        where: { name: src.name },
+        update: {
+          color: src.color || null,
+          isActive: src.isActive,
+          order: src.order,
+        },
+        create: {
+          id: src.id,
+          name: src.name,
+          color: src.color || null,
+          isDefault: src.isDefault,
+          isActive: src.isActive,
+          order: src.order,
+        },
+      });
+    } catch (err) {
+      console.error('[dbStore] Failed to sync lead source to remote MySQL:', (err as Error).message);
+    }
   }
 }
 
