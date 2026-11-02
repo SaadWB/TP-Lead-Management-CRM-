@@ -6,7 +6,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests",
+    "db:test": "node ../../scripts/testDb.js"
   },
   "dependencies": {
     "@crm/shared": "*",

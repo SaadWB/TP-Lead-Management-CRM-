@@ -14,6 +14,7 @@
     "postinstall": "npm run build --workspace=@crm/shared",
     "test": "npm run test --workspaces --if-present",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "db:test": "node scripts/testDb.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma db push",
     "prisma:seed": "sucrase-node prisma/seed.ts"
