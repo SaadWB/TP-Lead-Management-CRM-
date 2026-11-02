@@ -26,6 +26,7 @@ apps/web/.env.*
 .data/
 uploads/
 *.sql
+!prisma/migrations/**/*.sql
 *.dump
 *.tar.gz
 *.bak

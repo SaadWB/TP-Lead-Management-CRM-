@@ -16,7 +16,7 @@
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "db:test": "node scripts/testDb.js",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma db push",
+    "prisma:migrate": "prisma migrate deploy",
     "prisma:seed": "sucrase-node prisma/seed.ts"
   },
   "devDependencies": {

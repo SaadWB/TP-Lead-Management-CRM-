@@ -7,9 +7,10 @@ describe('Integration Tests: API Endpoints & Auth Flow', () => {
 
   beforeAll(async () => {
     // 1. Login as Super Admin
+    const adminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Password@123';
     const adminRes = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'admin@tenderprocure.com', password: 'Password@123' });
+      .send({ email: 'admin@tenderprocure.com', password: adminPassword });
 
     expect(adminRes.status).toBe(200);
     expect(adminRes.body.success).toBe(true);

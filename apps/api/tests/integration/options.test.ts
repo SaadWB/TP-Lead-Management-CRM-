@@ -9,9 +9,10 @@ describe('Integration Tests: Options Management & Role Enforcement (Round 10)', 
 
   beforeAll(async () => {
     // 1. Admin Login
+    const adminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Password@123';
     const adminRes = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'admin@tenderprocure.com', password: 'Password@123' });
+      .send({ email: 'admin@tenderprocure.com', password: adminPassword });
     adminToken = adminRes.body.data.token;
 
     // 2. Telecaller Login
