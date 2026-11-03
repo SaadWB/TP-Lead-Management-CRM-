@@ -4,12 +4,15 @@
       "id": "usr_admin_1",
       "name": "Alexander Vance (Super Admin)",
       "email": "admin@tenderprocure.com",
-      "passwordHash": "$2a$10$HnD68zEeeXgEEpWO1pUMKejO2163f961hn1UOAuHOBXtEaRXzjyn6",
+      "passwordHash": "$2a$12$lL02KPlS5445yVQHA3m/HOMMk9YgDRcwol9Y1xXnD5OsHFcA3Pclq",
       "role": "SUPER_ADMIN",
       "phone": "+1-555-0100",
       "isActive": true,
       "createdAt": "2026-09-16T14:19:57.159Z",
-      "updatedAt": "2026-10-15T14:19:57.159Z"
+      "updatedAt": "2026-10-15T14:19:57.159Z",
+      "mustChangePassword": true,
+      "failedLoginAttempts": 0,
+      "lockoutUntil": null
     },
     {
       "id": "usr_tele_1",
@@ -20,7 +23,11 @@
       "phone": "+1-555-0101",
       "isActive": true,
       "createdAt": "2026-09-21T14:19:57.159Z",
-      "updatedAt": "2026-10-15T14:19:57.159Z"
+      "updatedAt": "2026-11-02T15:24:08.852Z",
+      "failedLoginAttempts": 0,
+      "lockoutUntil": null,
+      "lastLoginAt": "2026-11-02T15:24:08.389Z",
+      "lastActiveAt": "2026-11-02T15:24:08.389Z"
     },
     {
       "id": "usr_tele_2",
