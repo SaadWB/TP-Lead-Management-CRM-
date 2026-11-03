@@ -277,7 +277,7 @@ function AdminLeadsContent() {
       onSearchChange={setSearchTerm}
       searchPlaceholder="Filter company, contact person, phone..."
     >
-      <div className="space-y-4 max-w-7xl mx-auto">
+      <div className="space-y-4 max-w-7xl mx-auto min-w-0 max-w-full">
         {/* Active KPI Filter Banner */}
         {currentKpi && (
           <div className="flex items-center justify-between bg-sky-50 border border-sky-200 px-4 py-2.5 rounded-xl shadow-soft-xs">
@@ -633,14 +633,33 @@ function AdminLeadsContent() {
         {/* Desktop Table Container */}
         <Card className="hidden md:block border border-slate-200/90 shadow-soft-sm overflow-hidden">
           <CardContent className="p-0">
-            {/* Horizontal scroll container strictly bounded within card */}
-            <div className="overflow-x-auto relative">
-              <table className="w-full min-w-[1560px] table-fixed text-left text-xs border-collapse">
-                <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 select-none">
+            {/* Horizontal and vertical scroll container strictly bounded within card */}
+            <div className="w-full max-w-full overflow-x-auto max-h-[72vh] relative scrollbar-thin">
+              <table className="w-full table-fixed text-left text-xs border-collapse" style={{ minWidth: 2004 }}>
+                <colgroup>
+                  <col style={{ width: '48px' }} />
+                  <col style={{ width: '56px' }} />
+                  <col style={{ width: '220px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '150px' }} />
+                  <col style={{ width: '110px' }} />
+                  <col style={{ width: '110px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '180px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '150px' }} />
+                  <col style={{ width: '150px' }} />
+                  <col style={{ width: '170px' }} />
+                  <col style={{ width: '170px' }} />
+                </colgroup>
+                <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 select-none sticky top-0 z-20 shadow-soft-xs">
                   <tr>
-                    {/* Sticky Checkbox */}
-                    <th className="w-12 min-w-[48px] max-w-[48px] p-3 text-center sticky left-0 z-20 bg-slate-50 border-r border-slate-200/60">
-                      <button onClick={toggleSelectAll} className="cursor-pointer">
+                    {/* Sticky Checkbox Column */}
+                    <th
+                      style={{ width: 48, minWidth: 48, maxWidth: 48 }}
+                      className="sticky left-0 top-0 z-30 bg-slate-50 border-r border-b border-slate-200/80 p-3 text-center overflow-hidden whitespace-nowrap min-w-0"
+                    >
+                      <button onClick={toggleSelectAll} className="cursor-pointer inline-flex items-center justify-center" title="Select all leads">
                         {selectedLeadIds.length === filteredLeads.length && filteredLeads.length > 0 ? (
                           <CheckSquare className="h-4 w-4 text-sky-600 mx-auto" />
                         ) : (
@@ -649,25 +668,109 @@ function AdminLeadsContent() {
                       </button>
                     </th>
 
-                    {/* Sticky Serial Number */}
-                    <th className="w-14 min-w-[56px] max-w-[56px] p-3 text-center text-slate-500 font-bold sticky left-12 z-20 bg-slate-50 border-r border-slate-200/80 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]">
+                    {/* Sticky Serial Number Column */}
+                    <th
+                      style={{ width: 56, minWidth: 56, maxWidth: 56 }}
+                      className="sticky left-[48px] top-0 z-30 bg-slate-50 border-r border-b border-slate-200/80 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] p-3 text-center text-slate-500 font-bold overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Serial Number"
+                    >
                       #
                     </th>
 
-                    <th className="w-64 min-w-[240px] max-w-[280px] p-3">Company & Service</th>
-                    <th className="w-44 min-w-[160px] max-w-[180px] p-3">Contact Person</th>
-                    <th className="w-36 min-w-[140px] max-w-[150px] p-3">Phone</th>
-                    <th className="w-32 min-w-[125px] max-w-[135px] p-3">Priority (Admin Edit)</th>
-                    <th className="w-44 min-w-[160px] max-w-[180px] p-3">Pipeline Stage</th>
-                    <th className="w-40 min-w-[150px] max-w-[170px] p-3">Assigned Telecaller</th>
-                    <th className="w-36 min-w-[140px] max-w-[160px] p-3">Sales Closer</th>
-                    <th className="w-40 min-w-[150px] max-w-[170px] p-3">Sales Stage</th>
-                    <th className="w-36 min-w-[130px] max-w-[150px] p-3">Lead Source</th>
-                    <th className="w-28 min-w-[110px] max-w-[120px] p-3">Created</th>
+                    <th
+                      style={{ width: 220, minWidth: 220, maxWidth: 220 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Company & Service Required"
+                    >
+                      Company
+                    </th>
 
-                    {/* Sticky Actions */}
-                    <th className="w-20 min-w-[80px] max-w-[80px] p-3 text-right sticky right-0 z-20 bg-slate-50 border-l border-slate-200/80 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)]">
+                    <th
+                      style={{ width: 160, minWidth: 160, maxWidth: 160 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Contact Person"
+                    >
+                      Contact
+                    </th>
+
+                    <th
+                      style={{ width: 150, minWidth: 150, maxWidth: 150 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Phone & Click-to-Call / WhatsApp"
+                    >
+                      Phone
+                    </th>
+
+                    <th
+                      style={{ width: 110, minWidth: 110, maxWidth: 110 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Quick Actions"
+                    >
                       Actions
+                    </th>
+
+                    <th
+                      style={{ width: 110, minWidth: 110, maxWidth: 110 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Priority (Admin Inline Edit)"
+                    >
+                      Priority
+                    </th>
+
+                    <th
+                      style={{ width: 160, minWidth: 160, maxWidth: 160 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Pipeline Stage"
+                    >
+                      Pipeline
+                    </th>
+
+                    <th
+                      style={{ width: 180, minWidth: 180, maxWidth: 180 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Last Call Outcome"
+                    >
+                      Outcome
+                    </th>
+
+                    <th
+                      style={{ width: 160, minWidth: 160, maxWidth: 160 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Assigned Telecaller"
+                    >
+                      Telecaller
+                    </th>
+
+                    <th
+                      style={{ width: 150, minWidth: 150, maxWidth: 150 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Assigned Sales Closer"
+                    >
+                      Sales Closer
+                    </th>
+
+                    <th
+                      style={{ width: 150, minWidth: 150, maxWidth: 150 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Lead Acquisition Source"
+                    >
+                      Lead Source
+                    </th>
+
+                    <th
+                      style={{ width: 170, minWidth: 170, maxWidth: 170 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Next Scheduled Follow-up Date"
+                    >
+                      Next Follow-up
+                    </th>
+
+                    <th
+                      style={{ width: 170, minWidth: 170, maxWidth: 170 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Last Updated Timestamp"
+                    >
+                      Last Updated
                     </th>
                   </tr>
                 </thead>
@@ -675,33 +778,32 @@ function AdminLeadsContent() {
                   {loading && filteredLeads.length === 0 ? (
                     [1, 2, 3, 4, 5, 6].map((i) => (
                       <tr key={i} className="animate-pulse">
-                        <td className="w-12 min-w-[48px] max-w-[48px] p-3 text-center sticky left-0 z-10 bg-white">
+                        <td style={{ width: 48 }} className="sticky left-0 z-10 bg-white p-3 text-center border-r border-slate-200/60">
                           <div className="w-4 h-4 bg-slate-200 rounded mx-auto" />
                         </td>
-                        <td className="w-14 min-w-[56px] max-w-[56px] p-3 text-center sticky left-12 z-10 bg-white">
+                        <td style={{ width: 56 }} className="sticky left-[48px] z-10 bg-white p-3 text-center border-r border-slate-200/80 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]">
                           <div className="w-6 h-3 bg-slate-200 rounded mx-auto" />
                         </td>
-                        <td className="w-64 min-w-[240px] max-w-[280px] p-3">
+                        <td style={{ width: 220 }} className="p-3">
                           <div className="w-3/4 h-3 bg-slate-200 rounded mb-1.5" />
                           <div className="w-1/2 h-2.5 bg-slate-200 rounded" />
                         </td>
-                        <td className="w-44 min-w-[160px] max-w-[180px] p-3"><div className="w-2/3 h-3 bg-slate-200 rounded" /></td>
-                        <td className="w-36 min-w-[140px] max-w-[150px] p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
-                        <td className="w-32 min-w-[125px] max-w-[135px] p-3"><div className="w-16 h-5 bg-slate-200 rounded" /></td>
-                        <td className="w-44 min-w-[160px] max-w-[180px] p-3"><div className="w-20 h-5 bg-slate-200 rounded" /></td>
-                        <td className="w-40 min-w-[150px] max-w-[170px] p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
-                        <td className="w-36 min-w-[140px] max-w-[160px] p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
-                        <td className="w-40 min-w-[150px] max-w-[170px] p-3"><div className="w-20 h-4 bg-slate-200 rounded" /></td>
-                        <td className="w-36 min-w-[130px] max-w-[150px] p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
-                        <td className="w-28 min-w-[110px] max-w-[120px] p-3"><div className="w-16 h-3 bg-slate-200 rounded" /></td>
-                        <td className="w-20 min-w-[80px] max-w-[80px] p-3 text-right sticky right-0 z-10 bg-white">
-                          <div className="w-6 h-6 bg-slate-200 rounded ml-auto" />
-                        </td>
+                        <td style={{ width: 160 }} className="p-3"><div className="w-2/3 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 150 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 110 }} className="p-3"><div className="w-16 h-5 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 110 }} className="p-3"><div className="w-16 h-5 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 160 }} className="p-3"><div className="w-20 h-5 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 180 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 160 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 150 }} className="p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 150 }} className="p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 170 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 170 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
                       </tr>
                     ))
                   ) : filteredLeads.length === 0 ? (
                     <tr>
-                      <td colSpan={12} className="p-8 text-center text-slate-400">
+                      <td colSpan={14} className="p-8 text-center text-slate-400">
                         No leads found matching current query.
                       </td>
                     </tr>
@@ -724,7 +826,8 @@ function AdminLeadsContent() {
                         >
                           {/* Sticky Checkbox Cell */}
                           <td
-                            className={`w-12 min-w-[48px] max-w-[48px] p-3 text-center sticky left-0 z-10 border-r border-slate-200/60 ${
+                            style={{ width: 48, minWidth: 48, maxWidth: 48 }}
+                            className={`sticky left-0 z-10 border-r border-slate-200/60 p-3 text-center overflow-hidden whitespace-nowrap min-w-0 ${
                               isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
                             }`}
                             onClick={(e) => {
@@ -732,24 +835,32 @@ function AdminLeadsContent() {
                               toggleSelectLead(lead.id);
                             }}
                           >
-                            {isSelected ? (
-                              <CheckSquare className="h-4 w-4 text-sky-600 mx-auto" />
-                            ) : (
-                              <Square className="h-4 w-4 text-slate-300 mx-auto" />
-                            )}
+                            <button type="button" className="inline-flex items-center justify-center cursor-pointer" title={isSelected ? 'Deselect lead' : 'Select lead'}>
+                              {isSelected ? (
+                                <CheckSquare className="h-4 w-4 text-sky-600 mx-auto" />
+                              ) : (
+                                <Square className="h-4 w-4 text-slate-300 mx-auto" />
+                              )}
+                            </button>
                           </td>
 
                           {/* Sticky Serial Number Cell */}
                           <td
-                            className={`w-14 min-w-[56px] max-w-[56px] p-3 text-center text-slate-500 font-semibold sticky left-12 z-10 border-r border-slate-200/80 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] ${
+                            style={{ width: 56, minWidth: 56, maxWidth: 56 }}
+                            className={`sticky left-[48px] z-10 border-r border-slate-200/80 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] p-3 text-center text-slate-500 font-semibold overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${
                               isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
                             }`}
+                            title={`Lead #${index + 1}`}
                           >
                             {index + 1}
                           </td>
 
-                          {/* Company & Service */}
-                          <td className="w-64 min-w-[240px] max-w-[280px] p-3 min-w-0">
+                          {/* Company */}
+                          <td
+                            style={{ width: 220, minWidth: 220, maxWidth: 220 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            title={`${lead.companyName} (${lead.serviceProduct})`}
+                          >
                             <span
                               className="font-bold text-slate-900 block truncate"
                               title={lead.companyName}
@@ -765,27 +876,33 @@ function AdminLeadsContent() {
                           </td>
 
                           {/* Contact Person */}
-                          <td className="w-44 min-w-[160px] max-w-[180px] p-3 font-semibold text-slate-700 min-w-0">
-                            <span
-                              className="block truncate"
-                              title={lead.contactPerson || 'Not available'}
-                            >
+                          <td
+                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
+                            className="p-3 font-semibold text-slate-700 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            title={lead.contactPerson || 'Not available'}
+                          >
+                            <span className="block truncate">
                               {lead.contactPerson || (
-                                <span className="text-slate-400 font-normal italic">-</span>
+                                <span className="text-slate-400 font-normal italic">—</span>
                               )}
                             </span>
                           </td>
 
                           {/* Phone */}
-                          <td className="w-40 min-w-[160px] max-w-[170px] p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-1.5">
+                          <td
+                            style={{ width: 150, minWidth: 150, maxWidth: 150 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            onClick={(e) => e.stopPropagation()}
+                            title={`Phone: ${lead.phone}`}
+                          >
+                            <div className="flex items-center gap-1.5 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
                               <a
                                 href={`tel:${lead.phone}`}
-                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 whitespace-nowrap"
+                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1 min-w-0 truncate"
                                 title={`Call ${lead.phone}`}
                               >
                                 <Phone className="h-3 w-3 shrink-0" />
-                                <span>{lead.phone}</span>
+                                <span className="truncate">{lead.phone}</span>
                               </a>
                               <WhatsAppButton
                                 phone={lead.phone}
@@ -793,16 +910,51 @@ function AdminLeadsContent() {
                                 leadName={lead.contactPerson || lead.companyName}
                                 size="sm"
                                 showText={false}
+                                className="shrink-0"
                               />
                             </div>
                           </td>
 
+                          {/* Actions Column */}
+                          <td
+                            style={{ width: 110, minWidth: 110, maxWidth: 110 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Actions"
+                          >
+                            <div className="flex items-center gap-1 min-w-0">
+                              <button
+                                onClick={() => {
+                                  setSelectedLeadId(lead.id);
+                                  setIsDrawerOpen(true);
+                                }}
+                                className="px-2 py-1 rounded bg-sky-50 text-sky-700 hover:bg-sky-100 font-bold text-[11px] transition-colors cursor-pointer shrink-0"
+                                title="View Lead Details"
+                              >
+                                View
+                              </button>
+                              <button
+                                onClick={() => setDeleteTarget(lead)}
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer shrink-0"
+                                title="Delete Lead"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
+
                           {/* Priority with inline Admin dropdown */}
-                          <td className="w-32 min-w-[125px] max-w-[135px] p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <td
+                            style={{ width: 110, minWidth: 110, maxWidth: 110 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            onClick={(e) => e.stopPropagation()}
+                            title={`Priority: ${lead.priority}`}
+                          >
                             <select
                               value={lead.priority}
                               onChange={(e) => handleSinglePriorityUpdate(lead.id, e.target.value as Priority)}
-                              className={`w-full text-[11px] font-bold rounded px-2 py-1 border cursor-pointer ${priority.bg} ${priority.text} ${priority.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
+                              className={`w-full max-w-full truncate text-[11px] font-bold rounded px-1.5 py-1 border cursor-pointer ${priority.bg} ${priority.text} ${priority.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
+                              title={`Priority: ${lead.priority}`}
                             >
                               <option value="LOW">LOW</option>
                               <option value="MEDIUM">MEDIUM</option>
@@ -811,32 +963,45 @@ function AdminLeadsContent() {
                             </select>
                           </td>
 
-                          {/* Pipeline Stage & Last Call Outcome */}
-                          <td className="w-44 min-w-[160px] max-w-[180px] p-3 min-w-0">
-                            <div className="flex flex-col gap-1 items-start">
+                          {/* Pipeline Stage */}
+                          <td
+                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            title={`Pipeline Stage: ${lead.pipelineStage}`}
+                          >
+                            <span
+                              className={`inline-block max-w-full truncate px-2.5 py-0.5 rounded text-[11px] font-bold border ${stage.bg} ${stage.text} ${stage.border}`}
+                              title={lead.pipelineStage}
+                            >
+                              {lead.pipelineStage}
+                            </span>
+                          </td>
+
+                          {/* Outcome */}
+                          <td
+                            style={{ width: 180, minWidth: 180, maxWidth: 180 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            title={lead.lastCallOutcome ? `Last Call Outcome: ${lead.lastCallOutcome}` : 'No call outcome recorded'}
+                          >
+                            {lead.lastCallOutcome ? (
                               <span
-                                className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-bold border truncate max-w-full ${stage.bg} ${stage.text} ${stage.border}`}
-                                title={lead.pipelineStage}
+                                className="inline-block max-w-full truncate px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200"
+                                title={lead.lastCallOutcome}
                               >
-                                {lead.pipelineStage}
+                                {lead.lastCallOutcome}
                               </span>
-                              {lead.lastCallOutcome && (
-                                <span
-                                  className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200 truncate max-w-full"
-                                  title={`Last Outcome: ${lead.lastCallOutcome}`}
-                                >
-                                  {lead.lastCallOutcome}
-                                </span>
-                              )}
-                            </div>
+                            ) : (
+                              <span className="text-slate-400 font-normal italic text-[11px]">—</span>
+                            )}
                           </td>
 
                           {/* Assigned Telecaller */}
-                          <td className="w-40 min-w-[150px] max-w-[170px] p-3 text-slate-700 font-medium min-w-0">
-                            <span
-                              className="block truncate"
-                              title={lead.assignedTelecaller?.name || 'Unassigned'}
-                            >
+                          <td
+                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
+                            className="p-3 text-slate-700 font-medium overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            title={lead.assignedTelecaller?.name ? `Telecaller: ${lead.assignedTelecaller.name}` : 'Unassigned'}
+                          >
+                            <span className="block truncate">
                               {lead.assignedTelecaller?.name || (
                                 <span className="text-slate-400 italic">Unassigned</span>
                               )}
@@ -844,65 +1009,67 @@ function AdminLeadsContent() {
                           </td>
 
                           {/* Sales Closer */}
-                          <td className="w-36 min-w-[140px] max-w-[160px] p-3 text-slate-700 font-medium min-w-0">
-                            <span
-                              className="block truncate"
-                              title={lead.assignedSalesman?.name || 'None'}
-                            >
+                          <td
+                            style={{ width: 150, minWidth: 150, maxWidth: 150 }}
+                            className="p-3 text-slate-700 font-medium overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            title={lead.assignedSalesman?.name ? `Sales Closer: ${lead.assignedSalesman.name}` : 'None'}
+                          >
+                            <span className="block truncate">
                               {lead.assignedSalesman?.name || (
                                 <span className="text-slate-400 italic">None</span>
                               )}
                             </span>
                           </td>
 
-                          {/* Sales Stage */}
-                          <td className="w-40 min-w-[150px] max-w-[170px] p-3 whitespace-nowrap">
-                            {lead.salesStage ? (
-                              <span
-                                className="inline-block px-2 py-0.5 rounded text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 truncate max-w-full"
-                                title={lead.salesStage.replace(/_/g, ' ')}
-                              >
-                                {lead.salesStage.replace(/_/g, ' ')}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 italic text-[11px]">-</span>
-                            )}
-                          </td>
-
                           {/* Lead Source */}
-                          <td className="w-36 min-w-[130px] max-w-[150px] p-3 min-w-0">
+                          <td
+                            style={{ width: 150, minWidth: 150, maxWidth: 150 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            title={
+                              lead.leadSource === 'Other' && lead.leadSourceOther
+                                ? `Lead Source: Other (${lead.leadSourceOther})`
+                                : lead.leadSource
+                                ? `Lead Source: ${lead.leadSource}`
+                                : 'No lead source'
+                            }
+                          >
                             {lead.leadSource ? (
                               <span
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 truncate max-w-full"
+                                className="inline-flex items-center gap-1.5 max-w-full truncate px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700"
                                 title={lead.leadSource === 'Other' && lead.leadSourceOther ? `Other: ${lead.leadSourceOther}` : lead.leadSource}
                               >
                                 <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0" />
                                 <span className="truncate">{lead.leadSource}</span>
                               </span>
                             ) : (
-                              <span className="text-slate-400 font-normal italic text-xs">-</span>
+                              <span className="text-slate-400 font-normal italic text-xs">—</span>
                             )}
                           </td>
 
-                          {/* Created */}
-                          <td className="w-28 min-w-[110px] max-w-[120px] p-3 text-slate-400 font-mono text-[11px] whitespace-nowrap">
-                            {formatDate(lead.createdAt)}
+                          {/* Next Follow-up */}
+                          <td
+                            style={{ width: 170, minWidth: 170, maxWidth: 170 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-slate-700 font-mono text-[11px]"
+                            title={lead.nextFollowUpDate ? `Next Follow-up: ${formatDate(lead.nextFollowUpDate)}` : 'No follow-up scheduled'}
+                          >
+                            {lead.nextFollowUpDate ? (
+                              <span className="inline-block max-w-full truncate px-2 py-0.5 rounded text-[11px] font-medium bg-slate-50 border border-slate-200">
+                                {formatDate(lead.nextFollowUpDate)}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-normal italic text-xs font-sans">—</span>
+                            )}
                           </td>
 
-                          {/* Sticky Delete Action Cell */}
+                          {/* Last Updated */}
                           <td
-                            className={`w-20 min-w-[80px] max-w-[80px] p-3 text-right sticky right-0 z-10 border-l border-slate-200/80 shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.06)] ${
-                              isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
-                            }`}
-                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: 170, minWidth: 170, maxWidth: 170 }}
+                            className="p-3 text-slate-500 font-mono text-[11px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            title={`Last updated: ${formatDate(lead.updatedAt || lead.createdAt)}`}
                           >
-                            <button
-                              onClick={() => setDeleteTarget(lead)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                              title="Delete Lead"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <span className="block truncate">
+                              {formatDate(lead.updatedAt || lead.createdAt)}
+                            </span>
                           </td>
                         </tr>
                       );

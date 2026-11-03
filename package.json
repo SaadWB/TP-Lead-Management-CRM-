@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspaces --if-present",
+    "dev": "npm run dev --workspaces --parallel --if-present",
     "dev:api": "npm run dev --workspace=@crm/api",
     "dev:web": "npm run dev --workspace=@crm/web",
     "build": "npm run build --workspaces --if-present",

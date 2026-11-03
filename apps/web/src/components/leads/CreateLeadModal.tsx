@@ -69,7 +69,7 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
         email: email.trim() || undefined,
         priority,
         leadSource: leadSource || undefined,
-        leadSourceOther: leadSource === 'Other' ? leadSourceOther.trim() || undefined : undefined,
+        leadSourceOther: leadSource?.toLowerCase() === 'other' ? leadSourceOther.trim() || undefined : undefined,
         notes: notes.trim() || undefined,
       });
 
@@ -172,10 +172,13 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
           />
         </div>
 
-        {leadSource === 'Other' && (
-          <div className="animate-in fade-in duration-200">
+        {leadSource?.toLowerCase() === 'other' && (
+          <div className="animate-in fade-in duration-200 space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-slate-700">Lead Source Details</label>
+              <span className="text-[10px] text-slate-400 font-mono">{leadSourceOther.length}/100</span>
+            </div>
             <Input
-              label="Lead Source Details"
               value={leadSourceOther}
               onChange={(e) => setLeadSourceOther(e.target.value)}
               placeholder="e.g. Partner introduction, newspaper ad (max 100 characters)"
