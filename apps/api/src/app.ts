@@ -75,6 +75,7 @@ export function createApp(): Application {
     config.corsOrigin,
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'https://tp-lead-management-crm.vercel.app'
   ].filter(Boolean);
 
   app.use(
