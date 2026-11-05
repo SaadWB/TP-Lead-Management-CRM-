@@ -31,7 +31,7 @@ exports.loginSchema = zod_1.z.object({
     password: zod_1.z.string().min(1, 'Password is required'),
 });
 exports.changePasswordSchema = zod_1.z.object({
-    currentPassword: zod_1.z.string().min(1, 'Current password is required'),
+    currentPassword: zod_1.z.string().optional(),
     newPassword: exports.passwordPolicySchema,
 });
 exports.createUserSchema = zod_1.z.object({

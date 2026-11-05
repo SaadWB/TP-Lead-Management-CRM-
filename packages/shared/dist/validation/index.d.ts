@@ -11,13 +11,13 @@ export declare const loginSchema: z.ZodObject<{
     password: string;
 }>;
 export declare const changePasswordSchema: z.ZodObject<{
-    currentPassword: z.ZodString;
+    currentPassword: z.ZodOptional<z.ZodString>;
     newPassword: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodString, string, string>, string, string>, string, string>;
 }, "strip", z.ZodTypeAny, {
-    currentPassword: string;
+    currentPassword?: string | undefined;
     newPassword: string;
 }, {
-    currentPassword: string;
+    currentPassword?: string | undefined;
     newPassword: string;
 }>;
 export declare const createUserSchema: z.ZodObject<{
