@@ -10,7 +10,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
-  quickLogin: (role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   role: UserRole | null;
@@ -64,14 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     throw new Error(res.message || 'Login failed');
   }
 
-  async function quickLogin(targetRole: UserRole) {
-    let email = 'admin@tenderprocure.com';
-    if (targetRole === 'TELECALLER') email = 'telecaller1@tenderprocure.com';
-    else if (targetRole === 'SALESMAN') email = 'sales1@tenderprocure.com';
-
-    await login(email, 'Password@123');
-  }
-
   async function logout() {
     // 1. Immediately wipe local session & token
     api.setToken(null);
@@ -119,7 +110,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         loading,
         login,
-        quickLogin,
         logout,
         isAuthenticated: !!user,
         role: user?.role || null,

@@ -5,7 +5,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
-import { Priority, Lead, DEFAULT_LEAD_SOURCES } from '@crm/shared';
+import { Priority, Lead, User, DEFAULT_LEAD_SOURCES } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Plus } from 'lucide-react';
 
@@ -27,6 +27,8 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
   const [sourceOptions, setSourceOptions] = useState<{ value: string; label: string }[]>(
     DEFAULT_LEAD_SOURCES.map((s) => ({ value: s, label: s }))
   );
+  const [assignedUserId, setAssignedUserId] = useState<string>('');
+  const [userOptions, setUserOptions] = useState<{ value: string; label: string; role: string }[]>([]);
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -49,6 +51,22 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
       .catch(() => {
         // Fallback to default lead sources
       });
+
+    // Fetch active users for lead assignment
+    api.get<User[]>('/users', { isActive: true })
+      .then((res) => {
+        if (res.success && Array.isArray(res.data)) {
+          const formatted = res.data
+            .filter((u) => u.isActive)
+            .map((u) => ({
+              value: u.id,
+              label: `${u.name} (${u.role === 'TELECALLER' ? 'Telecaller' : u.role === 'SALESMAN' ? 'Sales Closer' : 'Admin'})`,
+              role: u.role,
+            }));
+          setUserOptions(formatted);
+        }
+      })
+      .catch(() => {});
   }, [isOpen]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -61,6 +79,9 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
     setError('');
 
     try {
+      const selectedUser = userOptions.find((u) => u.value === assignedUserId);
+      const isSalesman = selectedUser?.role === 'SALESMAN';
+
       const res = await api.post<Lead>('/leads', {
         companyName: companyName.trim(),
         serviceProduct: serviceProduct.trim(),
@@ -70,6 +91,8 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
         priority,
         leadSource: leadSource || undefined,
         leadSourceOther: leadSource?.toLowerCase() === 'other' ? leadSourceOther.trim() || undefined : undefined,
+        assignedTelecallerId: isSalesman ? undefined : assignedUserId || undefined,
+        assignedSalesmanId: isSalesman ? assignedUserId || undefined : undefined,
         notes: notes.trim() || undefined,
       });
 
@@ -85,6 +108,7 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
         setPriority('MEDIUM');
         setLeadSource('');
         setLeadSourceOther('');
+        setAssignedUserId('');
         setNotes('');
       }
     } catch (err: any) {
@@ -149,7 +173,7 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Select
             label="Priority Level"
             value={priority}
@@ -168,6 +192,15 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
             options={[
               { value: '', label: 'Select lead source' },
               ...sourceOptions,
+            ]}
+          />
+          <Select
+            label="Assign Lead To"
+            value={assignedUserId}
+            onChange={(e) => setAssignedUserId(e.target.value)}
+            options={[
+              { value: '', label: '-- Unassigned --' },
+              ...userOptions.map((u) => ({ value: u.value, label: u.label })),
             ]}
           />
         </div>

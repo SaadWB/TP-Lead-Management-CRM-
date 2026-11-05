@@ -71,6 +71,46 @@ export function LeadDrawer({
   const [contactInput, setContactInput] = useState('');
   const [savingContact, setSavingContact] = useState(false);
 
+  const [pipelineOptions, setPipelineOptions] = useState<string[]>([
+    'New Lead',
+    'Attempting Contact',
+    'Connected',
+    'Follow-up',
+    'Demo',
+    'Closed',
+  ]);
+  const [outcomeOptions, setOutcomeOptions] = useState<string[]>([
+    'No Answer',
+    'Busy',
+    'Call Cut',
+    'Call Back Later',
+    'Connected – Discussed',
+    'Details Requested',
+    'Demo Interested',
+    'Demo Scheduled',
+    'Demo Completed',
+    'Decision Pending',
+    'Not Interested',
+    'Wrong Number',
+  ]);
+
+  useEffect(() => {
+    if (isOpen) {
+      api.get<{ stages?: { name: string; isActive: boolean }[]; outcomes?: { name: string; isActive: boolean }[] }>('/options')
+        .then((res) => {
+          if (res.success && res.data) {
+            if (res.data.stages && res.data.stages.length > 0) {
+              setPipelineOptions(res.data.stages.filter((s) => s.isActive).map((s) => s.name));
+            }
+            if (res.data.outcomes && res.data.outcomes.length > 0) {
+              setOutcomeOptions(res.data.outcomes.filter((o) => o.isActive).map((o) => o.name));
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
   async function handlePriorityChange(newPriority: Priority) {
     if (!lead) return;
     try {
@@ -81,6 +121,19 @@ export function LeadDrawer({
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update priority');
+    }
+  }
+
+  async function handleOutcomeChange(newOutcome: string) {
+    if (!lead) return;
+    try {
+      const res = await api.patch<Lead>(`/leads/${lead.id}`, { lastCallOutcome: newOutcome || null });
+      if (res.success && res.data) {
+        setLead(res.data);
+        onLeadUpdated(res.data);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update outcome');
     }
   }
 
@@ -314,18 +367,42 @@ export function LeadDrawer({
                       onChange={(e) => handleQuickStageChange(e.target.value)}
                       className="text-xs font-semibold px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
                     >
-                      {TELECALLER_KANBAN_COLUMNS.map((col) => (
-                        <option key={col.id} value={col.id}>
-                          {col.title}
-                        </option>
-                      ))}
+                      {user?.role === 'SUPER_ADMIN'
+                        ? pipelineOptions.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))
+                        : TELECALLER_KANBAN_COLUMNS.map((col) => (
+                            <option key={col.id} value={col.id}>
+                              {col.title}
+                            </option>
+                          ))}
                     </select>
 
-                    {lead.lastCallOutcome && (
-                      <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                    {user?.role === 'SUPER_ADMIN' ? (
+                      <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
                         <span className="text-[10px] uppercase font-bold text-slate-500">Outcome:</span>
-                        <span className="text-xs font-bold text-slate-800">{lead.lastCallOutcome}</span>
+                        <select
+                          value={lead.lastCallOutcome || ''}
+                          onChange={(e) => handleOutcomeChange(e.target.value)}
+                          className="text-xs font-semibold bg-transparent text-slate-800 focus:outline-none cursor-pointer"
+                        >
+                          <option value="">-- No Outcome --</option>
+                          {outcomeOptions.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
                       </div>
+                    ) : (
+                      lead.lastCallOutcome && (
+                        <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                          <span className="text-[10px] uppercase font-bold text-slate-500">Outcome:</span>
+                          <span className="text-xs font-bold text-slate-800">{lead.lastCallOutcome}</span>
+                        </div>
+                      )
                     )}
 
                     {lead.salesStage && (
@@ -402,14 +479,32 @@ export function LeadDrawer({
                         )}
                       </div>
                       <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                          Call Outcome
-                        </span>
-                        <span
-                          className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-bold border ${stageStyle.bg} ${stageStyle.text} ${stageStyle.border}`}
-                        >
-                          {lead.pipelineStage}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                            Call Outcome
+                          </span>
+                          {user?.role === 'SUPER_ADMIN' && (
+                            <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
+                          )}
+                        </div>
+                        {user?.role === 'SUPER_ADMIN' ? (
+                          <select
+                            value={lead.lastCallOutcome || ''}
+                            onChange={(e) => handleOutcomeChange(e.target.value)}
+                            className="mt-1 w-full text-xs font-bold bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs"
+                          >
+                            <option value="">-- No Outcome --</option>
+                            {outcomeOptions.map((o) => (
+                              <option key={o} value={o}>
+                                {o}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                            {lead.lastCallOutcome || 'Never contacted'}
+                          </span>
+                        )}
                       </div>
                       <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                         <div className="flex items-center justify-between">

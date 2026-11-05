@@ -1,5 +1,49 @@
 import { Lead, PipelineStage, Priority, CallOutcome, normalizeCallOutcome } from '@crm/shared';
 import { dbStore } from './dbStore';
+import { prisma } from '../config/prisma';
+
+function mapPrismaLeadToShared(l: any): Lead {
+  return {
+    id: l.id,
+    companyName: l.companyName,
+    serviceProduct: l.serviceProduct,
+    contactPerson: l.contactPerson || undefined,
+    phone: l.phone,
+    email: l.email || undefined,
+    alternatePhone: l.alternatePhone || undefined,
+    website: l.website || undefined,
+    city: l.city || undefined,
+    state: l.state || undefined,
+    priority: l.priority as Priority,
+    pipelineStage: l.pipelineStage,
+    salesStage: l.salesStage || undefined,
+    callAttempts: l.callAttempts || 0,
+    isRetry: l.isRetry || false,
+    retryCount: l.retryCount || 0,
+    lastCallOutcome: l.lastCallOutcome || undefined,
+    lastContactDate: l.lastContactDate ? new Date(l.lastContactDate).toISOString() : undefined,
+    lastStatusUpdatedAt: l.lastStatusUpdatedAt ? new Date(l.lastStatusUpdatedAt).toISOString() : undefined,
+    nextFollowUpDate: l.nextFollowUpDate ? new Date(l.nextFollowUpDate).toISOString() : undefined,
+    nextAction: l.nextAction || undefined,
+    notes: l.notes || undefined,
+    leadSource: l.leadSource || undefined,
+    leadSourceOther: l.leadSourceOther || undefined,
+    assignedTelecallerId: l.assignedTelecallerId || undefined,
+    assignedSalesmanId: l.assignedSalesmanId || undefined,
+    createdById: l.createdById || undefined,
+    convertedAt: l.convertedAt ? new Date(l.convertedAt).toISOString() : undefined,
+    dealValue: l.dealValue || undefined,
+    lostReason: l.lostReason || undefined,
+    lostNotes: l.lostNotes || undefined,
+    archivedAt: l.archivedAt ? new Date(l.archivedAt).toISOString() : undefined,
+    isDeleted: l.isDeleted || false,
+    deletedAt: l.deletedAt ? new Date(l.deletedAt).toISOString() : undefined,
+    deletedById: l.deletedById || undefined,
+    createdAt: new Date(l.createdAt).toISOString(),
+    updatedAt: new Date(l.updatedAt).toISOString(),
+    lastActivityAt: l.lastActivityAt ? new Date(l.lastActivityAt).toISOString() : undefined,
+  };
+}
 
 export interface LeadFilterOptions {
   search?: string;
@@ -198,15 +242,35 @@ export class LeadRepository {
 
   async findById(id: string): Promise<Lead | null> {
     dbStore.processAutomaticRules();
-    const lead = dbStore.store.leads.find((l) => l.id === id);
+    let lead = dbStore.store.leads.find((l) => l.id === id);
+    if (!lead) {
+      try {
+        const dbLead = await prisma.lead.findUnique({ where: { id } });
+        if (dbLead) {
+          lead = mapPrismaLeadToShared(dbLead);
+          const idx = dbStore.store.leads.findIndex((l) => l.id === lead!.id);
+          if (idx !== -1) {
+            dbStore.store.leads[idx] = lead;
+          } else {
+            dbStore.store.leads.push(lead);
+          }
+          dbStore.persist();
+        }
+      } catch (err) {
+        console.warn('[leadRepository] findById DB query failed:', (err as Error).message);
+      }
+    }
     if (!lead) return null;
     return this.enrichLead(lead);
   }
 
   async findMany(options: LeadFilterOptions = {}): Promise<{ leads: Lead[]; total: number }> {
     dbStore.processAutomaticRules();
+    if (dbStore.store.leads.length === 0) {
+      await dbStore.syncFromDatabase();
+    }
     // Exclude archived/deleted leads by default
-    let filtered = dbStore.store.leads.filter((l) => !l.archivedAt);
+    let filtered = dbStore.store.leads.filter((l) => !l.archivedAt && !l.isDeleted);
 
     // Operational KPI Filter Mapping
     if (options.kpi) {
@@ -429,12 +493,28 @@ export class LeadRepository {
     };
     dbStore.store.leads.push(newLead);
     dbStore.persist();
-    dbStore.syncLeadToDatabase(newLead).catch(console.error);
+    try {
+      await dbStore.syncLeadToDatabase(newLead);
+    } catch (err) {
+      console.warn('[leadRepository] create DB sync error:', (err as Error).message);
+    }
     return this.enrichLead(newLead);
   }
 
   async update(id: string, updateData: Partial<Lead>): Promise<Lead | null> {
-    const index = dbStore.store.leads.findIndex((l) => l.id === id);
+    let index = dbStore.store.leads.findIndex((l) => l.id === id);
+    if (index === -1) {
+      try {
+        const dbLead = await prisma.lead.findUnique({ where: { id } });
+        if (dbLead) {
+          const mapped = mapPrismaLeadToShared(dbLead);
+          dbStore.store.leads.push(mapped);
+          index = dbStore.store.leads.length - 1;
+        }
+      } catch (err) {
+        console.warn('[leadRepository] update DB lookup error:', (err as Error).message);
+      }
+    }
     if (index === -1) return null;
 
     dbStore.store.leads[index] = {
@@ -444,7 +524,11 @@ export class LeadRepository {
       lastActivityAt: updateData.lastActivityAt || new Date().toISOString(),
     };
     dbStore.persist();
-    dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
+    try {
+      await dbStore.syncLeadToDatabase(dbStore.store.leads[index]);
+    } catch (err) {
+      console.warn('[leadRepository] update DB sync error:', (err as Error).message);
+    }
     return this.enrichLead(dbStore.store.leads[index]);
   }
 

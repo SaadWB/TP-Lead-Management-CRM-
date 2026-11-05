@@ -94,484 +94,14 @@ const DATA_DIR = path.resolve(__dirname, '../../../../.data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
 
 function generateInitialSeed(): DataStore {
-  const defaultPasswordHash = bcrypt.hashSync('Password@123', 10);
-  const now = new Date();
-  const pastDay = (days: number) => new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
-  const futureDay = (days: number, hour = 14) => {
-    const d = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-    d.setHours(hour, 0, 0, 0);
-    return d.toISOString();
-  };
-
-  const users = [
-    {
-      id: 'usr_admin_1',
-      name: 'Alexander Vance (Super Admin)',
-      email: 'admin@tenderprocure.com',
-      passwordHash: defaultPasswordHash,
-      role: 'SUPER_ADMIN' as UserRole,
-      phone: '+1-555-0100',
-      isActive: true,
-      createdAt: pastDay(30),
-      updatedAt: pastDay(1),
-    },
-    {
-      id: 'usr_tele_1',
-      name: 'Priya Sharma',
-      email: 'telecaller1@tenderprocure.com',
-      passwordHash: defaultPasswordHash,
-      role: 'TELECALLER' as UserRole,
-      phone: '+1-555-0101',
-      isActive: true,
-      createdAt: pastDay(25),
-      updatedAt: pastDay(1),
-    },
-    {
-      id: 'usr_tele_2',
-      name: 'Rahul Verma',
-      email: 'telecaller2@tenderprocure.com',
-      passwordHash: defaultPasswordHash,
-      role: 'TELECALLER' as UserRole,
-      phone: '+1-555-0102',
-      isActive: true,
-      createdAt: pastDay(25),
-      updatedAt: pastDay(1),
-    },
-    {
-      id: 'usr_sales_1',
-      name: 'David Kim',
-      email: 'sales1@tenderprocure.com',
-      passwordHash: defaultPasswordHash,
-      role: 'SALESMAN' as UserRole,
-      phone: '+1-555-0103',
-      isActive: true,
-      createdAt: pastDay(20),
-      updatedAt: pastDay(1),
-    },
-    {
-      id: 'usr_sales_2',
-      name: 'Ananya Patel',
-      email: 'sales2@tenderprocure.com',
-      passwordHash: defaultPasswordHash,
-      role: 'SALESMAN' as UserRole,
-      phone: '+1-555-0104',
-      isActive: true,
-      createdAt: pastDay(20),
-      updatedAt: pastDay(1),
-    },
-  ];
-
-  const leads: Lead[] = [
-    {
-      id: 'lead_101',
-      companyName: 'Apex Industrial Solvents',
-      serviceProduct: 'Government Tender Procurement SaaS',
-      contactPerson: 'Robert Sterling',
-      phone: '+1-555-234-5678',
-      email: 'r.sterling@apexind.com',
-      website: 'https://apexind.example.com',
-      city: 'Chicago',
-      state: 'IL',
-      priority: 'HIGH' as Priority,
-      pipelineStage: 'CONNECTED' as PipelineStage,
-      callAttempts: 2,
-      lastCallOutcome: 'CONNECTED' as CallOutcome,
-      lastContactDate: pastDay(1),
-      nextFollowUpDate: futureDay(1, 11),
-      nextAction: 'Send technical compliance proposal and pricing sheet',
-      notes: 'Actively bidding on 3 defense sector tenders. Needs automated bid tracking.',
-      leadSource: 'Import - Q4 Manufacturing List',
-      assignedTelecallerId: 'usr_tele_1',
-      assignedSalesmanId: null,
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(5),
-      updatedAt: pastDay(1),
-      lastActivityAt: pastDay(1),
-    },
-    {
-      id: 'lead_102',
-      companyName: 'BluePeak Healthcare Infrastructure',
-      serviceProduct: 'Healthcare Supply Chain Bid Engine',
-      contactPerson: 'Elena Rostova',
-      phone: '+1-555-345-6789',
-      email: 'elena@bluepeakhealth.org',
-      website: 'https://bluepeakhealth.example.org',
-      city: 'Boston',
-      state: 'MA',
-      priority: 'URGENT' as Priority,
-      pipelineStage: 'INTERESTED' as PipelineStage,
-      callAttempts: 3,
-      lastCallOutcome: 'INTERESTED' as CallOutcome,
-      lastContactDate: pastDay(2),
-      nextFollowUpDate: pastDay(0), // due today!
-      nextAction: 'Confirm demo attendees from executive procurement committee',
-      notes: 'Very interested in our tender alert feature. Mentioned 12 branch locations.',
-      leadSource: 'Website Inbound',
-      assignedTelecallerId: 'usr_tele_1',
-      assignedSalesmanId: null,
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(7),
-      updatedAt: pastDay(2),
-      lastActivityAt: pastDay(2),
-    },
-    {
-      id: 'lead_103',
-      companyName: 'Crestline Civil Engineering',
-      serviceProduct: 'Municipal Tender Bid Management',
-      contactPerson: 'Marcus Holloway',
-      phone: '+1-555-456-7890',
-      email: 'marcus@crestlineeng.com',
-      website: 'https://crestlineeng.example.com',
-      city: 'Denver',
-      state: 'CO',
-      priority: 'MEDIUM' as Priority,
-      pipelineStage: 'NEW' as PipelineStage,
-      callAttempts: 0,
-      lastCallOutcome: null,
-      lastContactDate: null,
-      nextFollowUpDate: futureDay(2, 10),
-      nextAction: 'First exploratory discovery call',
-      notes: 'Imported from heavy infrastructure trade expo.',
-      leadSource: 'Expo 2026',
-      assignedTelecallerId: 'usr_tele_1',
-      assignedSalesmanId: null,
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(2),
-      updatedAt: pastDay(2),
-      lastActivityAt: pastDay(2),
-    },
-    {
-      id: 'lead_104',
-      companyName: 'Dynasty Logistics Corp',
-      serviceProduct: 'Fleet & Freight Tender Portal',
-      contactPerson: 'Sarah Jenkins',
-      phone: '+1-555-567-8901',
-      email: 'sjenkins@dynastylog.com',
-      website: 'https://dynastylog.example.com',
-      city: 'Atlanta',
-      state: 'GA',
-      priority: 'HIGH' as Priority,
-      pipelineStage: 'DEMO_MEETING_REQUIRED' as PipelineStage,
-      callAttempts: 4,
-      lastCallOutcome: 'CALL_BACK_REQUESTED' as CallOutcome,
-      lastContactDate: pastDay(1),
-      nextFollowUpDate: futureDay(1, 15),
-      nextAction: 'Schedule 45-minute live platform demonstration with Sales',
-      notes: 'Wants to see custom RFQ parsing and multi-user approval hierarchies.',
-      leadSource: 'Referral',
-      assignedTelecallerId: 'usr_tele_1',
-      assignedSalesmanId: null,
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(10),
-      updatedAt: pastDay(1),
-      lastActivityAt: pastDay(1),
-    },
-    {
-      id: 'lead_105',
-      companyName: 'Evergreen Environmental Services',
-      serviceProduct: 'Waste Management Tender Portal',
-      contactPerson: 'Tariq Al-Mansoor',
-      phone: '+1-555-678-9012',
-      email: 'tariq@evergreenservices.com',
-      city: 'Seattle',
-      state: 'WA',
-      priority: 'LOW' as Priority,
-      pipelineStage: 'NOT_INTERESTED' as PipelineStage,
-      callAttempts: 2,
-      lastCallOutcome: 'NOT_INTERESTED' as CallOutcome,
-      lastContactDate: pastDay(4),
-      nextFollowUpDate: null,
-      nextAction: 'Keep on quarterly newsletter drip',
-      notes: 'Currently locked into a 3-year contract with legacy vendor.',
-      leadSource: 'Cold Outreach List',
-      assignedTelecallerId: 'usr_tele_1',
-      assignedSalesmanId: null,
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(12),
-      updatedAt: pastDay(4),
-      lastActivityAt: pastDay(4),
-    },
-    {
-      id: 'lead_106',
-      companyName: 'Fortress Cyber Defense Ltd',
-      serviceProduct: 'Federal Security Tender Automation',
-      contactPerson: 'Nathan Drake',
-      phone: '+1-555-789-0123',
-      email: 'nathan@fortressdefense.gov.mock',
-      city: 'Washington',
-      state: 'DC',
-      priority: 'URGENT' as Priority,
-      pipelineStage: 'ASSIGNED_TO_SALESMAN' as PipelineStage,
-      callAttempts: 5,
-      lastCallOutcome: 'CONNECTED' as CallOutcome,
-      lastContactDate: pastDay(2),
-      nextFollowUpDate: futureDay(1, 16),
-      nextAction: 'Sales discovery & architecture sign-off',
-      notes: 'Qualified by Priya. High-value opportunity with $80k annual estimated license.',
-      leadSource: 'GovTech Summit',
-      assignedTelecallerId: 'usr_tele_1',
-      assignedSalesmanId: 'usr_sales_1',
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(15),
-      updatedAt: pastDay(2),
-      lastActivityAt: pastDay(2),
-    },
-    {
-      id: 'lead_107',
-      companyName: 'Global Telecom Towers Inc',
-      serviceProduct: '5G Infrastructure Tender Tracker',
-      contactPerson: 'Claire Redfield',
-      phone: '+1-555-890-1234',
-      email: 'claire@globaltelecom.com',
-      city: 'Dallas',
-      state: 'TX',
-      priority: 'HIGH' as Priority,
-      pipelineStage: 'DEMO_SCHEDULED' as PipelineStage,
-      callAttempts: 3,
-      lastCallOutcome: 'CONNECTED' as CallOutcome,
-      lastContactDate: pastDay(3),
-      nextFollowUpDate: futureDay(2, 14),
-      nextAction: 'Sales demo with VP of Operations',
-      notes: 'Salesman David Kim leading demo scheduled for 2:00 PM.',
-      leadSource: 'Direct Outreach',
-      assignedTelecallerId: 'usr_tele_1',
-      assignedSalesmanId: 'usr_sales_1',
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(18),
-      updatedAt: pastDay(3),
-      lastActivityAt: pastDay(3),
-    },
-    {
-      id: 'lead_108',
-      companyName: 'Horizon Renewable Energy',
-      serviceProduct: 'Solar Tender Intelligence Suite',
-      contactPerson: 'Vikram Mehta',
-      phone: '+1-555-901-2345',
-      email: 'vikram@horizonenergy.io',
-      city: 'Austin',
-      state: 'TX',
-      priority: 'URGENT' as Priority,
-      pipelineStage: 'NEGOTIATION' as PipelineStage,
-      callAttempts: 6,
-      lastCallOutcome: 'CONNECTED' as CallOutcome,
-      lastContactDate: pastDay(1),
-      nextFollowUpDate: futureDay(1, 17),
-      nextAction: 'Send revised master services agreement with SLA annexure',
-      notes: 'Negotiating annual enterprise contract at $45,000.',
-      leadSource: 'Webinar Attendee',
-      assignedTelecallerId: 'usr_tele_2',
-      assignedSalesmanId: 'usr_sales_1',
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(22),
-      updatedAt: pastDay(1),
-      lastActivityAt: pastDay(1),
-    },
-    {
-      id: 'lead_109',
-      companyName: 'Ironclad Heavy Machinery',
-      serviceProduct: 'Equipment Leasing Tender CRM',
-      contactPerson: 'Leon Kennedy',
-      phone: '+1-555-012-3456',
-      email: 'leon@ironcladequip.com',
-      city: 'Detroit',
-      state: 'MI',
-      priority: 'MEDIUM' as Priority,
-      pipelineStage: 'CONVERTED' as PipelineStage,
-      callAttempts: 7,
-      lastCallOutcome: 'CONNECTED' as CallOutcome,
-      lastContactDate: pastDay(5),
-      nextFollowUpDate: null,
-      nextAction: 'Onboarding handover completed',
-      notes: 'Closed by David Kim. Deal value $36,000 paid annually upfront.',
-      leadSource: 'Trade Show',
-      assignedTelecallerId: 'usr_tele_2',
-      assignedSalesmanId: 'usr_sales_1',
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(35),
-      updatedAt: pastDay(5),
-      lastActivityAt: pastDay(5),
-      convertedAt: pastDay(5),
-      dealValue: 36000,
-    },
-    {
-      id: 'lead_110',
-      companyName: 'Jupiter Aerospace Sensors',
-      serviceProduct: 'Defense Subcontracting Tracker',
-      contactPerson: 'Arthur Pendelton',
-      phone: '+1-555-123-9999',
-      email: 'arthur@jupitersensors.com',
-      city: 'Huntsville',
-      state: 'AL',
-      priority: 'LOW' as Priority,
-      pipelineStage: 'LOST' as PipelineStage,
-      callAttempts: 4,
-      lastCallOutcome: 'NOT_INTERESTED' as CallOutcome,
-      lastContactDate: pastDay(8),
-      nextFollowUpDate: null,
-      nextAction: null,
-      notes: 'Budget cuts forced postponement of tender automation initiatives.',
-      leadSource: 'Cold Outreach',
-      assignedTelecallerId: 'usr_tele_2',
-      assignedSalesmanId: 'usr_sales_2',
-      createdById: 'usr_admin_1',
-      createdAt: pastDay(28),
-      updatedAt: pastDay(8),
-      lastActivityAt: pastDay(8),
-      lostReason: 'NO_BUDGET',
-      lostNotes: 'Internal freeze on software procurement for FY2026.',
-    },
-  ];
-
-  const activities: LeadActivity[] = [
-    {
-      id: 'act_1',
-      leadId: 'lead_101',
-      userId: 'usr_tele_1',
-      type: 'CALL_LOGGED' as ActivityType,
-      description: 'Priya Sharma logged call outcome: CONNECTED. Notes: Actively bidding on 3 defense sector tenders.',
-      createdAt: pastDay(1),
-    },
-    {
-      id: 'act_2',
-      leadId: 'lead_102',
-      userId: 'usr_tele_1',
-      type: 'STAGE_CHANGED' as ActivityType,
-      description: 'Stage changed to INTERESTED by Priya Sharma',
-      createdAt: pastDay(2),
-    },
-    {
-      id: 'act_3',
-      leadId: 'lead_106',
-      userId: 'usr_tele_1',
-      type: 'LEAD_ASSIGNED' as ActivityType,
-      description: 'Handed over to Salesman David Kim with handover summary: High-value $80k opportunity.',
-      createdAt: pastDay(2),
-    },
-    {
-      id: 'act_4',
-      leadId: 'lead_109',
-      userId: 'usr_sales_1',
-      type: 'LEAD_CONVERTED' as ActivityType,
-      description: 'Lead marked WON / CONVERTED with contract value $36,000 by David Kim.',
-      createdAt: pastDay(5),
-    },
-  ];
-
-  const assignmentHistories: LeadAssignmentHistory[] = [
-    {
-      id: 'asg_1',
-      leadId: 'lead_106',
-      assignedById: 'usr_tele_1',
-      previousUserId: 'usr_tele_1',
-      newUserId: 'usr_sales_1',
-      roleType: 'SALESMAN',
-      handoverSummary: 'Client ready for custom RFQ parsing demo. Enterprise team size.',
-      createdAt: pastDay(2),
-    },
-  ];
-
-  const callLogs: CallLog[] = [
-    {
-      id: 'call_1',
-      leadId: 'lead_101',
-      userId: 'usr_tele_1',
-      outcome: 'CONNECTED' as CallOutcome,
-      notes: 'Spoke with Robert. He handles civil supply bids. Very open to our compliance auto-check.',
-      contactDate: pastDay(1),
-      followUpNeeded: true,
-      nextFollowUpDate: futureDay(1, 11),
-      nextAction: 'Send pricing and compliance deck',
-      durationSeconds: 380,
-      createdAt: pastDay(1),
-    },
-    {
-      id: 'call_2',
-      leadId: 'lead_102',
-      userId: 'usr_tele_1',
-      outcome: 'INTERESTED' as CallOutcome,
-      notes: 'Elena confirmed interest. Scheduled follow-up with executive board.',
-      contactDate: pastDay(2),
-      followUpNeeded: true,
-      nextFollowUpDate: pastDay(0),
-      nextAction: 'Confirm demo attendees from executive procurement committee',
-      durationSeconds: 420,
-      createdAt: pastDay(2),
-    },
-  ];
-
-  const followUpTasks: FollowUpTask[] = [
-    {
-      id: 'task_1',
-      leadId: 'lead_102',
-      assignedUserId: 'usr_tele_1',
-      taskType: 'FOLLOW_UP' as TaskType,
-      dueDate: pastDay(0).split('T')[0],
-      dueTime: '11:00',
-      notes: 'Follow up regarding procurement committee availability.',
-      status: 'PENDING' as TaskStatus,
-      createdAt: pastDay(2),
-      updatedAt: pastDay(2),
-      isOverdue: false,
-    },
-    {
-      id: 'task_2',
-      leadId: 'lead_101',
-      assignedUserId: 'usr_tele_1',
-      taskType: 'CALL' as TaskType,
-      dueDate: futureDay(1).split('T')[0],
-      dueTime: '14:30',
-      notes: 'Discuss technical proposal with Robert.',
-      status: 'PENDING' as TaskStatus,
-      createdAt: pastDay(1),
-      updatedAt: pastDay(1),
-      isOverdue: false,
-    },
-    {
-      id: 'task_3',
-      leadId: 'lead_107',
-      assignedUserId: 'usr_sales_1',
-      taskType: 'DEMO' as TaskType,
-      dueDate: futureDay(2).split('T')[0],
-      dueTime: '14:00',
-      notes: 'Run full platform demo for Claire and telecom team.',
-      status: 'PENDING' as TaskStatus,
-      createdAt: pastDay(3),
-      updatedAt: pastDay(3),
-      isOverdue: false,
-    },
-  ];
-
-  const notifications: NotificationItem[] = [
-    {
-      id: 'notif_1',
-      userId: 'usr_tele_1',
-      title: 'Follow-up Due Today',
-      message: 'Follow-up scheduled with Elena Rostova (BluePeak Healthcare Infrastructure)',
-      type: 'UPCOMING_TASK',
-      isRead: false,
-      link: '/leads/lead_102',
-      createdAt: pastDay(0),
-    },
-    {
-      id: 'notif_2',
-      userId: 'usr_sales_1',
-      title: 'New Lead Assigned',
-      message: 'Priya Sharma transferred Fortress Cyber Defense Ltd ($80k opportunity) to you.',
-      type: 'LEAD_ASSIGNMENT',
-      isRead: false,
-      link: '/leads/lead_106',
-      createdAt: pastDay(2),
-    },
-  ];
-
   return {
-    users,
-    leads,
-    activities,
-    assignmentHistories,
-    callLogs,
-    followUpTasks,
-    notifications,
+    users: [],
+    leads: [],
+    activities: [],
+    assignmentHistories: [],
+    callLogs: [],
+    followUpTasks: [],
+    notifications: [],
     customOptions: {
       priorities: [],
       callOutcomes: [],
@@ -631,6 +161,30 @@ class StoreManager {
           );
           if (filteredOutcomes.length !== store.customOptions.callOutcomes.length) {
             store.customOptions.callOutcomes = filteredOutcomes;
+            migrated = true;
+          }
+        }
+
+        // Filter out any legacy dummy leads
+        if (Array.isArray(store.leads)) {
+          const cleanLeads = store.leads.filter(
+            (l) => !l.id.startsWith('lead_10') &&
+                   !l.companyName?.toLowerCase().includes('acme test') &&
+                   !l.companyName?.toLowerCase().includes('noanswer corp') &&
+                   !l.companyName?.toLowerCase().includes('round4 test') &&
+                   l.companyName?.toLowerCase() !== 'test'
+          );
+          if (cleanLeads.length !== store.leads.length) {
+            store.leads = cleanLeads;
+            migrated = true;
+          }
+        }
+
+        // Filter out any legacy dummy users
+        if (Array.isArray(store.users)) {
+          const cleanUsers = store.users.filter((u) => !u.id.startsWith('usr_'));
+          if (cleanUsers.length !== store.users.length) {
+            store.users = cleanUsers;
             migrated = true;
           }
         }
@@ -877,6 +431,80 @@ class StoreManager {
     this.data = generateInitialSeed();
     this.persist();
     return this.data;
+  }
+
+  public async syncFromDatabase(): Promise<void> {
+    try {
+      const dbUsers = await prisma.user.findMany();
+      if (dbUsers.length > 0) {
+        this.data.users = dbUsers.map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role as UserRole,
+          phone: u.phone || null,
+          isActive: u.isActive,
+          mustChangePassword: u.mustChangePassword ?? false,
+          failedLoginAttempts: u.failedLoginAttempts ?? 0,
+          lockoutUntil: u.lockoutUntil ? new Date(u.lockoutUntil).toISOString() : null,
+          lastLoginAt: u.lastLoginAt ? new Date(u.lastLoginAt).toISOString() : null,
+          lastActiveAt: u.lastActiveAt ? new Date(u.lastActiveAt).toISOString() : null,
+          createdAt: new Date(u.createdAt).toISOString(),
+          updatedAt: new Date(u.updatedAt).toISOString(),
+          passwordHash: u.passwordHash,
+        }));
+      }
+
+      const dbLeads = await prisma.lead.findMany({
+        where: { isDeleted: false },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (dbLeads.length > 0) {
+        this.data.leads = dbLeads.map((l) => ({
+          id: l.id,
+          companyName: l.companyName,
+          serviceProduct: l.serviceProduct,
+          contactPerson: l.contactPerson || undefined,
+          phone: l.phone,
+          email: l.email || undefined,
+          alternatePhone: l.alternatePhone || undefined,
+          website: l.website || undefined,
+          city: l.city || undefined,
+          state: l.state || undefined,
+          priority: l.priority as Priority,
+          pipelineStage: l.pipelineStage,
+          salesStage: (l.salesStage as any) || undefined,
+          callAttempts: l.callAttempts,
+          isRetry: l.isRetry,
+          retryCount: l.retryCount,
+          lastCallOutcome: l.lastCallOutcome || undefined,
+          lastContactDate: l.lastContactDate ? new Date(l.lastContactDate).toISOString() : undefined,
+          lastStatusUpdatedAt: l.lastStatusUpdatedAt ? new Date(l.lastStatusUpdatedAt).toISOString() : undefined,
+          nextFollowUpDate: l.nextFollowUpDate ? new Date(l.nextFollowUpDate).toISOString() : undefined,
+          nextAction: l.nextAction || undefined,
+          notes: l.notes || undefined,
+          leadSource: l.leadSource || undefined,
+          leadSourceOther: l.leadSourceOther || undefined,
+          assignedTelecallerId: l.assignedTelecallerId || undefined,
+          assignedSalesmanId: l.assignedSalesmanId || undefined,
+          createdById: l.createdById || undefined,
+          convertedAt: l.convertedAt ? new Date(l.convertedAt).toISOString() : undefined,
+          dealValue: l.dealValue || undefined,
+          lostReason: (l.lostReason as any) || undefined,
+          lostNotes: l.lostNotes || undefined,
+          archivedAt: l.archivedAt ? new Date(l.archivedAt).toISOString() : undefined,
+          isDeleted: l.isDeleted,
+          deletedAt: l.deletedAt ? new Date(l.deletedAt).toISOString() : undefined,
+          deletedById: l.deletedById || undefined,
+          createdAt: new Date(l.createdAt).toISOString(),
+          updatedAt: new Date(l.updatedAt).toISOString(),
+          lastActivityAt: l.lastActivityAt ? new Date(l.lastActivityAt).toISOString() : undefined,
+        }));
+      }
+      this.persist();
+    } catch (err) {
+      console.warn('[StoreManager] syncFromDatabase error:', (err as Error).message);
+    }
   }
 
   public async syncLeadToDatabase(lead: Lead): Promise<void> {

@@ -159,15 +159,41 @@ export async function createLead(req: Request, res: Response, next: NextFunction
       description: `Lead created by ${req.user!.name}${sourceNote}`,
     });
 
-    // Notify telecaller if assigned by someone else
-    if (data.assignedTelecallerId && data.assignedTelecallerId !== req.user!.id) {
-      await notificationService.notifyLeadAssignment(
-        data.assignedTelecallerId,
-        newLead.id,
-        newLead.companyName,
-        newLead.contactPerson || '-',
-        req.user!.name
-      );
+    // Record assignment history and notify if assigned
+    if (data.assignedTelecallerId) {
+      dbStore.store.assignmentHistories.push({
+        id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        leadId: newLead.id,
+        assignedById: req.user!.id,
+        previousUserId: null,
+        newUserId: data.assignedTelecallerId,
+        roleType: 'TELECALLER',
+        handoverSummary: 'Assigned during lead creation',
+        createdAt: new Date().toISOString(),
+      });
+      dbStore.persist();
+
+      if (data.assignedTelecallerId !== req.user!.id) {
+        await notificationService.notifyLeadAssignment(
+          data.assignedTelecallerId,
+          newLead.id,
+          newLead.companyName,
+          newLead.contactPerson || '-',
+          req.user!.name
+        );
+      }
+    } else if (data.assignedSalesmanId) {
+      dbStore.store.assignmentHistories.push({
+        id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        leadId: newLead.id,
+        assignedById: req.user!.id,
+        previousUserId: null,
+        newUserId: data.assignedSalesmanId,
+        roleType: 'SALESMAN',
+        handoverSummary: 'Assigned during lead creation',
+        createdAt: new Date().toISOString(),
+      });
+      dbStore.persist();
     }
 
     sendSuccess(res, newLead, 'Lead created successfully', 201);

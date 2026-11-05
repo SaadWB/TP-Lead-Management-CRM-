@@ -68,6 +68,28 @@ function AdminLeadsContent() {
   const [telecallerFilter, setTelecallerFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [sourceOptions, setSourceOptions] = useState<string[]>([]);
+  const [pipelineOptions, setPipelineOptions] = useState<string[]>([
+    'New Lead',
+    'Attempting Contact',
+    'Connected',
+    'Follow-up',
+    'Demo',
+    'Closed',
+  ]);
+  const [callOutcomeOptions, setCallOutcomeOptions] = useState<string[]>([
+    'No Answer',
+    'Busy',
+    'Call Cut',
+    'Call Back Later',
+    'Connected – Discussed',
+    'Details Requested',
+    'Demo Interested',
+    'Demo Scheduled',
+    'Demo Completed',
+    'Decision Pending',
+    'Not Interested',
+    'Wrong Number',
+  ]);
 
   // Bulk selection
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
@@ -101,14 +123,26 @@ function AdminLeadsContent() {
   useEffect(() => {
     fetchLeads();
     loadTelecallers();
-    loadSources();
+    loadOptions();
   }, [stageFilter, outcomeFilter, salesStageFilter, priorityFilter, telecallerFilter, sourceFilter, currentKpi]);
 
-  async function loadSources() {
+  async function loadOptions() {
     try {
-      const res = await api.get<{ leadSources?: { name: string; isActive: boolean }[] }>('/options');
-      if (res.success && res.data?.leadSources) {
-        setSourceOptions(res.data.leadSources.filter((s) => s.isActive).map((s) => s.name));
+      const res = await api.get<{
+        leadSources?: { name: string; isActive: boolean }[];
+        stages?: { name: string; isActive: boolean }[];
+        outcomes?: { name: string; isActive: boolean }[];
+      }>('/options');
+      if (res.success && res.data) {
+        if (res.data.leadSources) {
+          setSourceOptions(res.data.leadSources.filter((s) => s.isActive).map((s) => s.name));
+        }
+        if (res.data.stages && res.data.stages.length > 0) {
+          setPipelineOptions(res.data.stages.filter((s) => s.isActive).map((s) => s.name));
+        }
+        if (res.data.outcomes && res.data.outcomes.length > 0) {
+          setCallOutcomeOptions(res.data.outcomes.filter((o) => o.isActive).map((o) => o.name));
+        }
       }
     } catch {
       // ignore
@@ -158,6 +192,30 @@ function AdminLeadsContent() {
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update priority');
+    }
+  }
+
+  // Row-level pipeline stage update
+  async function handleSinglePipelineUpdate(leadId: string, pipelineStage: string) {
+    try {
+      const res = await api.patch<Lead>(`/leads/${leadId}`, { pipelineStage });
+      if (res.success && res.data) {
+        setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update pipeline stage');
+    }
+  }
+
+  // Row-level call outcome update
+  async function handleSingleOutcomeUpdate(leadId: string, lastCallOutcome: string) {
+    try {
+      const res = await api.patch<Lead>(`/leads/${leadId}`, { lastCallOutcome: lastCallOutcome || null });
+      if (res.success && res.data) {
+        setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update call outcome');
     }
   }
 
@@ -577,22 +635,44 @@ function AdminLeadsContent() {
                     </div>
                   </div>
 
-                  {/* Pipeline Stage & Last Outcome Badges */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${stage.bg} ${stage.text} ${stage.border}`}>
-                      {lead.pipelineStage}
-                    </span>
-                    {lead.lastCallOutcome && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                        {lead.lastCallOutcome}
-                      </span>
-                    )}
-                    {lead.assignedTelecaller && (
-                      <span className="text-[11px] text-slate-500 font-medium">
-                        Telecaller: <strong className="text-slate-800">{lead.assignedTelecaller.name}</strong>
-                      </span>
-                    )}
+                  {/* Pipeline Stage & Last Outcome Edit Controls */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 bg-slate-50/80 rounded-lg border border-slate-100" onClick={(e) => e.stopPropagation()}>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Pipeline Stage:</span>
+                      <select
+                        value={lead.pipelineStage}
+                        onChange={(e) => handleSinglePipelineUpdate(lead.id, e.target.value)}
+                        className={`w-full text-[11px] font-bold rounded-md px-2 py-1 border cursor-pointer ${stage.bg} ${stage.text} ${stage.border}`}
+                      >
+                        {pipelineOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Last Call Outcome:</span>
+                      <select
+                        value={lead.lastCallOutcome || ''}
+                        onChange={(e) => handleSingleOutcomeUpdate(lead.id, e.target.value)}
+                        className="w-full text-[11px] font-semibold rounded-md px-2 py-1 border border-slate-200 bg-white text-slate-800 cursor-pointer"
+                      >
+                        <option value="">-- No Outcome --</option>
+                        {callOutcomeOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
+
+                  {lead.assignedTelecaller && (
+                    <div className="text-[11px] text-slate-500 font-medium px-1">
+                      Telecaller: <strong className="text-slate-800">{lead.assignedTelecaller.name}</strong>
+                    </div>
+                  )}
 
                   {/* Lead Source in Mobile Card */}
                   {lead.leadSource && (
@@ -963,36 +1043,45 @@ function AdminLeadsContent() {
                             </select>
                           </td>
 
-                          {/* Pipeline Stage */}
+                          {/* Pipeline Stage with inline Admin dropdown */}
                           <td
                             style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            onClick={(e) => e.stopPropagation()}
                             title={`Pipeline Stage: ${lead.pipelineStage}`}
                           >
-                            <span
-                              className={`inline-block max-w-full truncate px-2.5 py-0.5 rounded text-[11px] font-bold border ${stage.bg} ${stage.text} ${stage.border}`}
-                              title={lead.pipelineStage}
+                            <select
+                              value={lead.pipelineStage}
+                              onChange={(e) => handleSinglePipelineUpdate(lead.id, e.target.value)}
+                              className={`w-full max-w-full truncate text-[11px] font-bold rounded px-1.5 py-1 border cursor-pointer ${stage.bg} ${stage.text} ${stage.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
                             >
-                              {lead.pipelineStage}
-                            </span>
+                              {pipelineOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
                           </td>
 
-                          {/* Outcome */}
+                          {/* Outcome with inline Admin dropdown */}
                           <td
                             style={{ width: 180, minWidth: 180, maxWidth: 180 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            onClick={(e) => e.stopPropagation()}
                             title={lead.lastCallOutcome ? `Last Call Outcome: ${lead.lastCallOutcome}` : 'No call outcome recorded'}
                           >
-                            {lead.lastCallOutcome ? (
-                              <span
-                                className="inline-block max-w-full truncate px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200"
-                                title={lead.lastCallOutcome}
-                              >
-                                {lead.lastCallOutcome}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 font-normal italic text-[11px]">—</span>
-                            )}
+                            <select
+                              value={lead.lastCallOutcome || ''}
+                              onChange={(e) => handleSingleOutcomeUpdate(lead.id, e.target.value)}
+                              className="w-full max-w-full truncate text-[11px] font-semibold rounded px-1.5 py-1 border border-slate-200 bg-slate-50 text-slate-800 cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500"
+                            >
+                              <option value="">-- No Outcome --</option>
+                              {callOutcomeOptions.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
                           </td>
 
                           {/* Assigned Telecaller */}

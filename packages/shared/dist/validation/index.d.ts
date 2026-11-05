@@ -14,11 +14,11 @@ export declare const changePasswordSchema: z.ZodObject<{
     currentPassword: z.ZodOptional<z.ZodString>;
     newPassword: z.ZodEffects<z.ZodEffects<z.ZodEffects<z.ZodString, string, string>, string, string>, string, string>;
 }, "strip", z.ZodTypeAny, {
-    currentPassword?: string | undefined;
     newPassword: string;
+    currentPassword?: string | undefined;
 }, {
-    currentPassword?: string | undefined;
     newPassword: string;
+    currentPassword?: string | undefined;
 }>;
 export declare const createUserSchema: z.ZodObject<{
     name: z.ZodString;

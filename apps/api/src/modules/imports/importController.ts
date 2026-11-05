@@ -361,6 +361,9 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         assignedId = telecallerPool[roundRobinIdx % telecallerPool.length];
         roundRobinIdx++;
         telecallerCounts[assignedId] = (telecallerCounts[assignedId] || 0) + 1;
+      } else if (distributionMethod === 'MANUAL' && telecallerPool.length > 0) {
+        assignedId = telecallerPool[0];
+        telecallerCounts[assignedId] = (telecallerCounts[assignedId] || 0) + 1;
       } else if (record.assignedTelecallerId) {
         assignedId = record.assignedTelecallerId;
       }
@@ -387,6 +390,19 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         createdById: req.user!.id,
       });
 
+      if (assignedId) {
+        dbStore.store.assignmentHistories.push({
+          id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          leadId: newLead.id,
+          assignedById: req.user!.id,
+          previousUserId: null,
+          newUserId: assignedId,
+          roleType: 'TELECALLER',
+          handoverSummary: 'Bulk file import allocation',
+          createdAt: new Date().toISOString(),
+        });
+      }
+
       await activityRepository.create({
         leadId: newLead.id,
         userId: req.user!.id,
@@ -410,12 +426,22 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
       },
     });
 
+    const allUsers = await userRepository.findAll();
+    const userMap = new Map(allUsers.map((u) => [u.id, u.name]));
+
+    const distribution = telecallerPool.map((id) => ({
+      telecallerId: id,
+      name: userMap.get(id) || 'Telecaller',
+      count: telecallerCounts[id] || 0,
+    }));
+
     sendSuccess(res, {
       fileName,
       totalProcessed: records.length,
       importedCount,
       updatedCount,
       skippedCount,
+      distribution,
       telecallerDistribution: telecallerCounts,
     });
   } catch (error) {

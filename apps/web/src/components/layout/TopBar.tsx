@@ -17,7 +17,7 @@ interface TopBarProps {
 }
 
 export function TopBar(props: TopBarProps) {
-  const { user, quickLogin } = useAuth();
+  const { user } = useAuth();
   const headerContext = useHeaderContext();
 
   const title = props.title ?? headerContext?.header.title ?? 'TenderProcure CRM';
@@ -62,33 +62,6 @@ export function TopBar(props: TopBarProps) {
 
       {/* Right Actions */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-        {/* Quick Role Switcher - Admin Only */}
-        {user?.role === 'SUPER_ADMIN' && (
-          <div className="hidden lg:flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs">
-            <span className="text-[10px] font-bold text-slate-500 px-1 uppercase tracking-wider">
-              Switch:
-            </span>
-            <button
-              onClick={() => quickLogin('SUPER_ADMIN')}
-              className="px-2 py-1 rounded text-[11px] font-semibold cursor-pointer transition-colors bg-purple-600 text-white shadow-soft-sm"
-            >
-              Admin
-            </button>
-            <button
-              onClick={() => quickLogin('TELECALLER')}
-              className="px-2 py-1 rounded text-[11px] font-semibold cursor-pointer transition-colors text-slate-600 hover:text-slate-900"
-            >
-              Telecaller
-            </button>
-            <button
-              onClick={() => quickLogin('SALESMAN')}
-              className="px-2 py-1 rounded text-[11px] font-semibold cursor-pointer transition-colors text-slate-600 hover:text-slate-900"
-            >
-              Salesman
-            </button>
-          </div>
-        )}
-
         {/* Notifications */}
         <NotificationPopover />
 

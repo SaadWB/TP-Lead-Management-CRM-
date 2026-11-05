@@ -756,14 +756,35 @@ export function ImportWizard() {
                 Telecaller Lead Allocation Breakdown
               </h4>
               <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden bg-white">
-                {importReport.distribution.map((item: any) => (
-                  <div key={item.telecallerId} className="p-3.5 flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-800">{item.name}</span>
-                    <Badge variant="blue" size="md">
-                      +{item.count} leads assigned
-                    </Badge>
-                  </div>
-                ))}
+                {(() => {
+                  const distList: { telecallerId: string; name: string; count: number }[] =
+                    Array.isArray(importReport.distribution) && importReport.distribution.length > 0
+                      ? importReport.distribution
+                      : importReport.telecallerDistribution
+                      ? Object.entries(importReport.telecallerDistribution).map(([telecallerId, count]) => ({
+                          telecallerId,
+                          name: telecallers.find((t: User) => t.id === telecallerId)?.name || 'Telecaller',
+                          count: count as number,
+                        }))
+                      : [];
+
+                  if (distList.length === 0) {
+                    return (
+                      <div className="p-4 text-center text-xs text-slate-400 italic">
+                        Leads imported as unassigned (no active telecallers designated).
+                      </div>
+                    );
+                  }
+
+                  return distList.map((item) => (
+                    <div key={item.telecallerId} className="p-3.5 flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-800">{item.name}</span>
+                      <Badge variant="blue" size="md">
+                        +{item.count} leads assigned
+                      </Badge>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
 

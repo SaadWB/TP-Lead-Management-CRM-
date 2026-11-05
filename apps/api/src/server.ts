@@ -9,6 +9,11 @@ try {
   console.error('[Server Startup] Round 7 migration error:', err);
 }
 
+// Ensure database data is synchronized to memory store at boot
+dbStore.syncFromDatabase().catch((err) => {
+  console.warn('[Server Startup] Initial database sync warning:', err.message);
+});
+
 // Periodic runner for automatic follow-up and return-to-fresh rules (runs every 60s)
 const autoRuleInterval = setInterval(() => {
   try {

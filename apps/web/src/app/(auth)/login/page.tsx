@@ -5,14 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { ShieldCheck, Lock, Mail, ArrowRight, UserCheck, PhoneCall, Briefcase } from 'lucide-react';
-import { UserRole } from '@crm/shared';
+import { Lock, Mail, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
-  const { user, loading: authLoading, login, quickLogin } = useAuth();
+  const { user, loading: authLoading, login } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState('admin@tenderprocure.com');
-  const [password, setPassword] = useState('Password@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,18 +40,6 @@ export default function LoginPage() {
       await login(email, password);
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleQuickLogin(role: UserRole) {
-    setLoading(true);
-    setError('');
-    try {
-      await quickLogin(role);
-    } catch (err: any) {
-      setError(err.message || 'Quick login failed.');
     } finally {
       setLoading(false);
     }
@@ -118,56 +105,6 @@ export default function LoginPage() {
               Sign In to CRM
             </Button>
           </form>
-
-          {/* Quick Demo Switcher */}
-          <div className="pt-4 border-t border-slate-100">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block text-center mb-3">
-              Fast Demo Login (1-Click Test Access)
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleQuickLogin('SUPER_ADMIN')}
-                className="p-3 sm:p-2.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-900 text-left transition-colors cursor-pointer group disabled:opacity-50 min-h-[44px]"
-              >
-                <div className="flex items-center gap-1.5 text-xs sm:text-[11px] font-bold">
-                  <ShieldCheck className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-purple-600" /> Admin
-                </div>
-                <span className="text-[11px] sm:text-[10px] text-purple-700 block mt-0.5 truncate">
-                  Full Access
-                </span>
-              </button>
-
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleQuickLogin('TELECALLER')}
-                className="p-3 sm:p-2.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 text-left transition-colors cursor-pointer group disabled:opacity-50 min-h-[44px]"
-              >
-                <div className="flex items-center gap-1.5 text-xs sm:text-[11px] font-bold">
-                  <PhoneCall className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-blue-600" /> Telecaller
-                </div>
-                <span className="text-[11px] sm:text-[10px] text-blue-700 block mt-0.5 truncate">
-                  Kanban Queue
-                </span>
-              </button>
-
-              <button
-                type="button"
-                disabled={loading}
-                onClick={() => handleQuickLogin('SALESMAN')}
-                className="p-3 sm:p-2.5 rounded-xl border border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-900 text-left transition-colors cursor-pointer group disabled:opacity-50 min-h-[44px]"
-              >
-                <div className="flex items-center gap-1.5 text-xs sm:text-[11px] font-bold">
-                  <Briefcase className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-teal-600" /> Salesman
-                </div>
-                <span className="text-[11px] sm:text-[10px] text-teal-700 block mt-0.5 truncate">
-                  Demo & Closer
-                </span>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Security footer note */}
