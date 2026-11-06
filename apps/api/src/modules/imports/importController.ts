@@ -325,6 +325,8 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
     telecallerPool.forEach((id) => (telecallerCounts[id] = 0));
 
     let roundRobinIdx = 0;
+    const nowIso = new Date().toISOString();
+    const newlyCreatedLeads: any[] = [];
 
     for (const record of records) {
       if (record.action === 'SKIP') {
@@ -334,22 +336,31 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
 
       if (record.action === 'UPDATE' && record.matchedExistingId) {
         // Update existing lead without overwriting history
-        const existing = await leadRepository.findById(record.matchedExistingId);
-        if (existing) {
-          await leadRepository.update(existing.id, {
+        const existingIndex = dbStore.store.leads.findIndex((l) => l.id === record.matchedExistingId);
+        if (existingIndex !== -1) {
+          const existing = dbStore.store.leads[existingIndex];
+          dbStore.store.leads[existingIndex] = {
+            ...existing,
             serviceProduct: record.serviceProduct || existing.serviceProduct,
             contactPerson: record.contactPerson || existing.contactPerson,
             notes: record.notes ? `${existing.notes || ''}\n[Import Update]: ${record.notes}` : existing.notes,
             leadSource: record.leadSource || existing.leadSource,
             leadSourceOther: record.leadSourceOther || existing.leadSourceOther,
-            lastActivityAt: new Date().toISOString(),
-          });
-          await activityRepository.create({
+            lastActivityAt: nowIso,
+            updatedAt: nowIso,
+          };
+
+          dbStore.store.activities.push({
+            id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             leadId: existing.id,
             userId: req.user!.id,
+            user: { id: req.user!.id, name: req.user!.name, email: req.user!.email, role: req.user!.role },
             type: 'LEAD_IMPORTED',
             description: `Lead updated from bulk import file "${fileName}" by ${req.user!.name}`,
+            createdAt: nowIso,
           });
+
+          dbStore.syncLeadToDatabase(dbStore.store.leads[existingIndex]).catch(() => {});
           updatedCount++;
           continue;
         }
@@ -368,17 +379,23 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         assignedId = record.assignedTelecallerId;
       }
 
-      const newLead = await leadRepository.create({
+      const leadId = `lead_${Date.now()}_${Math.random().toString(36).substring(2, 6)}_${importedCount}`;
+      const newLead = {
+        id: leadId,
         companyName: record.companyName,
-        serviceProduct: record.serviceProduct,
+        serviceProduct: record.serviceProduct || 'General Procurement',
         contactPerson: record.contactPerson || '',
         phone: record.phone,
         email: record.email || null,
         alternatePhone: record.alternatePhone || null,
         website: record.website || null,
-        priority: record.priority as Priority,
+        city: null,
+        state: null,
+        priority: (record.priority as Priority) || 'MEDIUM',
         pipelineStage: (record.pipelineStage as PipelineStage) || 'New Lead',
         callAttempts: record.callAttempts || 0,
+        isRetry: false,
+        retryCount: 0,
         lastCallOutcome: record.lastCallOutcome || null,
         lastContactDate: record.lastContactDate || null,
         nextFollowUpDate: record.nextFollowUpDate || null,
@@ -388,7 +405,14 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         leadSourceOther: record.leadSourceOther || null,
         assignedTelecallerId: assignedId,
         createdById: req.user!.id,
-      });
+        isDeleted: false,
+        createdAt: nowIso,
+        updatedAt: nowIso,
+        lastActivityAt: nowIso,
+      };
+
+      dbStore.store.leads.push(newLead);
+      newlyCreatedLeads.push(newLead);
 
       if (assignedId) {
         dbStore.store.assignmentHistories.push({
@@ -399,19 +423,35 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
           newUserId: assignedId,
           roleType: 'TELECALLER',
           handoverSummary: 'Bulk file import allocation',
-          createdAt: new Date().toISOString(),
+          createdAt: nowIso,
         });
       }
 
-      await activityRepository.create({
+      dbStore.store.activities.push({
+        id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         leadId: newLead.id,
         userId: req.user!.id,
+        user: { id: req.user!.id, name: req.user!.name, email: req.user!.email, role: req.user!.role },
         type: 'LEAD_IMPORTED',
         description: `Lead imported from file "${fileName}" by ${req.user!.name}`,
+        createdAt: nowIso,
       });
 
       importedCount++;
     }
+
+    // Single atomic persist to local JSON store
+    dbStore.persist();
+
+    // Async background sync of newly created leads to remote database
+    const syncBatchToPrisma = async () => {
+      for (const l of newlyCreatedLeads) {
+        await dbStore.syncLeadToDatabase(l).catch(() => {});
+      }
+    };
+    syncBatchToPrisma().catch((err) => {
+      console.warn('[commitImport] Background sync warning:', err.message);
+    });
 
     await auditLogRepository.create({
       userId: req.user!.id,

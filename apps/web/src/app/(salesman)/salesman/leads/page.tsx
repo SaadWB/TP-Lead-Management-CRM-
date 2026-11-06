@@ -11,7 +11,7 @@ import { api } from '@/lib/apiClient';
 import { useSWRData } from '@/lib/apiCache';
 import { Award, RefreshCw, Edit3, Phone } from 'lucide-react';
 import { WhatsAppButton } from '@/components/leads/WhatsAppButton';
-import { formatDate, getPriorityColor, getStageColor } from '@/lib/utils';
+import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
 
 const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
   ssr: false,
@@ -128,11 +128,21 @@ export default function SalesmanLeadsPage() {
                         )}
                       </div>
                     </div>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold border shrink-0 ${priority.bg} ${priority.text} ${priority.border}`}
-                    >
-                      {lead.priority}
-                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {lead.lastCallOutcome && (() => {
+                        const ocMeta = getOutcomeColor(lead.lastCallOutcome);
+                        return (
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${ocMeta.bg} ${ocMeta.text} ${ocMeta.border}`}>
+                            {lead.lastCallOutcome}
+                          </span>
+                        );
+                      })()}
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold border shrink-0 ${priority.bg} ${priority.text} ${priority.border}`}
+                      >
+                        {lead.priority}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Phone Row with Click-to-Call + WhatsApp */}
@@ -263,7 +273,7 @@ export default function SalesmanLeadsPage() {
                 <tbody className="divide-y divide-slate-100">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-8 text-center text-slate-400">
+                      <td colSpan={9} className="p-8 text-center text-slate-400">
                         No assigned leads in this filter
                       </td>
                     </tr>
@@ -272,6 +282,7 @@ export default function SalesmanLeadsPage() {
                       const priority = getPriorityColor(lead.priority);
                       const currentSalesStage = (lead.salesStage as SalesStage) || 'ASSIGNED';
                       const stageColor = getStageColor(currentSalesStage);
+                      const ocMeta = getOutcomeColor(lead.lastCallOutcome);
 
                       return (
                         <tr
@@ -314,8 +325,14 @@ export default function SalesmanLeadsPage() {
                             </span>
                           </td>
                           <td className="p-3.5">
-                            <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                              {lead.pipelineStage}
+                            <span
+                              className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${
+                                lead.lastCallOutcome
+                                  ? `${ocMeta.bg} ${ocMeta.text} ${ocMeta.border}`
+                                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
+                            >
+                              {lead.lastCallOutcome || lead.pipelineStage}
                             </span>
                           </td>
                           {/* C2: Sales Stage dropdown in each row */}

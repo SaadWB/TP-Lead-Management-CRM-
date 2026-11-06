@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { api } from '@/lib/apiClient';
+import { invalidateCache } from '@/lib/apiCache';
 import { User, IMPORT_TEMPLATE_COLUMNS } from '@crm/shared';
 import { Button } from '../ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
@@ -211,6 +212,8 @@ export function ImportWizard() {
       });
 
       if (res.success && res.data) {
+        invalidateCache('/leads');
+        invalidateCache('/reports/dashboard');
         setImportReport(res.data);
         setCurrentStep(5); // Complete summary
       }

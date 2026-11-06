@@ -36,19 +36,18 @@ export async function createRefreshToken(
   const tokenHash = hashToken(rawToken);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-  try {
-    await prisma.refreshToken.create({
-      data: {
-        tokenHash,
-        userId,
-        expiresAt,
-        ipAddress: options?.ipAddress || null,
-        userAgent: options?.userAgent ? options.userAgent.substring(0, 255) : null,
-      },
-    });
-  } catch (err) {
+  // Non-blocking persistent store of refresh token
+  prisma.refreshToken.create({
+    data: {
+      tokenHash,
+      userId,
+      expiresAt,
+      ipAddress: options?.ipAddress || null,
+      userAgent: options?.userAgent ? options.userAgent.substring(0, 255) : null,
+    },
+  }).catch((err) => {
     console.error('[Tokens] Failed to store refresh token in DB:', (err as Error).message);
-  }
+  });
 
   return rawToken;
 }

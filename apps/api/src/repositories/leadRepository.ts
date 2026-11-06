@@ -524,11 +524,9 @@ export class LeadRepository {
       lastActivityAt: updateData.lastActivityAt || new Date().toISOString(),
     };
     dbStore.persist();
-    try {
-      await dbStore.syncLeadToDatabase(dbStore.store.leads[index]);
-    } catch (err) {
+    dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch((err) => {
       console.warn('[leadRepository] update DB sync error:', (err as Error).message);
-    }
+    });
     return this.enrichLead(dbStore.store.leads[index]);
   }
 

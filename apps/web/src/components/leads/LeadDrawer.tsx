@@ -22,11 +22,12 @@ import {
   Check,
   Compass,
 } from 'lucide-react';
-import { Lead, TELECALLER_KANBAN_COLUMNS, Priority, PRIORITIES, SalesStage, SALES_STAGE_OPTIONS } from '@crm/shared';
+import { Lead, TELECALLER_KANBAN_COLUMNS, Priority, PRIORITIES, SalesStage, SALES_STAGE_OPTIONS, User } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { formatDateTime, formatDate, getPriorityColor, getStageColor } from '@/lib/utils';
+import { formatDateTime, formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
+import { invalidateCache } from '@/lib/apiCache';
 import { CallLogModal } from './CallLogModal';
 import { TaskModal } from './TaskModal';
 import { HandoverModal } from '../kanban/HandoverModal';
@@ -94,6 +95,9 @@ export function LeadDrawer({
     'Wrong Number',
   ]);
 
+  const [telecallers, setTelecallers] = useState<User[]>([]);
+  const [salesmen, setSalesmen] = useState<User[]>([]);
+
   useEffect(() => {
     if (isOpen) {
       api.get<{ stages?: { name: string; isActive: boolean }[]; outcomes?: { name: string; isActive: boolean }[] }>('/options')
@@ -108,6 +112,18 @@ export function LeadDrawer({
           }
         })
         .catch(() => {});
+
+      api.get<User[]>('/users', { role: 'TELECALLER', isActive: true })
+        .then((res) => {
+          if (res.success && res.data) setTelecallers(res.data);
+        })
+        .catch(() => {});
+
+      api.get<User[]>('/users', { role: 'SALESMAN', isActive: true })
+        .then((res) => {
+          if (res.success && res.data) setSalesmen(res.data);
+        })
+        .catch(() => {});
     }
   }, [isOpen]);
 
@@ -118,6 +134,7 @@ export function LeadDrawer({
       if (res.success && res.data) {
         setLead(res.data);
         onLeadUpdated(res.data);
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update priority');
@@ -131,9 +148,42 @@ export function LeadDrawer({
       if (res.success && res.data) {
         setLead(res.data);
         onLeadUpdated(res.data);
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update outcome');
+    }
+  }
+
+  async function handleTelecallerChange(newTelecallerId: string) {
+    if (!lead) return;
+    try {
+      const res = await api.patch<Lead>(`/leads/${lead.id}`, {
+        assignedTelecallerId: newTelecallerId || null,
+      });
+      if (res.success && res.data) {
+        setLead(res.data);
+        onLeadUpdated(res.data);
+        invalidateCache('/reports/dashboard');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update assigned telecaller');
+    }
+  }
+
+  async function handleSalesmanChange(newSalesmanId: string) {
+    if (!lead) return;
+    try {
+      const res = await api.patch<Lead>(`/leads/${lead.id}`, {
+        assignedSalesmanId: newSalesmanId || null,
+      });
+      if (res.success && res.data) {
+        setLead(res.data);
+        onLeadUpdated(res.data);
+        invalidateCache('/reports/dashboard');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update assigned salesman');
     }
   }
 
@@ -231,6 +281,7 @@ export function LeadDrawer({
 
   const priorityStyle = lead ? getPriorityColor(lead.priority) : { bg: '', text: '', border: '' };
   const stageStyle = lead ? getStageColor(lead.pipelineStage) : { bg: '', text: '', border: '' };
+  const outcomeStyle = lead ? getOutcomeColor(lead.lastCallOutcome) : { bg: '', text: '', border: '' };
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
@@ -463,12 +514,12 @@ export function LeadDrawer({
                           <select
                             value={lead.priority}
                             onChange={(e) => handlePriorityChange(e.target.value as Priority)}
-                            className="mt-1 w-full text-xs font-bold bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs"
+                            className={`mt-1 w-full text-xs font-bold rounded px-2 py-1 border cursor-pointer ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border} focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs`}
                           >
-                            <option value="LOW">Low</option>
-                            <option value="MEDIUM">Medium</option>
-                            <option value="HIGH">High</option>
-                            <option value="URGENT">Urgent</option>
+                            <option value="LOW" className="bg-blue-50 text-blue-700 font-bold">Low</option>
+                            <option value="MEDIUM" className="bg-amber-50 text-amber-800 font-bold">Medium</option>
+                            <option value="HIGH" className="bg-orange-50 text-orange-700 font-bold">High</option>
+                            <option value="URGENT" className="bg-red-50 text-red-700 font-bold">Urgent</option>
                           </select>
                         ) : (
                           <span
@@ -491,17 +542,20 @@ export function LeadDrawer({
                           <select
                             value={lead.lastCallOutcome || ''}
                             onChange={(e) => handleOutcomeChange(e.target.value)}
-                            className="mt-1 w-full text-xs font-bold bg-white border border-slate-200 rounded px-2 py-0.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs"
+                            className={`mt-1 w-full text-xs font-bold rounded px-2 py-1 border cursor-pointer ${outcomeStyle.bg} ${outcomeStyle.text} ${outcomeStyle.border} focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs`}
                           >
-                            <option value="">-- No Outcome --</option>
-                            {outcomeOptions.map((o) => (
-                              <option key={o} value={o}>
-                                {o}
-                              </option>
-                            ))}
+                            <option value="" className="bg-slate-50 text-slate-700 font-normal">-- No Outcome --</option>
+                            {outcomeOptions.map((o) => {
+                              const optColor = getOutcomeColor(o);
+                              return (
+                                <option key={o} value={o} className={`${optColor.bg} ${optColor.text} font-bold`}>
+                                  {o}
+                                </option>
+                              );
+                            })}
                           </select>
                         ) : (
-                          <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                          <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-bold border ${outcomeStyle.bg} ${outcomeStyle.text} ${outcomeStyle.border}`}>
                             {lead.lastCallOutcome || 'Never contacted'}
                           </span>
                         )}
@@ -534,20 +588,64 @@ export function LeadDrawer({
                         </span>
                       </div>
                       <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                          Assigned Telecaller
-                        </span>
-                        <span className="text-xs font-semibold text-slate-800 block mt-1">
-                          {lead.assignedTelecaller?.name || 'Unassigned'}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                            Assigned Telecaller
+                          </span>
+                          {user?.role === 'SUPER_ADMIN' && (
+                            <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
+                          )}
+                        </div>
+                        {user?.role === 'SUPER_ADMIN' ? (
+                          <select
+                            value={lead.assignedTelecallerId || ''}
+                            onChange={(e) => handleTelecallerChange(e.target.value)}
+                            className={`mt-1 w-full text-xs font-semibold rounded px-2 py-1 border cursor-pointer shadow-soft-xs ${
+                              lead.assignedTelecallerId
+                                ? 'bg-white text-slate-800 border-slate-200 font-bold'
+                                : 'bg-amber-50/70 text-amber-800 border-amber-200 italic'
+                            } focus:outline-none focus:ring-1 focus:ring-sky-500`}
+                          >
+                            <option value="">-- Unassigned --</option>
+                            {telecallers.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-800 block mt-1">
+                            {lead.assignedTelecaller?.name || telecallers.find((t) => t.id === lead.assignedTelecallerId)?.name || 'Unassigned'}
+                          </span>
+                        )}
                       </div>
                       <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                          Assigned Salesman
-                        </span>
-                        <span className="text-xs font-semibold text-slate-800 block mt-1">
-                          {lead.assignedSalesman?.name || 'Not handed over'}
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                            Assigned Salesman
+                          </span>
+                          {user?.role === 'SUPER_ADMIN' && (
+                            <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
+                          )}
+                        </div>
+                        {user?.role === 'SUPER_ADMIN' ? (
+                          <select
+                            value={lead.assignedSalesmanId || ''}
+                            onChange={(e) => handleSalesmanChange(e.target.value)}
+                            className="mt-1 w-full text-xs font-semibold bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs"
+                          >
+                            <option value="">-- Not Handed Over --</option>
+                            {salesmen.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-800 block mt-1">
+                            {lead.assignedSalesman?.name || salesmen.find((s) => s.id === lead.assignedSalesmanId)?.name || 'Not handed over'}
+                          </span>
+                        )}
                       </div>
                     </div>
 

@@ -23,58 +23,86 @@ function mapPrismaUserToShared(dbUser: any): User & { passwordHash: string } {
 
 export class UserRepository {
   async findById(id: string): Promise<(User & { passwordHash?: string }) | null> {
+    // Fast in-memory lookup first (0ms)
+    const memUser = dbStore.store.users.find((u) => u.id === id);
+    if (memUser) {
+      return { ...memUser };
+    }
+
+    // Fallback to database if not in memory
     try {
       const dbUser = await prisma.user.findUnique({ where: { id } });
       if (dbUser) {
-        return mapPrismaUserToShared(dbUser);
+        const mapped = mapPrismaUserToShared(dbUser);
+        const idx = dbStore.store.users.findIndex((u) => u.id === mapped.id);
+        if (idx !== -1) {
+          dbStore.store.users[idx] = mapped;
+        } else {
+          dbStore.store.users.push(mapped);
+        }
+        dbStore.persist();
+        return mapped;
       }
-    } catch {
-      // Fallback to store
+    } catch (err) {
+      console.warn('[userRepository] findById DB query failed:', (err as Error).message);
     }
 
-    const user = dbStore.store.users.find((u) => u.id === id);
-    if (!user) return null;
-    return { ...user };
+    return null;
   }
 
   async findByEmail(email: string): Promise<(User & { passwordHash: string }) | null> {
     const normalized = email.toLowerCase().trim();
+    // Fast in-memory lookup first (0ms)
+    const memUser = dbStore.store.users.find((u) => u.email.toLowerCase() === normalized);
+    if (memUser) {
+      return { ...memUser };
+    }
+
+    // Fallback to database if not in memory
     try {
       const dbUser = await prisma.user.findUnique({ where: { email: normalized } });
       if (dbUser) {
-        return mapPrismaUserToShared(dbUser);
+        const mapped = mapPrismaUserToShared(dbUser);
+        const idx = dbStore.store.users.findIndex((u) => u.id === mapped.id);
+        if (idx !== -1) {
+          dbStore.store.users[idx] = mapped;
+        } else {
+          dbStore.store.users.push(mapped);
+        }
+        dbStore.persist();
+        return mapped;
       }
-    } catch {
-      // Fallback to store
+    } catch (err) {
+      console.warn('[userRepository] findByEmail DB query failed:', (err as Error).message);
     }
 
-    const user = dbStore.store.users.find((u) => u.email.toLowerCase() === normalized);
-    if (!user) return null;
-    return { ...user };
+    return null;
   }
 
   async findAll(filter?: { role?: UserRole; isActive?: boolean }): Promise<User[]> {
     const store = dbStore.store;
 
-    // Try fetching from database first
-    try {
-      const where: any = {};
-      if (filter?.role) where.role = filter.role;
-      if (filter?.isActive !== undefined) where.isActive = filter.isActive;
+    // If store.users is populated, serve immediately from memory (0ms)
+    let users = store.users;
+    if (users.length === 0) {
+      try {
+        const where: any = {};
+        if (filter?.role) where.role = filter.role;
+        if (filter?.isActive !== undefined) where.isActive = filter.isActive;
 
-      const dbUsers = await prisma.user.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-      });
-
-      if (dbUsers.length > 0) {
-        return dbUsers.map((u) => {
-          const { passwordHash, ...safe } = mapPrismaUserToShared(u);
-          return safe;
+        const dbUsers = await prisma.user.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
         });
+
+        if (dbUsers.length > 0) {
+          store.users = dbUsers.map((u) => mapPrismaUserToShared(u));
+          dbStore.persist();
+          users = store.users;
+        }
+      } catch (err) {
+        console.warn('[userRepository] findAll DB query failed:', (err as Error).message);
       }
-    } catch {
-      // Fallback to store
     }
 
     let users = store.users;
@@ -176,34 +204,8 @@ export class UserRepository {
       lastActiveAt?: string | null;
     }
   ): Promise<User | null> {
-    try {
-      const prismaUpdateData: any = {};
-      if (data.name !== undefined) prismaUpdateData.name = data.name;
-      if (data.email !== undefined) prismaUpdateData.email = data.email.toLowerCase().trim();
-      if (data.role !== undefined) prismaUpdateData.role = data.role as any;
-      if (data.phone !== undefined) prismaUpdateData.phone = data.phone;
-      if (data.isActive !== undefined) prismaUpdateData.isActive = data.isActive;
-      if (data.mustChangePassword !== undefined) prismaUpdateData.mustChangePassword = data.mustChangePassword;
-      if (data.failedLoginAttempts !== undefined) prismaUpdateData.failedLoginAttempts = data.failedLoginAttempts;
-      if (data.lockoutUntil !== undefined) {
-        prismaUpdateData.lockoutUntil = data.lockoutUntil ? new Date(data.lockoutUntil) : null;
-      }
-      if (data.lastLoginAt !== undefined) {
-        prismaUpdateData.lastLoginAt = data.lastLoginAt ? new Date(data.lastLoginAt) : null;
-      }
-      if (data.lastActiveAt !== undefined) {
-        prismaUpdateData.lastActiveAt = data.lastActiveAt ? new Date(data.lastActiveAt) : null;
-      }
-      if (data.passwordHash !== undefined) prismaUpdateData.passwordHash = data.passwordHash;
-
-      await prisma.user.update({
-        where: { id },
-        data: prismaUpdateData,
-      });
-    } catch (err) {
-      console.warn('[userRepository] Remote DB update failed, falling back to local store:', (err as Error).message);
-    }
-
+    // 1. Immediately update memory store and persist locally (0ms)
+    let userWithoutPass: User | null = null;
     const index = dbStore.store.users.findIndex((u) => u.id === id);
     if (index !== -1) {
       dbStore.store.users[index] = {
@@ -212,10 +214,43 @@ export class UserRepository {
         updatedAt: new Date().toISOString(),
       };
       dbStore.persist();
-      const { passwordHash, ...userWithoutPass } = dbStore.store.users[index];
-      return userWithoutPass;
+      const { passwordHash, ...safe } = dbStore.store.users[index];
+      userWithoutPass = safe;
     }
 
+    // 2. Sync to Prisma in background without holding HTTP response
+    const syncToPrisma = async () => {
+      try {
+        const prismaUpdateData: any = {};
+        if (data.name !== undefined) prismaUpdateData.name = data.name;
+        if (data.email !== undefined) prismaUpdateData.email = data.email.toLowerCase().trim();
+        if (data.role !== undefined) prismaUpdateData.role = data.role as any;
+        if (data.phone !== undefined) prismaUpdateData.phone = data.phone;
+        if (data.isActive !== undefined) prismaUpdateData.isActive = data.isActive;
+        if (data.mustChangePassword !== undefined) prismaUpdateData.mustChangePassword = data.mustChangePassword;
+        if (data.failedLoginAttempts !== undefined) prismaUpdateData.failedLoginAttempts = data.failedLoginAttempts;
+        if (data.lockoutUntil !== undefined) {
+          prismaUpdateData.lockoutUntil = data.lockoutUntil ? new Date(data.lockoutUntil) : null;
+        }
+        if (data.lastLoginAt !== undefined) {
+          prismaUpdateData.lastLoginAt = data.lastLoginAt ? new Date(data.lastLoginAt) : null;
+        }
+        if (data.lastActiveAt !== undefined) {
+          prismaUpdateData.lastActiveAt = data.lastActiveAt ? new Date(data.lastActiveAt) : null;
+        }
+        if (data.passwordHash !== undefined) prismaUpdateData.passwordHash = data.passwordHash;
+
+        await prisma.user.update({
+          where: { id },
+          data: prismaUpdateData,
+        });
+      } catch (err) {
+        console.warn('[userRepository] Background DB update warning:', (err as Error).message);
+      }
+    };
+    syncToPrisma().catch(() => {});
+
+    if (userWithoutPass) return userWithoutPass;
     const fetched = await this.findById(id);
     if (!fetched) return null;
     const { passwordHash, ...safe } = fetched;

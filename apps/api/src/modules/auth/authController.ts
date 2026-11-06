@@ -94,7 +94,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    await dbStore.syncAuditLogToDatabase({
+    dbStore.syncAuditLogToDatabase({
       id: `audit_login_${Date.now()}`,
       userId: userWithPass.id,
       action: 'USER_LOGIN',
@@ -102,7 +102,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       entityId: userWithPass.id,
       details: { email: userWithPass.email, role: userWithPass.role },
       createdAt: nowIso,
-    });
+    }).catch(console.error);
 
     sendSuccess(
       res,

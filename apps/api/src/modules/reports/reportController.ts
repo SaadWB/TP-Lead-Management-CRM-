@@ -15,7 +15,8 @@ import { prisma } from '../../config/prisma';
 export async function getDashboardMetrics(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const user = req.user!;
-    const leads = dbStore.store.leads.filter((l) => !l.archivedAt);
+    // Ensure accurate active leads pool (exclude archived and soft-deleted leads)
+    const leads = dbStore.store.leads.filter((l) => !l.archivedAt && !l.isDeleted);
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -30,8 +31,8 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
 
     const totalLeads = visibleLeads.length;
     const newLeads = visibleLeads.filter((l) => l.pipelineStage === 'New Lead' || l.pipelineStage === 'NEW').length;
-    const unassignedLeads = leads.filter((l) => !l.assignedTelecallerId && !l.assignedSalesmanId).length;
-    const leadsAssignedToTelecallers = leads.filter((l) => !!l.assignedTelecallerId).length;
+    const unassignedLeads = visibleLeads.filter((l) => !l.assignedTelecallerId && !l.assignedSalesmanId).length;
+    const leadsAssignedToTelecallers = visibleLeads.filter((l) => !!l.assignedTelecallerId).length;
     const leadsInProgress = visibleLeads.filter((l) =>
       ['Attempting Contact', 'Connected', 'Follow-up', 'Demo'].includes(l.pipelineStage)
     ).length;

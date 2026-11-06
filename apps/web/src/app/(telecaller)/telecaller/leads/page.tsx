@@ -14,7 +14,7 @@ import {
   Priority,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
-import { useSWRData } from '@/lib/apiCache';
+import { useSWRData, invalidateCache } from '@/lib/apiCache';
 import { useAuth } from '@/lib/authContext';
 import {
   Clock,
@@ -36,7 +36,7 @@ import {
   Search,
   MessageSquare,
 } from 'lucide-react';
-import { formatDate, formatDateTime, getPriorityColor } from '@/lib/utils';
+import { formatDate, formatDateTime, getPriorityColor, getOutcomeColor, getStageColor } from '@/lib/utils';
 import { WhatsAppButton, WhatsAppIcon } from '@/components/leads/WhatsAppButton';
 import { openWhatsAppChat } from '@/lib/whatsapp';
 import { Modal } from '@/components/ui/Modal';
@@ -503,6 +503,7 @@ export default function TelecallerMyLeadsPage() {
       });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
+        invalidateCache('/reports/dashboard');
         triggerSaveNotice(`Pipeline changed to "${newStage}"`);
         triggerUndo(previousLead, `Changed pipeline of ${lead.companyName} to ${newStage}`);
       } else {
@@ -601,6 +602,7 @@ export default function TelecallerMyLeadsPage() {
 
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
+        invalidateCache('/reports/dashboard');
         triggerSaveNotice(`Saved: ${newOutcome}`);
         triggerUndo(previousLead, `Logged outcome "${newOutcome}" for ${lead.companyName}`);
         if (newOutcome === 'Details Requested') {
@@ -660,6 +662,7 @@ export default function TelecallerMyLeadsPage() {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, { priority: newPriority });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
+        invalidateCache('/reports/dashboard');
         triggerSaveNotice(`Priority: ${newPriority}`);
         triggerUndo(previousLead, `Changed priority of ${lead.companyName}`);
       }
@@ -1129,9 +1132,14 @@ export default function TelecallerMyLeadsPage() {
                       onChange={(e) => handlePriorityChange(lead, e.target.value as Priority)}
                       className={`text-[11px] font-bold rounded-lg px-2 py-1 border shrink-0 ${priorityMeta.bg} ${priorityMeta.text} ${priorityMeta.border}`}
                     >
-                      {allPriorities.map((p) => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
+                      {allPriorities.map((p) => {
+                        const pMeta = getPriorityColor(p);
+                        return (
+                          <option key={p} value={p} className={`font-bold ${pMeta.text} bg-white`}>
+                            {p}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
@@ -1166,9 +1174,14 @@ export default function TelecallerMyLeadsPage() {
                           lead.pipelineStage
                         )}`}
                       >
-                        {PIPELINE_STAGE_LIST.map((stage) => (
-                          <option key={stage} value={stage}>{stage}</option>
-                        ))}
+                        {PIPELINE_STAGE_LIST.map((stage) => {
+                          const sMeta = getStageColor(stage);
+                          return (
+                            <option key={stage} value={stage} className={`font-semibold ${sMeta.text} bg-white`}>
+                              {stage}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
 
@@ -1176,16 +1189,30 @@ export default function TelecallerMyLeadsPage() {
                       <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                         Last Call Outcome
                       </label>
-                      <select
-                        value={lead.lastCallOutcome || ''}
-                        onChange={(e) => handleOutcomeChange(lead, e.target.value)}
-                        className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 font-semibold cursor-pointer"
-                      >
-                        <option value="">-- Select Outcome --</option>
-                        {allOutcomes.map((oc) => (
-                          <option key={oc} value={oc}>{oc}</option>
-                        ))}
-                      </select>
+                      {(() => {
+                        const ocMeta = getOutcomeColor(lead.lastCallOutcome);
+                        return (
+                          <select
+                            value={lead.lastCallOutcome || ''}
+                            onChange={(e) => handleOutcomeChange(lead, e.target.value)}
+                            className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border cursor-pointer ${
+                              lead.lastCallOutcome
+                                ? `${ocMeta.bg} ${ocMeta.text} ${ocMeta.border}`
+                                : 'bg-slate-50 border-slate-200 text-slate-800'
+                            }`}
+                          >
+                            <option value="" className="bg-white text-slate-500">-- Select Outcome --</option>
+                            {allOutcomes.map((oc) => {
+                              const oMeta = getOutcomeColor(oc);
+                              return (
+                                <option key={oc} value={oc} className={`font-semibold ${oMeta.text} bg-white`}>
+                                  {oc}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -1436,11 +1463,14 @@ export default function TelecallerMyLeadsPage() {
                             onChange={(e) => handlePriorityChange(lead, e.target.value as Priority)}
                             className={`w-full text-[11px] font-bold rounded-lg px-2 py-1 border cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs ${priorityMeta.bg} ${priorityMeta.text} ${priorityMeta.border}`}
                           >
-                            {allPriorities.map((p) => (
-                              <option key={p} value={p}>
-                                {p}
-                              </option>
-                            ))}
+                            {allPriorities.map((p) => {
+                              const pMeta = getPriorityColor(p);
+                              return (
+                                <option key={p} value={p} className={`font-bold ${pMeta.text} bg-white`}>
+                                  {p}
+                                </option>
+                              );
+                            })}
                           </select>
                         </td>
 
@@ -1453,28 +1483,43 @@ export default function TelecallerMyLeadsPage() {
                               lead.pipelineStage
                             )}`}
                           >
-                            {PIPELINE_STAGE_LIST.map((stage) => (
-                              <option key={stage} value={stage}>
-                                {stage}
-                              </option>
-                            ))}
+                            {PIPELINE_STAGE_LIST.map((stage) => {
+                              const sMeta = getStageColor(stage);
+                              return (
+                                <option key={stage} value={stage} className={`font-semibold ${sMeta.text} bg-white`}>
+                                  {stage}
+                                </option>
+                              );
+                            })}
                           </select>
                         </td>
 
                         {/* Last Call Outcome Dropdown */}
                         <td className="w-56 min-w-[220px] p-3" onClick={(e) => e.stopPropagation()}>
-                          <select
-                            value={lead.lastCallOutcome || ''}
-                            onChange={(e) => handleOutcomeChange(lead, e.target.value)}
-                            className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-slate-800 font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs"
-                          >
-                            <option value="">-- Select Outcome --</option>
-                            {allOutcomes.map((oc) => (
-                              <option key={oc} value={oc}>
-                                {oc}
-                              </option>
-                            ))}
-                          </select>
+                          {(() => {
+                            const ocMeta = getOutcomeColor(lead.lastCallOutcome);
+                            return (
+                              <select
+                                value={lead.lastCallOutcome || ''}
+                                onChange={(e) => handleOutcomeChange(lead, e.target.value)}
+                                className={`w-full text-xs font-semibold rounded-lg px-2 py-1.5 border focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs ${
+                                  lead.lastCallOutcome
+                                    ? `${ocMeta.bg} ${ocMeta.text} ${ocMeta.border}`
+                                    : 'bg-slate-50 border-slate-200 text-slate-800'
+                                }`}
+                              >
+                                <option value="" className="bg-white text-slate-500">-- Select Outcome --</option>
+                                {allOutcomes.map((oc) => {
+                                  const oMeta = getOutcomeColor(oc);
+                                  return (
+                                    <option key={oc} value={oc} className={`font-semibold ${oMeta.text} bg-white`}>
+                                      {oc}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                            );
+                          })()}
                         </td>
 
                         {/* Next Action (Editable with Missing warning) */}

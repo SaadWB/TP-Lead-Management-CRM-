@@ -37,6 +37,9 @@ export function getMemoryCache<T>(key: string): T | undefined {
 export function invalidateCache(prefix?: string): void {
   if (!prefix) {
     memoryCache.clear();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('crm:cache-invalidated', { detail: { prefix: '' } }));
+    }
     return;
   }
   const toDelete: string[] = [];
@@ -46,6 +49,9 @@ export function invalidateCache(prefix?: string): void {
     }
   });
   toDelete.forEach((k) => memoryCache.delete(k));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('crm:cache-invalidated', { detail: { prefix } }));
+  }
 }
 
 /**
@@ -110,10 +116,30 @@ export function useSWRData<T>(
     }
     listeners.get(cacheKey)!.add(listener);
 
+    // 3. React to cache invalidation events
+    const handleInvalidation = (e: Event) => {
+      const customEvent = e as CustomEvent<{ prefix?: string }>;
+      const prefix = customEvent.detail?.prefix;
+      if (!prefix || cacheKey.startsWith(prefix)) {
+        fetchData(true);
+      }
+    };
+    window.addEventListener('crm:cache-invalidated', handleInvalidation);
+
+    // 4. React to window focus for real-time freshness
+    const handleFocus = () => {
+      if (options.revalidateOnFocus !== false) {
+        fetchData(true);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       listeners.get(cacheKey)?.delete(listener);
+      window.removeEventListener('crm:cache-invalidated', handleInvalidation);
+      window.removeEventListener('focus', handleFocus);
     };
-  }, [cacheKey, fetchData]);
+  }, [cacheKey, fetchData, options.revalidateOnFocus]);
 
   const mutate = useCallback(
     (updater?: T | ((prev: T | undefined) => T)) => {

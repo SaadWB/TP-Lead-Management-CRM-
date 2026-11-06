@@ -230,6 +230,76 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
 
     const updated = await leadRepository.update(req.params.id, patchData);
 
+    // Track telecaller assignment change
+    if (data.assignedTelecallerId !== undefined && data.assignedTelecallerId !== lead.assignedTelecallerId) {
+      const prevId = lead.assignedTelecallerId;
+      const newId = data.assignedTelecallerId;
+      dbStore.store.assignmentHistories.push({
+        id: `asg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        leadId: lead.id,
+        assignedById: req.user!.id,
+        previousUserId: prevId || null,
+        newUserId: newId || '',
+        roleType: 'TELECALLER',
+        handoverSummary: newId ? 'Assigned by Super Admin' : 'Unassigned by Super Admin',
+        createdAt: new Date().toISOString(),
+      });
+      dbStore.persist();
+
+      if (newId) {
+        const targetUser = await userRepository.findById(newId);
+        await activityRepository.create({
+          leadId: lead.id,
+          userId: req.user!.id,
+          type: prevId ? 'LEAD_REASSIGNED' : 'LEAD_ASSIGNED',
+          description: `Telecaller changed to ${targetUser?.name || 'Assigned'} by ${req.user!.name}`,
+        });
+        if (targetUser) {
+          notificationService.notifyLeadAssignment(
+            targetUser.id,
+            lead.id,
+            lead.companyName,
+            lead.contactPerson || '-',
+            req.user!.name
+          ).catch(console.error);
+        }
+      } else {
+        await activityRepository.create({
+          leadId: lead.id,
+          userId: req.user!.id,
+          type: 'LEAD_REASSIGNED',
+          description: `Lead unassigned from telecaller by ${req.user!.name}`,
+        });
+      }
+    }
+
+    // Track sales closer assignment change
+    if (data.assignedSalesmanId !== undefined && data.assignedSalesmanId !== lead.assignedSalesmanId) {
+      const prevId = lead.assignedSalesmanId;
+      const newId = data.assignedSalesmanId;
+      dbStore.store.assignmentHistories.push({
+        id: `asg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        leadId: lead.id,
+        assignedById: req.user!.id,
+        previousUserId: prevId || null,
+        newUserId: newId || '',
+        roleType: 'SALESMAN',
+        handoverSummary: newId ? 'Assigned to Sales Closer by Super Admin' : 'Unassigned from Sales Closer',
+        createdAt: new Date().toISOString(),
+      });
+      dbStore.persist();
+
+      if (newId) {
+        const targetUser = await userRepository.findById(newId);
+        await activityRepository.create({
+          leadId: lead.id,
+          userId: req.user!.id,
+          type: prevId ? 'LEAD_REASSIGNED' : 'LEAD_ASSIGNED',
+          description: `Sales Closer assigned to ${targetUser?.name || 'Sales Closer'} by ${req.user!.name}`,
+        });
+      }
+    }
+
     // Track lead source change in lead history
     if (data.leadSource !== undefined && data.leadSource !== lead.leadSource) {
       const detail = data.leadSourceOther ? ` (${data.leadSourceOther})` : '';
@@ -239,7 +309,7 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
         type: 'NOTE_ADDED',
         description: `Lead Source set to "${data.leadSource || '-'}"${detail} by ${req.user!.name}`,
       });
-    } else {
+    } else if (data.assignedTelecallerId === undefined && data.assignedSalesmanId === undefined) {
       await activityRepository.create({
         leadId: lead.id,
         userId: req.user!.id,

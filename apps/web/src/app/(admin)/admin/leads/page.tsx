@@ -17,7 +17,8 @@ import {
   User,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
-import { formatDate, getPriorityColor, getStageColor } from '@/lib/utils';
+import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
+import { invalidateCache } from '@/lib/apiCache';
 import {
   Users,
   Filter,
@@ -189,9 +190,25 @@ function AdminLeadsContent() {
       const res = await api.patch<Lead>(`/leads/${leadId}/priority`, { priority });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update priority');
+    }
+  }
+
+  // Row-level telecaller update (Super Admin inline assign)
+  async function handleSingleTelecallerUpdate(leadId: string, assignedTelecallerId: string) {
+    try {
+      const res = await api.patch<Lead>(`/leads/${leadId}`, {
+        assignedTelecallerId: assignedTelecallerId || null,
+      });
+      if (res.success && res.data) {
+        setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        invalidateCache('/reports/dashboard');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update assigned telecaller');
     }
   }
 
@@ -201,6 +218,7 @@ function AdminLeadsContent() {
       const res = await api.patch<Lead>(`/leads/${leadId}`, { pipelineStage });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update pipeline stage');
@@ -213,6 +231,7 @@ function AdminLeadsContent() {
       const res = await api.patch<Lead>(`/leads/${leadId}`, { lastCallOutcome: lastCallOutcome || null });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update call outcome');
@@ -231,6 +250,7 @@ function AdminLeadsContent() {
       if (res.success) {
         setSelectedLeadIds([]);
         fetchLeads();
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update priorities');
@@ -252,6 +272,7 @@ function AdminLeadsContent() {
       if (res.success) {
         setSelectedLeadIds([]);
         fetchLeads();
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Bulk assignment failed');
@@ -270,6 +291,7 @@ function AdminLeadsContent() {
         setLeads((prev) => prev.filter((l) => l.id !== deleteTarget.id));
         setSelectedLeadIds((prev) => prev.filter((id) => id !== deleteTarget.id));
         setDeleteTarget(null);
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to delete lead');
@@ -290,6 +312,7 @@ function AdminLeadsContent() {
         setLeads((prev) => prev.filter((l) => !selectedLeadIds.includes(l.id)));
         setSelectedLeadIds([]);
         setShowBulkDeleteConfirm(false);
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to delete selected leads');
@@ -546,6 +569,7 @@ function AdminLeadsContent() {
             filteredLeads.map((lead, index) => {
               const priority = getPriorityColor(lead.priority);
               const stage = getStageColor(lead.pipelineStage);
+              const outcome = getOutcomeColor(lead.lastCallOutcome);
               const isSelected = selectedLeadIds.includes(lead.id);
 
               return (
@@ -601,12 +625,12 @@ function AdminLeadsContent() {
                     <select
                       value={lead.priority}
                       onChange={(e) => handleSinglePriorityUpdate(lead.id, e.target.value as Priority)}
-                      className={`text-[11px] font-bold rounded-lg px-2 py-1 border shrink-0 ${priority.bg} ${priority.text} ${priority.border}`}
+                      className={`text-[11px] font-bold rounded-lg px-2 py-1 border shrink-0 cursor-pointer ${priority.bg} ${priority.text} ${priority.border}`}
                     >
-                      <option value="LOW">LOW</option>
-                      <option value="MEDIUM">MEDIUM</option>
-                      <option value="HIGH">HIGH</option>
-                      <option value="URGENT">URGENT</option>
+                      <option value="LOW" className="bg-blue-50 text-blue-700 font-bold">LOW</option>
+                      <option value="MEDIUM" className="bg-amber-50 text-amber-800 font-bold">MEDIUM</option>
+                      <option value="HIGH" className="bg-orange-50 text-orange-700 font-bold">HIGH</option>
+                      <option value="URGENT" className="bg-red-50 text-red-700 font-bold">URGENT</option>
                     </select>
                   </div>
 
@@ -644,11 +668,14 @@ function AdminLeadsContent() {
                         onChange={(e) => handleSinglePipelineUpdate(lead.id, e.target.value)}
                         className={`w-full text-[11px] font-bold rounded-md px-2 py-1 border cursor-pointer ${stage.bg} ${stage.text} ${stage.border}`}
                       >
-                        {pipelineOptions.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
+                        {pipelineOptions.map((opt) => {
+                          const optStage = getStageColor(opt);
+                          return (
+                            <option key={opt} value={opt} className={`${optStage.bg} ${optStage.text} font-bold`}>
+                              {opt}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                     <div>
@@ -656,23 +683,41 @@ function AdminLeadsContent() {
                       <select
                         value={lead.lastCallOutcome || ''}
                         onChange={(e) => handleSingleOutcomeUpdate(lead.id, e.target.value)}
-                        className="w-full text-[11px] font-semibold rounded-md px-2 py-1 border border-slate-200 bg-white text-slate-800 cursor-pointer"
+                        className={`w-full text-[11px] font-bold rounded-md px-2 py-1 border cursor-pointer ${outcome.bg} ${outcome.text} ${outcome.border}`}
                       >
-                        <option value="">-- No Outcome --</option>
-                        {callOutcomeOptions.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
+                        <option value="" className="bg-slate-50 text-slate-700 font-normal">-- No Outcome --</option>
+                        {callOutcomeOptions.map((opt) => {
+                          const optOutcome = getOutcomeColor(opt);
+                          return (
+                            <option key={opt} value={opt} className={`${optOutcome.bg} ${optOutcome.text} font-bold`}>
+                              {opt}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   </div>
 
-                  {lead.assignedTelecaller && (
-                    <div className="text-[11px] text-slate-500 font-medium px-1">
-                      Telecaller: <strong className="text-slate-800">{lead.assignedTelecaller.name}</strong>
-                    </div>
-                  )}
+                  {/* Assigned Telecaller Selector on Mobile */}
+                  <div className="p-2 bg-slate-50/80 rounded-lg border border-slate-100" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Assigned Telecaller:</span>
+                    <select
+                      value={lead.assignedTelecallerId || ''}
+                      onChange={(e) => handleSingleTelecallerUpdate(lead.id, e.target.value)}
+                      className={`w-full text-[11px] font-semibold rounded-md px-2 py-1 border cursor-pointer ${
+                        lead.assignedTelecallerId
+                          ? 'bg-white text-slate-800 border-slate-200 font-bold'
+                          : 'bg-amber-50/70 text-amber-800 border-amber-200 italic'
+                      }`}
+                    >
+                      <option value="">-- Unassigned --</option>
+                      {telecallers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                   {/* Lead Source in Mobile Card */}
                   {lead.leadSource && (
@@ -784,14 +829,6 @@ function AdminLeadsContent() {
                     <th
                       style={{ width: 110, minWidth: 110, maxWidth: 110 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
-                      title="Quick Actions"
-                    >
-                      Actions
-                    </th>
-
-                    <th
-                      style={{ width: 110, minWidth: 110, maxWidth: 110 }}
-                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                       title="Priority (Admin Inline Edit)"
                     >
                       Priority
@@ -852,6 +889,15 @@ function AdminLeadsContent() {
                     >
                       Last Updated
                     </th>
+
+                    {/* Actions Column moved to the very end */}
+                    <th
+                      style={{ width: 110, minWidth: 110, maxWidth: 110 }}
+                      className="p-3 text-center font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Quick Actions"
+                    >
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
@@ -891,6 +937,7 @@ function AdminLeadsContent() {
                     filteredLeads.map((lead, index) => {
                       const priority = getPriorityColor(lead.priority);
                       const stage = getStageColor(lead.pipelineStage);
+                      const outcome = getOutcomeColor(lead.lastCallOutcome);
                       const isSelected = selectedLeadIds.includes(lead.id);
 
                       return (
@@ -995,34 +1042,6 @@ function AdminLeadsContent() {
                             </div>
                           </td>
 
-                          {/* Actions Column */}
-                          <td
-                            style={{ width: 110, minWidth: 110, maxWidth: 110 }}
-                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
-                            onClick={(e) => e.stopPropagation()}
-                            title="Actions"
-                          >
-                            <div className="flex items-center gap-1 min-w-0">
-                              <button
-                                onClick={() => {
-                                  setSelectedLeadId(lead.id);
-                                  setIsDrawerOpen(true);
-                                }}
-                                className="px-2 py-1 rounded bg-sky-50 text-sky-700 hover:bg-sky-100 font-bold text-[11px] transition-colors cursor-pointer shrink-0"
-                                title="View Lead Details"
-                              >
-                                View
-                              </button>
-                              <button
-                                onClick={() => setDeleteTarget(lead)}
-                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer shrink-0"
-                                title="Delete Lead"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
-
                           {/* Priority with inline Admin dropdown */}
                           <td
                             style={{ width: 110, minWidth: 110, maxWidth: 110 }}
@@ -1036,10 +1055,10 @@ function AdminLeadsContent() {
                               className={`w-full max-w-full truncate text-[11px] font-bold rounded px-1.5 py-1 border cursor-pointer ${priority.bg} ${priority.text} ${priority.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
                               title={`Priority: ${lead.priority}`}
                             >
-                              <option value="LOW">LOW</option>
-                              <option value="MEDIUM">MEDIUM</option>
-                              <option value="HIGH">HIGH</option>
-                              <option value="URGENT">URGENT</option>
+                              <option value="LOW" className="bg-blue-50 text-blue-700 font-bold">LOW</option>
+                              <option value="MEDIUM" className="bg-amber-50 text-amber-800 font-bold">MEDIUM</option>
+                              <option value="HIGH" className="bg-orange-50 text-orange-700 font-bold">HIGH</option>
+                              <option value="URGENT" className="bg-red-50 text-red-700 font-bold">URGENT</option>
                             </select>
                           </td>
 
@@ -1055,11 +1074,14 @@ function AdminLeadsContent() {
                               onChange={(e) => handleSinglePipelineUpdate(lead.id, e.target.value)}
                               className={`w-full max-w-full truncate text-[11px] font-bold rounded px-1.5 py-1 border cursor-pointer ${stage.bg} ${stage.text} ${stage.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
                             >
-                              {pipelineOptions.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
+                              {pipelineOptions.map((opt) => {
+                                const optStage = getStageColor(opt);
+                                return (
+                                  <option key={opt} value={opt} className={`${optStage.bg} ${optStage.text} font-bold`}>
+                                    {opt}
+                                  </option>
+                                );
+                              })}
                             </select>
                           </td>
 
@@ -1073,28 +1095,43 @@ function AdminLeadsContent() {
                             <select
                               value={lead.lastCallOutcome || ''}
                               onChange={(e) => handleSingleOutcomeUpdate(lead.id, e.target.value)}
-                              className="w-full max-w-full truncate text-[11px] font-semibold rounded px-1.5 py-1 border border-slate-200 bg-slate-50 text-slate-800 cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              className={`w-full max-w-full truncate text-[11px] font-bold rounded px-1.5 py-1 border cursor-pointer ${outcome.bg} ${outcome.text} ${outcome.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
                             >
-                              <option value="">-- No Outcome --</option>
-                              {callOutcomeOptions.map((opt) => (
-                                <option key={opt} value={opt}>
-                                  {opt}
-                                </option>
-                              ))}
+                              <option value="" className="bg-slate-50 text-slate-700 font-normal">-- No Outcome --</option>
+                              {callOutcomeOptions.map((opt) => {
+                                const optOutcome = getOutcomeColor(opt);
+                                return (
+                                  <option key={opt} value={opt} className={`${optOutcome.bg} ${optOutcome.text} font-bold`}>
+                                    {opt}
+                                  </option>
+                                );
+                              })}
                             </select>
                           </td>
 
-                          {/* Assigned Telecaller */}
+                          {/* Assigned Telecaller (Interactive Super Admin Assign) */}
                           <td
                             style={{ width: 160, minWidth: 160, maxWidth: 160 }}
-                            className="p-3 text-slate-700 font-medium overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            onClick={(e) => e.stopPropagation()}
                             title={lead.assignedTelecaller?.name ? `Telecaller: ${lead.assignedTelecaller.name}` : 'Unassigned'}
                           >
-                            <span className="block truncate">
-                              {lead.assignedTelecaller?.name || (
-                                <span className="text-slate-400 italic">Unassigned</span>
-                              )}
-                            </span>
+                            <select
+                              value={lead.assignedTelecallerId || ''}
+                              onChange={(e) => handleSingleTelecallerUpdate(lead.id, e.target.value)}
+                              className={`w-full max-w-full truncate text-[11px] font-semibold rounded px-1.5 py-1 border cursor-pointer ${
+                                lead.assignedTelecallerId
+                                  ? 'bg-slate-50 text-slate-800 border-slate-200 font-bold'
+                                  : 'bg-amber-50/70 text-amber-800 border-amber-200 italic'
+                              } focus:outline-none focus:ring-1 focus:ring-sky-500`}
+                            >
+                              <option value="">-- Unassigned --</option>
+                              {telecallers.map((t) => (
+                                <option key={t.id} value={t.id} className="font-semibold text-slate-800">
+                                  {t.name}
+                                </option>
+                              ))}
+                            </select>
                           </td>
 
                           {/* Sales Closer */}
@@ -1159,6 +1196,34 @@ function AdminLeadsContent() {
                             <span className="block truncate">
                               {formatDate(lead.updatedAt || lead.createdAt)}
                             </span>
+                          </td>
+
+                          {/* Actions Column (placed at the very end of the row) */}
+                          <td
+                            style={{ width: 110, minWidth: 110, maxWidth: 110 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-center"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Actions"
+                          >
+                            <div className="flex items-center justify-center gap-1 min-w-0">
+                              <button
+                                onClick={() => {
+                                  setSelectedLeadId(lead.id);
+                                  setIsDrawerOpen(true);
+                                }}
+                                className="px-2.5 py-1 rounded bg-sky-50 text-sky-700 hover:bg-sky-100 font-bold text-[11px] transition-colors cursor-pointer shrink-0"
+                                title="View Lead Details"
+                              >
+                                View
+                              </button>
+                              <button
+                                onClick={() => setDeleteTarget(lead)}
+                                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer shrink-0"
+                                title="Delete Lead"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
