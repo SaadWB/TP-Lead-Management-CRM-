@@ -213,11 +213,13 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
 
     const data = updateLeadSchema.parse(req.body);
 
-    // Mass assignment prevention: only Super Admin can reassign or change priority
-    if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
+    // Mass assignment prevention: only Super Admin can reassign; Super Admin and Telecaller can update priority
+    if (req.user!.role !== USER_ROLES.SUPER_ADMIN && req.user!.role !== USER_ROLES.TELECALLER) {
       if (data.priority) {
-        throw new ForbiddenError('Only Super Admin can update lead priority.');
+        throw new ForbiddenError('You do not have permission to update lead priority.');
       }
+    }
+    if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
       if (data.assignedTelecallerId !== undefined || data.assignedSalesmanId !== undefined) {
         throw new ForbiddenError('Only Super Admin can reassign leads.');
       }
@@ -356,11 +358,13 @@ export async function restoreLead(req: Request, res: Response, next: NextFunctio
 
 export async function updateLeadPriority(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
-      throw new ForbiddenError('Only Super Admin can update lead priority.');
+    if (req.user!.role !== USER_ROLES.SUPER_ADMIN && req.user!.role !== USER_ROLES.TELECALLER) {
+      throw new ForbiddenError('You do not have permission to update lead priority.');
     }
     const lead = await leadRepository.findById(req.params.id);
     if (!lead) throw new NotFoundError('Lead not found');
+
+    assertLeadAccess(req.user, lead);
 
     const { priority } = req.body;
     if (!priority || !['LOW', 'MEDIUM', 'HIGH', 'URGENT'].includes(priority)) {
@@ -383,8 +387,8 @@ export async function updateLeadPriority(req: Request, res: Response, next: Next
 
 export async function bulkUpdatePriority(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
-      throw new ForbiddenError('Only Super Admin can bulk update lead priorities.');
+    if (req.user!.role !== USER_ROLES.SUPER_ADMIN && req.user!.role !== USER_ROLES.TELECALLER) {
+      throw new ForbiddenError('You do not have permission to bulk update lead priorities.');
     }
     const data = bulkPrioritySchema.parse(req.body);
     const updatedCount = await leadRepository.bulkUpdatePriority(data.leadIds, data.priority as Priority);

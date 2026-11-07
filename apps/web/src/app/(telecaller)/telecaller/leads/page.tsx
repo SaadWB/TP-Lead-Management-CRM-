@@ -248,22 +248,8 @@ export default function TelecallerMyLeadsPage() {
     return getDatePresetRange(datePreset);
   }, [datePreset, customFromDate, customToDate]);
 
-  // Query parameters for SWR hook
-  const queryParams = useMemo(() => {
-    const p: Record<string, any> = { limit: 100 };
-    if (pipelineFilter !== 'ALL') p.pipelineStage = pipelineFilter;
-    if (outcomeFilter) p.lastCallOutcome = outcomeFilter;
-    if (priorityFilter) p.priority = priorityFilter;
-    if (searchTerm) p.search = searchTerm;
-    if (datePreset !== 'ALL' && dateField) {
-      p.dateField = dateField;
-      if (fromDate) p.fromDate = fromDate;
-      if (toDate) p.toDate = toDate;
-    }
-    if (sortBy) p.sortBy = sortBy;
-    if (sortOrder) p.sortOrder = sortOrder;
-    return p;
-  }, [pipelineFilter, outcomeFilter, priorityFilter, searchTerm, datePreset, dateField, fromDate, toDate, sortBy, sortOrder]);
+  // Stable query parameters for SWR hook - loads all telecaller leads so client-side filtering, stage counts, and sorting are 0ms instant without cache thrashing
+  const queryParams = useMemo(() => ({ limit: 1000 }), []);
 
   // SWR Caching
   const { data: cachedLeads, loading: swrLoading, mutate: mutateLeads, refresh: refreshLeads } =
@@ -662,6 +648,7 @@ export default function TelecallerMyLeadsPage() {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, { priority: newPriority });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
         triggerSaveNotice(`Priority: ${newPriority}`);
         triggerUndo(previousLead, `Changed priority of ${lead.companyName}`);

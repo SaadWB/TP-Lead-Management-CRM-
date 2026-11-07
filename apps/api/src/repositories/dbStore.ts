@@ -90,7 +90,9 @@ export function getDefaultLeadSourceOptions(): LeadSourceOption[] {
 }
 
 
-const DATA_DIR = path.resolve(__dirname, '../../../../.data');
+const DATA_DIR = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
+  ? path.join('/tmp', '.data')
+  : path.resolve(__dirname, '../../../../.data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
 
 function generateInitialSeed(): DataStore {
@@ -118,6 +120,7 @@ class StoreManager {
   private lastMtime: number = 0;
   private lastCheckTime: number = 0;
   private lastRuleRunTime: number = 0;
+  private lastDbSyncTime: number = 0;
 
   constructor() {
     this.data = this.loadData();
@@ -433,9 +436,23 @@ class StoreManager {
     return this.data;
   }
 
+  public async ensureSynced(force = false): Promise<void> {
+    const now = Date.now();
+    if (force || this.data.leads.length === 0 || now - this.lastDbSyncTime > 15000) {
+      await this.syncFromDatabase();
+    }
+  }
+
   public async syncFromDatabase(): Promise<void> {
     try {
-      const dbUsers = await prisma.user.findMany();
+      const [dbUsers, dbLeads] = await Promise.all([
+        prisma.user.findMany(),
+        prisma.lead.findMany({
+          where: { isDeleted: false },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
+
       if (dbUsers.length > 0) {
         this.data.users = dbUsers.map((u) => ({
           id: u.id,
@@ -455,10 +472,6 @@ class StoreManager {
         }));
       }
 
-      const dbLeads = await prisma.lead.findMany({
-        where: { isDeleted: false },
-        orderBy: { createdAt: 'desc' },
-      });
       if (dbLeads.length > 0) {
         this.data.leads = dbLeads.map((l) => ({
           id: l.id,
@@ -501,6 +514,7 @@ class StoreManager {
           lastActivityAt: l.lastActivityAt ? new Date(l.lastActivityAt).toISOString() : undefined,
         }));
       }
+      this.lastDbSyncTime = Date.now();
       this.persist();
     } catch (err) {
       console.warn('[StoreManager] syncFromDatabase error:', (err as Error).message);

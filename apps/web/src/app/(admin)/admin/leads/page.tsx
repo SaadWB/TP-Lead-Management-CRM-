@@ -153,7 +153,7 @@ function AdminLeadsContent() {
   async function fetchLeads() {
     setLoading(true);
     try {
-      const params: any = { limit: 100 };
+      const params: any = { limit: 1000 };
       if (currentKpi) params.kpi = currentKpi;
       if (stageFilter) params.pipelineStage = stageFilter;
       if (outcomeFilter) params.lastCallOutcome = outcomeFilter;
@@ -205,6 +205,7 @@ function AdminLeadsContent() {
       });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -218,6 +219,7 @@ function AdminLeadsContent() {
       const res = await api.patch<Lead>(`/leads/${leadId}`, { pipelineStage });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -231,6 +233,7 @@ function AdminLeadsContent() {
       const res = await api.patch<Lead>(`/leads/${leadId}`, { lastCallOutcome: lastCallOutcome || null });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -250,6 +253,7 @@ function AdminLeadsContent() {
       if (res.success) {
         setSelectedLeadIds([]);
         fetchLeads();
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -272,6 +276,7 @@ function AdminLeadsContent() {
       if (res.success) {
         setSelectedLeadIds([]);
         fetchLeads();
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {

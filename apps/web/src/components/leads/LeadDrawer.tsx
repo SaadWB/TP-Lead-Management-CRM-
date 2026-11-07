@@ -134,6 +134,7 @@ export function LeadDrawer({
       if (res.success && res.data) {
         setLead(res.data);
         onLeadUpdated(res.data);
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -148,6 +149,7 @@ export function LeadDrawer({
       if (res.success && res.data) {
         setLead(res.data);
         onLeadUpdated(res.data);
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -164,6 +166,7 @@ export function LeadDrawer({
       if (res.success && res.data) {
         setLead(res.data);
         onLeadUpdated(res.data);
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -180,6 +183,7 @@ export function LeadDrawer({
       if (res.success && res.data) {
         setLead(res.data);
         onLeadUpdated(res.data);
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -506,11 +510,11 @@ export function LeadDrawer({
                           <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
                             Priority
                           </span>
-                          {user?.role === 'SUPER_ADMIN' && (
+                          {(user?.role === 'SUPER_ADMIN' || user?.role === 'TELECALLER') && (
                             <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
                           )}
                         </div>
-                        {user?.role === 'SUPER_ADMIN' ? (
+                        {user?.role === 'SUPER_ADMIN' || user?.role === 'TELECALLER' ? (
                           <select
                             value={lead.priority}
                             onChange={(e) => handlePriorityChange(e.target.value as Priority)}

@@ -265,10 +265,8 @@ export class LeadRepository {
   }
 
   async findMany(options: LeadFilterOptions = {}): Promise<{ leads: Lead[]; total: number }> {
+    await dbStore.ensureSynced();
     dbStore.processAutomaticRules();
-    if (dbStore.store.leads.length === 0) {
-      await dbStore.syncFromDatabase();
-    }
     // Exclude archived/deleted leads by default
     let filtered = dbStore.store.leads.filter((l) => !l.archivedAt && !l.isDeleted);
 
