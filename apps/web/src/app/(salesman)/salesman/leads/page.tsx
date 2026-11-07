@@ -28,17 +28,17 @@ export default function SalesmanLeadsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [stageFilter, setStageFilter] = useState('');
 
-  const params: any = { limit: 100 };
-  if (stageFilter) params.salesStage = stageFilter;
+  const queryParams = React.useMemo(() => ({ limit: 1000 }), []);
 
   const { data: leadsData, loading, mutate: fetchLeads } = useSWRData<Lead[]>(
     '/leads',
-    params
+    queryParams
   );
 
   const leads = leadsData || [];
 
   const filtered = leads.filter((l) => {
+    if (stageFilter && l.salesStage !== stageFilter) return false;
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
     return (

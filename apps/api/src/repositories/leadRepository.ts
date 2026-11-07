@@ -138,104 +138,15 @@ export class LeadRepository {
     if (leads.length === 0) return [];
     const store = dbStore.store;
     const userMap = new Map(store.users.map((u) => [u.id, u]));
-    const leadIdSet = new Set(leads.map((l) => l.id));
-
-    const activitiesMap = new Map<string, any[]>();
-    for (const a of store.activities) {
-      if (leadIdSet.has(a.leadId)) {
-        let list = activitiesMap.get(a.leadId);
-        if (!list) {
-          list = [];
-          activitiesMap.set(a.leadId, list);
-        }
-        const author = a.userId ? userMap.get(a.userId) : null;
-        list.push({
-          ...a,
-          user: author ? { id: author.id, name: author.name, email: author.email, role: author.role } : null,
-        });
-      }
-    }
-
-    const callLogsMap = new Map<string, any[]>();
-    for (const c of store.callLogs) {
-      if (leadIdSet.has(c.leadId)) {
-        let list = callLogsMap.get(c.leadId);
-        if (!list) {
-          list = [];
-          callLogsMap.set(c.leadId, list);
-        }
-        const caller = c.userId ? userMap.get(c.userId) : null;
-        list.push({
-          ...c,
-          user: caller ? { id: caller.id, name: caller.name, email: caller.email } : null,
-        });
-      }
-    }
-
-    const tasksMap = new Map<string, any[]>();
-    const todayMidnight = new Date().setHours(0, 0, 0, 0);
-    for (const t of store.followUpTasks) {
-      if (leadIdSet.has(t.leadId)) {
-        let list = tasksMap.get(t.leadId);
-        if (!list) {
-          list = [];
-          tasksMap.set(t.leadId, list);
-        }
-        const assignee = t.assignedUserId ? userMap.get(t.assignedUserId) : null;
-        const isOverdue = t.status === 'PENDING' && new Date(t.dueDate).getTime() < todayMidnight;
-        list.push({
-          ...t,
-          assignedUser: assignee ? { id: assignee.id, name: assignee.name, email: assignee.email } : undefined,
-          isOverdue,
-        });
-      }
-    }
-
-    const historiesMap = new Map<string, any[]>();
-    for (const h of store.assignmentHistories) {
-      if (leadIdSet.has(h.leadId)) {
-        let list = historiesMap.get(h.leadId);
-        if (!list) {
-          list = [];
-          historiesMap.set(h.leadId, list);
-        }
-        const assignedBy = h.assignedById ? userMap.get(h.assignedById) : null;
-        const previousUser = h.previousUserId ? userMap.get(h.previousUserId) : null;
-        const newUser = h.newUserId ? userMap.get(h.newUserId) : null;
-        list.push({
-          ...h,
-          assignedBy: assignedBy ? { id: assignedBy.id, name: assignedBy.name, email: assignedBy.email } : undefined,
-          previousUser: previousUser ? { id: previousUser.id, name: previousUser.name, email: previousUser.email } : null,
-          newUser: newUser ? { id: newUser.id, name: newUser.name, email: newUser.email } : undefined,
-        });
-      }
-    }
 
     return leads.map((lead) => {
       const telecaller = lead.assignedTelecallerId ? userMap.get(lead.assignedTelecallerId) || null : null;
       const salesman = lead.assignedSalesmanId ? userMap.get(lead.assignedSalesmanId) || null : null;
 
-      const activities = (activitiesMap.get(lead.id) || []).sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      const callLogs = (callLogsMap.get(lead.id) || []).sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      const followUpTasks = (tasksMap.get(lead.id) || []).sort(
-        (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-      );
-      const assignmentHistories = (historiesMap.get(lead.id) || []).sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-
       return {
         ...lead,
         assignedTelecaller: telecaller ? { id: telecaller.id, name: telecaller.name, email: telecaller.email } : null,
         assignedSalesman: salesman ? { id: salesman.id, name: salesman.name, email: salesman.email } : null,
-        activities,
-        callLogs,
-        followUpTasks,
-        assignmentHistories,
       };
     });
   }

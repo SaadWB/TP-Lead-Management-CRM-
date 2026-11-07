@@ -18,7 +18,7 @@ import {
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
-import { invalidateCache } from '@/lib/apiCache';
+import { invalidateCache, getMemoryCache, setMemoryCache, getCacheKey } from '@/lib/apiCache';
 import {
   Users,
   Filter,
@@ -123,11 +123,21 @@ function AdminLeadsContent() {
 
   useEffect(() => {
     fetchLeads();
-    loadTelecallers();
-    loadOptions();
   }, [stageFilter, outcomeFilter, salesStageFilter, priorityFilter, telecallerFilter, sourceFilter, currentKpi]);
 
+  useEffect(() => {
+    loadTelecallers();
+    loadOptions();
+  }, []);
+
   async function loadOptions() {
+    const cached = getMemoryCache<any>('/options');
+    if (cached) {
+      if (cached.leadSources) setSourceOptions(cached.leadSources.filter((s: any) => s.isActive).map((s: any) => s.name));
+      if (cached.stages?.length > 0) setPipelineOptions(cached.stages.filter((s: any) => s.isActive).map((s: any) => s.name));
+      if (cached.outcomes?.length > 0) setCallOutcomeOptions(cached.outcomes.filter((o: any) => o.isActive).map((o: any) => o.name));
+      return;
+    }
     try {
       const res = await api.get<{
         leadSources?: { name: string; isActive: boolean }[];
@@ -135,6 +145,7 @@ function AdminLeadsContent() {
         outcomes?: { name: string; isActive: boolean }[];
       }>('/options');
       if (res.success && res.data) {
+        setMemoryCache('/options', res.data);
         if (res.data.leadSources) {
           setSourceOptions(res.data.leadSources.filter((s) => s.isActive).map((s) => s.name));
         }
@@ -151,19 +162,29 @@ function AdminLeadsContent() {
   }
 
   async function fetchLeads() {
-    setLoading(true);
-    try {
-      const params: any = { limit: 1000 };
-      if (currentKpi) params.kpi = currentKpi;
-      if (stageFilter) params.pipelineStage = stageFilter;
-      if (outcomeFilter) params.lastCallOutcome = outcomeFilter;
-      if (salesStageFilter) params.salesStage = salesStageFilter;
-      if (priorityFilter) params.priority = priorityFilter;
-      if (telecallerFilter) params.assignedTelecallerId = telecallerFilter;
-      if (sourceFilter) params.leadSource = sourceFilter;
+    const params: any = { limit: 1000 };
+    if (currentKpi) params.kpi = currentKpi;
+    if (stageFilter) params.pipelineStage = stageFilter;
+    if (outcomeFilter) params.lastCallOutcome = outcomeFilter;
+    if (salesStageFilter) params.salesStage = salesStageFilter;
+    if (priorityFilter) params.priority = priorityFilter;
+    if (telecallerFilter) params.assignedTelecallerId = telecallerFilter;
+    if (sourceFilter) params.leadSource = sourceFilter;
 
+    // Fast 0ms cache display: If cached leads exist, render table immediately without waiting
+    const cacheKey = getCacheKey('/leads', params);
+    const cached = getMemoryCache<Lead[]>(cacheKey);
+    if (cached && cached.length > 0) {
+      setLeads(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    try {
       const res = await api.get<Lead[]>('/leads', params);
       if (res.success && res.data) {
+        setMemoryCache(cacheKey, res.data);
         setLeads(res.data);
       }
     } catch (err) {
@@ -174,9 +195,16 @@ function AdminLeadsContent() {
   }
 
   async function loadTelecallers() {
+    const cacheKey = '/users?role=TELECALLER&isActive=true';
+    const cached = getMemoryCache<User[]>(cacheKey);
+    if (cached) {
+      setTelecallers(cached);
+      return;
+    }
     try {
       const res = await api.get<User[]>('/users', { role: 'TELECALLER', isActive: true });
       if (res.success && res.data) {
+        setMemoryCache(cacheKey, res.data);
         setTelecallers(res.data);
       }
     } catch {

@@ -10,12 +10,13 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { User, UserRole } from '@crm/shared';
 import { api } from '@/lib/apiClient';
+import { useSWRData } from '@/lib/apiCache';
 import { formatDate } from '@/lib/utils';
 import { UserPlus, Shield, PhoneCall, Briefcase } from 'lucide-react';
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: usersData, loading, mutate: fetchUsers } = useSWRData<User[]>('/users');
+  const users = usersData || [];
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   // New user form state
@@ -26,24 +27,6 @@ export default function AdminUsersPage() {
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  async function fetchUsers() {
-    setLoading(true);
-    try {
-      const res = await api.get<User[]>('/users');
-      if (res.success && res.data) {
-        setUsers(res.data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();

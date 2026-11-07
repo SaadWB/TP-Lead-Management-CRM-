@@ -69,7 +69,7 @@ const DEFAULT_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
 export default function TelecallerTodayPage() {
   const { user } = useAuth();
   const { data: cachedLeads, loading, mutate: mutateLeads, refresh: refreshLeads } =
-    useSWRData<Lead[]>('/leads', { limit: 100 });
+    useSWRData<Lead[]>('/leads', { limit: 1000 });
 
   const [leads, setLeads] = useState<Lead[]>(cachedLeads || []);
   const [searchTerm, setSearchTerm] = useState('');

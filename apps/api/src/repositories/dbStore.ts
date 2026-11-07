@@ -438,8 +438,19 @@ class StoreManager {
 
   public async ensureSynced(force = false): Promise<void> {
     const now = Date.now();
-    if (force || this.data.leads.length === 0 || now - this.lastDbSyncTime > 15000) {
+    // 1. If memory has zero leads, await initial sync from DB once
+    if (this.data.leads.length === 0) {
       await this.syncFromDatabase();
+      return;
+    }
+
+    // 2. If memory is populated, DO NOT block the HTTP response!
+    // Trigger non-blocking background sync every 30s to stay fresh without stalling tables
+    if (force || now - this.lastDbSyncTime > 30000) {
+      this.lastDbSyncTime = now;
+      this.syncFromDatabase().catch((err) => {
+        console.warn('[StoreManager] Background sync error:', (err as Error).message);
+      });
     }
   }
 
