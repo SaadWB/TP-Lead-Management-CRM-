@@ -8,7 +8,7 @@ import {
   Globe,
   MapPin,
   Clock,
-  User,
+  User as UserIcon,
   Calendar,
   CheckCircle2,
   FileText,
@@ -22,7 +22,7 @@ import {
   Check,
   Compass,
 } from 'lucide-react';
-import { Lead, TELECALLER_KANBAN_COLUMNS, Priority, PRIORITIES, SalesStage, SALES_STAGE_OPTIONS, User } from '@crm/shared';
+import { Lead, TELECALLER_KANBAN_COLUMNS, Priority, PRIORITIES, SalesStage, SALES_STAGE_OPTIONS, type User } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -656,7 +656,7 @@ export function LeadDrawer({
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                         <div className="flex items-start gap-2.5">
-                          <User className="h-4 w-4 text-slate-400 mt-0.5" />
+                          <UserIcon className="h-4 w-4 text-slate-400 mt-0.5" />
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
                               <span className="text-[11px] text-slate-400 block">Contact Person</span>

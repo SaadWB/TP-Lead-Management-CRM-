@@ -105,7 +105,7 @@ export class UserRepository {
       }
     }
 
-    let users = store.users;
+    users = store.users;
     if (filter?.role) {
       users = users.filter((u) => u.role === filter.role);
     }
