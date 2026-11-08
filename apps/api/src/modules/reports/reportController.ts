@@ -209,8 +209,10 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
 
 export async function exportLeadsCsv(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const leads = dbStore.store.leads.filter((l) => !l.archivedAt && !l.isDeleted);
-    const rows = leads.map((l) => ({
+    const rawLeads = dbStore.store.leads.filter((l) => !l.archivedAt && !l.isDeleted);
+    const userMap = new Map(dbStore.store.users.map((u) => [u.id, u.name]));
+
+    const rows = rawLeads.map((l) => ({
       'Lead ID': sanitizeForFormulaInjection(l.id),
       Company: sanitizeForFormulaInjection(l.companyName),
       'Contact Person': sanitizeForFormulaInjection(l.contactPerson || '-'),
@@ -225,14 +227,14 @@ export async function exportLeadsCsv(req: Request, res: Response, next: NextFunc
       'Next Action': sanitizeForFormulaInjection(l.nextAction || ''),
       'Lead Source': sanitizeForFormulaInjection(l.leadSource || ''),
       'Lead Source Detail': sanitizeForFormulaInjection(l.leadSourceOther || ''),
-      'Assigned Telecaller': sanitizeForFormulaInjection(l.assignedTelecaller?.name || ''),
-      'Assigned Salesman': sanitizeForFormulaInjection(l.assignedSalesman?.name || ''),
+      'Assigned Telecaller': sanitizeForFormulaInjection((l.assignedTelecallerId ? userMap.get(l.assignedTelecallerId) : null) || ''),
+      'Assigned Salesman': sanitizeForFormulaInjection((l.assignedSalesmanId ? userMap.get(l.assignedSalesmanId) : null) || ''),
       'Created Date': l.createdAt,
     }));
 
     if (req.user?.id) {
       await dbStore.syncAuditLogToDatabase({
-        id: `audit_export_${Date.now()}`,
+        id: `audit_export_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         userId: req.user.id,
         action: 'EXPORT_LEADS_CSV',
         entity: 'Lead',
@@ -245,7 +247,27 @@ export async function exportLeadsCsv(req: Request, res: Response, next: NextFunc
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="leads_export.csv"');
 
-    const headers = Object.keys(rows[0] || {}).join(',');
+    const DEFAULT_CSV_HEADERS = [
+      'Lead ID',
+      'Company',
+      'Contact Person',
+      'Phone',
+      'Email',
+      'Service/Product',
+      'Priority',
+      'Pipeline Stage',
+      'Call Attempts',
+      'Last Outcome',
+      'Next Follow-Up',
+      'Next Action',
+      'Lead Source',
+      'Lead Source Detail',
+      'Assigned Telecaller',
+      'Assigned Salesman',
+      'Created Date',
+    ];
+
+    const headers = rows.length > 0 ? Object.keys(rows[0]).join(',') : DEFAULT_CSV_HEADERS.join(',');
     const csvContent = [
       headers,
       ...rows.map((r) =>

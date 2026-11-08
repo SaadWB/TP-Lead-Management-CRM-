@@ -41,7 +41,7 @@ export async function assignSingleLead(req: Request, res: Response, next: NextFu
     const updateData: any = {
       ...(data.roleType === 'TELECALLER'
         ? { assignedTelecallerId: targetUser.id }
-        : { assignedSalesmanId: targetUser.id, pipelineStage: 'ASSIGNED_TO_SALESMAN' }),
+        : { assignedSalesmanId: targetUser.id, pipelineStage: 'Demo', salesStage: 'ASSIGNED' }),
       lastActivityAt: new Date().toISOString(),
     };
 
@@ -121,7 +121,7 @@ export async function bulkAssignLeads(req: Request, res: Response, next: NextFun
       await leadRepository.update(lead.id, {
         ...(data.roleType === 'TELECALLER'
           ? { assignedTelecallerId: targetUser.id }
-          : { assignedSalesmanId: targetUser.id, pipelineStage: 'ASSIGNED_TO_SALESMAN' }),
+          : { assignedSalesmanId: targetUser.id, pipelineStage: 'Demo', salesStage: 'ASSIGNED' }),
       });
 
       dbStore.store.assignmentHistories.push({

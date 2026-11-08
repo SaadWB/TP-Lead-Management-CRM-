@@ -22,7 +22,7 @@ export default function AdminUsersPage() {
   // New user form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('Password@123');
+  const [password, setPassword] = useState('TenderProcure@2026');
   const [role, setRole] = useState<UserRole>('TELECALLER');
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);

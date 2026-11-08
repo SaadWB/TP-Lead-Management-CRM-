@@ -100,14 +100,21 @@ export function LeadDrawer({
 
   useEffect(() => {
     if (isOpen) {
-      api.get<{ stages?: { name: string; isActive: boolean }[]; outcomes?: { name: string; isActive: boolean }[] }>('/options')
+      api.get<{
+        pipelineStages?: { name: string; isActive: boolean }[];
+        stages?: { name: string; isActive: boolean }[];
+        callOutcomes?: { name: string; isActive: boolean }[];
+        outcomes?: { name: string; isActive: boolean }[];
+      }>('/options')
         .then((res) => {
           if (res.success && res.data) {
-            if (res.data.stages && res.data.stages.length > 0) {
-              setPipelineOptions(res.data.stages.filter((s) => s.isActive).map((s) => s.name));
+            const stages = res.data.pipelineStages || res.data.stages;
+            const outcomes = res.data.callOutcomes || res.data.outcomes;
+            if (stages && stages.length > 0) {
+              setPipelineOptions(stages.filter((s) => s.isActive).map((s) => s.name));
             }
-            if (res.data.outcomes && res.data.outcomes.length > 0) {
-              setOutcomeOptions(res.data.outcomes.filter((o) => o.isActive).map((o) => o.name));
+            if (outcomes && outcomes.length > 0) {
+              setOutcomeOptions(outcomes.filter((o) => o.isActive).map((o) => o.name));
             }
           }
         })

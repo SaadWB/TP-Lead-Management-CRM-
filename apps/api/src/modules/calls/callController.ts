@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { logCallSchema, USER_ROLES, normalizeCallOutcome } from '@crm/shared';
+import { logCallSchema, USER_ROLES, normalizeCallOutcome, getSuggestedPipelineForOutcome } from '@crm/shared';
 import { leadRepository } from '../../repositories/leadRepository';
 import { callLogRepository } from '../../repositories/callLogRepository';
 import { activityRepository } from '../../repositories/activityRepository';
@@ -79,11 +79,16 @@ export async function logCall(req: Request, res: Response, next: NextFunction): 
       durationSeconds: data.durationSeconds,
     });
 
-    // 2. Increment call attempts & update lead status to the selected Call Outcome
+    // 2. Increment call attempts & update lead status to the suggested pipeline stage
+    const targetPipelineStage =
+      matchedOutcome?.suggestedPipelineStage ||
+      getSuggestedPipelineForOutcome(outcome) ||
+      lead.pipelineStage;
+
     const updateLeadData: any = {
       callAttempts: (lead.callAttempts || 0) + 1,
       lastCallOutcome: outcome,
-      pipelineStage: outcome, // The selected outcome becomes the lead's current status
+      pipelineStage: targetPipelineStage, // Maintain valid sales pipeline stage in Kanban
       lastContactDate: data.contactDate,
       lastStatusUpdatedAt: new Date().toISOString(),
       lastActivityAt: new Date().toISOString(),

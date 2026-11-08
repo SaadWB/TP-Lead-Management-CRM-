@@ -133,27 +133,33 @@ function AdminLeadsContent() {
   async function loadOptions() {
     const cached = getMemoryCache<any>('/options');
     if (cached) {
+      const cStages = cached.pipelineStages || cached.stages;
+      const cOutcomes = cached.callOutcomes || cached.outcomes;
       if (cached.leadSources) setSourceOptions(cached.leadSources.filter((s: any) => s.isActive).map((s: any) => s.name));
-      if (cached.stages?.length > 0) setPipelineOptions(cached.stages.filter((s: any) => s.isActive).map((s: any) => s.name));
-      if (cached.outcomes?.length > 0) setCallOutcomeOptions(cached.outcomes.filter((o: any) => o.isActive).map((o: any) => o.name));
+      if (cStages?.length > 0) setPipelineOptions(cStages.filter((s: any) => s.isActive).map((s: any) => s.name));
+      if (cOutcomes?.length > 0) setCallOutcomeOptions(cOutcomes.filter((o: any) => o.isActive).map((o: any) => o.name));
       return;
     }
     try {
       const res = await api.get<{
         leadSources?: { name: string; isActive: boolean }[];
+        pipelineStages?: { name: string; isActive: boolean }[];
         stages?: { name: string; isActive: boolean }[];
+        callOutcomes?: { name: string; isActive: boolean }[];
         outcomes?: { name: string; isActive: boolean }[];
       }>('/options');
       if (res.success && res.data) {
         setMemoryCache('/options', res.data);
+        const stages = res.data.pipelineStages || res.data.stages;
+        const outcomes = res.data.callOutcomes || res.data.outcomes;
         if (res.data.leadSources) {
           setSourceOptions(res.data.leadSources.filter((s) => s.isActive).map((s) => s.name));
         }
-        if (res.data.stages && res.data.stages.length > 0) {
-          setPipelineOptions(res.data.stages.filter((s) => s.isActive).map((s) => s.name));
+        if (stages && stages.length > 0) {
+          setPipelineOptions(stages.filter((s) => s.isActive).map((s) => s.name));
         }
-        if (res.data.outcomes && res.data.outcomes.length > 0) {
-          setCallOutcomeOptions(res.data.outcomes.filter((o) => o.isActive).map((o) => o.name));
+        if (outcomes && outcomes.length > 0) {
+          setCallOutcomeOptions(outcomes.filter((o) => o.isActive).map((o) => o.name));
         }
       }
     } catch {

@@ -64,7 +64,10 @@ export function HandoverModal({
 
     try {
       const res = await api.post<Lead>(`/leads/${lead.id}/stage`, {
-        pipelineStage: targetStage || 'Assign to Salesman',
+        pipelineStage:
+          targetStage && targetStage !== 'Assign to Salesman' && targetStage !== 'ASSIGNED_TO_SALESMAN'
+            ? targetStage
+            : 'Demo',
         assignedSalesmanId: selectedSalesmanId,
         handoverSummary,
         meetingDate: scheduleMeeting && meetingDate ? meetingDate : undefined,

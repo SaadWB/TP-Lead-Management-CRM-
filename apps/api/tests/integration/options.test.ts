@@ -1,5 +1,8 @@
 import request from 'supertest';
+import bcrypt from 'bcryptjs';
 import { createApp } from '../../src/app';
+import { prisma } from '../../src/config/prisma';
+import { dbStore } from '../../src/repositories/dbStore';
 
 describe('Integration Tests: Options Management & Role Enforcement (Round 10)', () => {
   const app = createApp();
@@ -8,24 +11,73 @@ describe('Integration Tests: Options Management & Role Enforcement (Round 10)', 
   let salesmanToken: string;
 
   beforeAll(async () => {
+    await dbStore.syncFromDatabase();
+
+    const testPassword = 'Password@123';
+    const passwordHash = await bcrypt.hash(testPassword, 10);
+
+    // Ensure Telecaller exists without ID collision
+    let telecaller = await prisma.user.findUnique({ where: { email: 'telecaller1@tenderprocure.com' } });
+    if (!telecaller) {
+      telecaller = await prisma.user.create({
+        data: {
+          name: 'Telecaller Test',
+          email: 'telecaller1@tenderprocure.com',
+          passwordHash,
+          role: 'TELECALLER',
+          isActive: true,
+        },
+      });
+    } else {
+      await prisma.user.update({
+        where: { id: telecaller.id },
+        data: { isActive: true, passwordHash },
+      });
+    }
+
+    // Ensure Salesman exists without ID collision
+    let salesman = await prisma.user.findUnique({ where: { email: 'sales1@tenderprocure.com' } });
+    if (!salesman) {
+      salesman = await prisma.user.create({
+        data: {
+          name: 'Salesman Test',
+          email: 'sales1@tenderprocure.com',
+          passwordHash,
+          role: 'SALESMAN',
+          isActive: true,
+        },
+      });
+    } else {
+      await prisma.user.update({
+        where: { id: salesman.id },
+        data: { isActive: true, passwordHash },
+      });
+    }
+
+    await dbStore.syncFromDatabase();
+
     // 1. Admin Login
     const adminPassword = process.env.INITIAL_ADMIN_PASSWORD || 'Password@123';
     const adminRes = await request(app)
       .post('/api/v1/auth/login')
       .send({ email: 'admin@tenderprocure.com', password: adminPassword });
-    adminToken = adminRes.body.data.token;
+    adminToken = adminRes.body?.data?.token;
 
     // 2. Telecaller Login
     const teleRes = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'telecaller1@tenderprocure.com', password: 'Password@123' });
-    telecallerToken = teleRes.body.data.token;
+      .send({ email: 'telecaller1@tenderprocure.com', password: testPassword });
+    telecallerToken = teleRes.body?.data?.token;
 
     // 3. Salesman Login
     const salesRes = await request(app)
       .post('/api/v1/auth/login')
-      .send({ email: 'sales1@tenderprocure.com', password: 'Password@123' });
-    salesmanToken = salesRes.body.data.token;
+      .send({ email: 'sales1@tenderprocure.com', password: testPassword });
+    salesmanToken = salesRes.body?.data?.token;
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
   });
 
   it('GET /api/v1/options should be accessible to telecaller and return active options', async () => {

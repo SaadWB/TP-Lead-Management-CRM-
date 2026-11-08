@@ -32,9 +32,33 @@ export default function AdminReportsPage() {
     }
   }
 
-  function handleExportCsv() {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '') : '';
-    window.open(`${apiBase}/api/v1/reports/export`, '_blank');
+  async function handleExportCsv() {
+    try {
+      const apiBase =
+        typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? 'http://127.0.0.1:5000'
+          : (process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || '');
+      const token = api.getToken();
+      const res = await fetch(`${apiBase}/api/v1/reports/export`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        throw new Error(`Export failed with status ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(err.message || 'Failed to export CSV');
+    }
   }
 
   return (

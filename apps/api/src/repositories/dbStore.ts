@@ -617,8 +617,17 @@ class StoreManager {
 
   public async syncAuditLogToDatabase(log: AuditLogItem): Promise<void> {
     try {
-      await prisma.auditLog.create({
-        data: {
+      await prisma.auditLog.upsert({
+        where: { id: log.id },
+        update: {
+          userId: log.userId || null,
+          action: log.action,
+          entity: log.entity,
+          entityId: log.entityId || null,
+          details: log.details || undefined,
+          createdAt: log.createdAt ? new Date(log.createdAt) : new Date(),
+        },
+        create: {
           id: log.id,
           userId: log.userId || null,
           action: log.action,
