@@ -27,6 +27,8 @@ function getApiBase(): string {
 }
 
 class ApiClient {
+  private refreshPromise: Promise<string | null> | null = null;
+
   public getToken(): string | null {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('token');
@@ -41,9 +43,57 @@ class ApiClient {
     }
   }
 
+  private async tryRefreshToken(): Promise<string | null> {
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = (async () => {
+      try {
+        const apiBase = getApiBase();
+        const res = await fetch(`${apiBase}/api/v1/auth/refresh`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!res.ok) {
+          this.setToken(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('crm_user');
+          }
+          return null;
+        }
+
+        const data: ApiResponse<{ token: string; refreshToken?: string }> = await res.json();
+        if (data.success && data.data?.token) {
+          this.setToken(data.data.token);
+          return data.data.token;
+        }
+
+        this.setToken(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('crm_user');
+        }
+        return null;
+      } catch {
+        this.setToken(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('crm_user');
+        }
+        return null;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
   async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    isRetry = false
   ): Promise<ApiResponse<T>> {
     const token = this.getToken();
     const headers: Record<string, string> = {
@@ -72,8 +122,22 @@ class ApiClient {
       const data: ApiResponse<T> = await response.json();
 
       if (!response.ok) {
+        const isAuthRoute =
+          cleanEndpoint.includes('/auth/login') ||
+          cleanEndpoint.includes('/auth/refresh') ||
+          cleanEndpoint.includes('/auth/logout');
+
+        // Transparent auto-refresh on 401 for active user sessions
+        if (response.status === 401 && !isAuthRoute && !isRetry) {
+          const newToken = await this.tryRefreshToken();
+          if (newToken) {
+            return this.request<T>(endpoint, options, true);
+          }
+        }
+
         if (response.status === 401 && typeof window !== 'undefined') {
           this.setToken(null);
+          localStorage.removeItem('crm_user');
         }
         throw new Error(data.message || `Request failed with status ${response.status}`);
       }

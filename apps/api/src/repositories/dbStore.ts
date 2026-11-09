@@ -438,8 +438,8 @@ class StoreManager {
 
   public async ensureSynced(force = false): Promise<void> {
     const now = Date.now();
-    // 1. If memory has zero leads, await initial sync from DB once
-    if (this.data.leads.length === 0) {
+    // 1. If initial sync from DB has never completed, await initial sync once so tables & cards are fully hydrated
+    if (this.lastDbSyncTime === 0) {
       await this.syncFromDatabase();
       return;
     }
@@ -465,65 +465,122 @@ class StoreManager {
       ]);
 
       if (dbUsers.length > 0) {
-        this.data.users = dbUsers.map((u) => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          role: u.role as UserRole,
-          phone: u.phone || null,
-          isActive: u.isActive,
-          mustChangePassword: u.mustChangePassword ?? false,
-          failedLoginAttempts: u.failedLoginAttempts ?? 0,
-          lockoutUntil: u.lockoutUntil ? new Date(u.lockoutUntil).toISOString() : null,
-          lastLoginAt: u.lastLoginAt ? new Date(u.lastLoginAt).toISOString() : null,
-          lastActiveAt: u.lastActiveAt ? new Date(u.lastActiveAt).toISOString() : null,
-          createdAt: new Date(u.createdAt).toISOString(),
-          updatedAt: new Date(u.updatedAt).toISOString(),
-          passwordHash: u.passwordHash,
-        }));
+        const userMap = new Map(this.data.users.map((u) => [u.id, u]));
+
+        for (const u of dbUsers) {
+          const mappedDbUser: User & { passwordHash: string } = {
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role as UserRole,
+            phone: u.phone || null,
+            isActive: u.isActive,
+            mustChangePassword: u.mustChangePassword ?? false,
+            failedLoginAttempts: u.failedLoginAttempts ?? 0,
+            lockoutUntil: u.lockoutUntil ? new Date(u.lockoutUntil).toISOString() : null,
+            lastLoginAt: u.lastLoginAt ? new Date(u.lastLoginAt).toISOString() : null,
+            lastActiveAt: u.lastActiveAt ? new Date(u.lastActiveAt).toISOString() : null,
+            createdAt: new Date(u.createdAt).toISOString(),
+            updatedAt: new Date(u.updatedAt).toISOString(),
+            passwordHash: u.passwordHash,
+          };
+
+          const existingMem = userMap.get(u.id);
+          if (!existingMem) {
+            userMap.set(u.id, mappedDbUser);
+          } else {
+            // Preserve the most recent lastActiveAt and lastLoginAt so active sessions are never clobbered
+            const memActiveMs = existingMem.lastActiveAt ? new Date(existingMem.lastActiveAt).getTime() : 0;
+            const dbActiveMs = mappedDbUser.lastActiveAt ? new Date(mappedDbUser.lastActiveAt).getTime() : 0;
+            const latestActiveMs = Math.max(memActiveMs, dbActiveMs);
+
+            const memLoginMs = existingMem.lastLoginAt ? new Date(existingMem.lastLoginAt).getTime() : 0;
+            const dbLoginMs = mappedDbUser.lastLoginAt ? new Date(mappedDbUser.lastLoginAt).getTime() : 0;
+            const latestLoginMs = Math.max(memLoginMs, dbLoginMs);
+
+            const memUpdatedMs = new Date(existingMem.updatedAt).getTime();
+            const dbUpdatedMs = new Date(u.updatedAt).getTime();
+
+            if (dbUpdatedMs > memUpdatedMs) {
+              userMap.set(u.id, {
+                ...mappedDbUser,
+                lastActiveAt: latestActiveMs > 0 ? new Date(latestActiveMs).toISOString() : null,
+                lastLoginAt: latestLoginMs > 0 ? new Date(latestLoginMs).toISOString() : null,
+              });
+            } else {
+              userMap.set(u.id, {
+                ...existingMem,
+                lastActiveAt: latestActiveMs > 0 ? new Date(latestActiveMs).toISOString() : null,
+                lastLoginAt: latestLoginMs > 0 ? new Date(latestLoginMs).toISOString() : null,
+              });
+            }
+          }
+        }
+        this.data.users = Array.from(userMap.values());
       }
 
       if (dbLeads.length > 0) {
-        this.data.leads = dbLeads.map((l) => ({
-          id: l.id,
-          companyName: l.companyName,
-          serviceProduct: l.serviceProduct,
-          contactPerson: l.contactPerson || undefined,
-          phone: l.phone,
-          email: l.email || undefined,
-          alternatePhone: l.alternatePhone || undefined,
-          website: l.website || undefined,
-          city: l.city || undefined,
-          state: l.state || undefined,
-          priority: l.priority as Priority,
-          pipelineStage: l.pipelineStage,
-          salesStage: (l.salesStage as any) || undefined,
-          callAttempts: l.callAttempts,
-          isRetry: l.isRetry,
-          retryCount: l.retryCount,
-          lastCallOutcome: l.lastCallOutcome || undefined,
-          lastContactDate: l.lastContactDate ? new Date(l.lastContactDate).toISOString() : undefined,
-          lastStatusUpdatedAt: l.lastStatusUpdatedAt ? new Date(l.lastStatusUpdatedAt).toISOString() : undefined,
-          nextFollowUpDate: l.nextFollowUpDate ? new Date(l.nextFollowUpDate).toISOString() : undefined,
-          nextAction: l.nextAction || undefined,
-          notes: l.notes || undefined,
-          leadSource: l.leadSource || undefined,
-          leadSourceOther: l.leadSourceOther || undefined,
-          assignedTelecallerId: l.assignedTelecallerId || undefined,
-          assignedSalesmanId: l.assignedSalesmanId || undefined,
-          createdById: l.createdById || undefined,
-          convertedAt: l.convertedAt ? new Date(l.convertedAt).toISOString() : undefined,
-          dealValue: l.dealValue || undefined,
-          lostReason: (l.lostReason as any) || undefined,
-          lostNotes: l.lostNotes || undefined,
-          archivedAt: l.archivedAt ? new Date(l.archivedAt).toISOString() : undefined,
-          isDeleted: l.isDeleted,
-          deletedAt: l.deletedAt ? new Date(l.deletedAt).toISOString() : undefined,
-          deletedById: l.deletedById || undefined,
-          createdAt: new Date(l.createdAt).toISOString(),
-          updatedAt: new Date(l.updatedAt).toISOString(),
-          lastActivityAt: l.lastActivityAt ? new Date(l.lastActivityAt).toISOString() : undefined,
-        }));
+        const leadMap = new Map(this.data.leads.map((l) => [l.id, l]));
+
+        for (const l of dbLeads) {
+          const mappedDbLead: Lead = {
+            id: l.id,
+            companyName: l.companyName,
+            serviceProduct: l.serviceProduct,
+            contactPerson: l.contactPerson || undefined,
+            phone: l.phone,
+            email: l.email || undefined,
+            alternatePhone: l.alternatePhone || undefined,
+            website: l.website || undefined,
+            city: l.city || undefined,
+            state: l.state || undefined,
+            priority: l.priority as Priority,
+            pipelineStage: l.pipelineStage,
+            salesStage: (l.salesStage as any) || undefined,
+            callAttempts: l.callAttempts,
+            isRetry: l.isRetry,
+            retryCount: l.retryCount,
+            lastCallOutcome: l.lastCallOutcome || undefined,
+            lastContactDate: l.lastContactDate ? new Date(l.lastContactDate).toISOString() : undefined,
+            lastStatusUpdatedAt: l.lastStatusUpdatedAt ? new Date(l.lastStatusUpdatedAt).toISOString() : undefined,
+            nextFollowUpDate: l.nextFollowUpDate ? new Date(l.nextFollowUpDate).toISOString() : undefined,
+            nextAction: l.nextAction || undefined,
+            notes: l.notes || undefined,
+            leadSource: l.leadSource || undefined,
+            leadSourceOther: l.leadSourceOther || undefined,
+            assignedTelecallerId: l.assignedTelecallerId || undefined,
+            assignedSalesmanId: l.assignedSalesmanId || undefined,
+            createdById: l.createdById || undefined,
+            convertedAt: l.convertedAt ? new Date(l.convertedAt).toISOString() : undefined,
+            dealValue: l.dealValue || undefined,
+            lostReason: (l.lostReason as any) || undefined,
+            lostNotes: l.lostNotes || undefined,
+            archivedAt: l.archivedAt ? new Date(l.archivedAt).toISOString() : undefined,
+            isDeleted: l.isDeleted,
+            deletedAt: l.deletedAt ? new Date(l.deletedAt).toISOString() : undefined,
+            deletedById: l.deletedById || undefined,
+            createdAt: new Date(l.createdAt).toISOString(),
+            updatedAt: new Date(l.updatedAt).toISOString(),
+            lastActivityAt: l.lastActivityAt ? new Date(l.lastActivityAt).toISOString() : undefined,
+          };
+
+          const existingMem = leadMap.get(l.id);
+          if (!existingMem) {
+            leadMap.set(l.id, mappedDbLead);
+          } else {
+            // Compare timestamps: Never overwrite newer in-memory assignments or status changes with stale DB reads!
+            const memUpdatedMs = new Date(existingMem.updatedAt).getTime();
+            const dbUpdatedMs = new Date(l.updatedAt).getTime();
+
+            if (dbUpdatedMs > memUpdatedMs) {
+              leadMap.set(l.id, mappedDbLead);
+            } else if (memUpdatedMs > dbUpdatedMs) {
+              // In-memory has pending changes (e.g. recent assignment or call outcome) - keep it and re-sync to DB
+              this.syncLeadToDatabase(existingMem).catch(() => {});
+            }
+          }
+        }
+        this.data.leads = Array.from(leadMap.values());
       }
       this.lastDbSyncTime = Date.now();
       this.persist();

@@ -18,7 +18,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const closeMobileSidebar = headerContext?.closeMobileSidebar ?? (() => {});
 
   useEffect(() => {
-    if (!loading && !user) {
+    // Only redirect to login when auth verification has finished, user is null, and no token exists
+    if (!loading && !user && !api.getToken()) {
       if (typeof window !== 'undefined') {
         window.location.replace('/login');
       } else {

@@ -20,7 +20,7 @@ export function generateAccessToken(user: TokenUserPayload): string {
       name: user.name,
     },
     config.jwtSecret,
-    { expiresIn: '15m' } // 15-minute access token
+    { expiresIn: (config.jwtExpiresIn as any) || '8h' } // 8-hour access token for unbroken CRM workday sessions
   );
 }
 

@@ -59,14 +59,14 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       throw new UnauthorizedError('Invalid email or password');
     }
 
-    // Successful login: reset failed attempts & lockout, update lastLoginAt and lastActiveAt (non-blocking)
+    // Successful login: reset failed attempts & lockout, update lastLoginAt and lastActiveAt in memory store
     const nowIso = new Date().toISOString();
-    userRepository.update(userWithPass.id, {
+    await userRepository.update(userWithPass.id, {
       failedLoginAttempts: 0,
       lockoutUntil: null,
       lastLoginAt: nowIso,
       lastActiveAt: nowIso,
-    }).catch((err) => console.warn('[auth] login stats update failed:', err));
+    });
 
     // Background rehash to cost 10 if cost was 12+, speeding up subsequent logins from 2000ms to 80ms
     if (userWithPass.passwordHash.startsWith('$2a$12$') || userWithPass.passwordHash.startsWith('$2b$12$')) {
@@ -91,7 +91,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       httpOnly: true,
       secure: config.nodeEnv === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 8 * 60 * 60 * 1000, // 8 hours
     });
 
     res.cookie('refreshToken', refreshToken, {
@@ -153,6 +153,11 @@ export async function refreshTokenHandler(req: Request, res: Response, next: Nex
       throw new UnauthorizedError('User account not found or deactivated');
     }
 
+    const nowIso = new Date().toISOString();
+    await userRepository.update(user.id, {
+      lastActiveAt: nowIso,
+    });
+
     const newAccessToken = generateAccessToken({
       id: user.id,
       email: user.email,
@@ -164,7 +169,7 @@ export async function refreshTokenHandler(req: Request, res: Response, next: Nex
       httpOnly: true,
       secure: config.nodeEnv === 'production',
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 8 * 60 * 60 * 1000,
     });
 
     res.cookie('refreshToken', rotated.newRefreshToken, {

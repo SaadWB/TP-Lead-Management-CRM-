@@ -13,8 +13,8 @@
       "mustChangePassword": false,
       "failedLoginAttempts": 0,
       "lockoutUntil": null,
-      "lastLoginAt": "2026-11-05T10:34:49.903Z",
-      "lastActiveAt": "2026-11-05T10:48:15.809Z"
+      "lastLoginAt": null,
+      "lastActiveAt": null
     },
     {
       "id": "cmw38krfc0000oti1ggc3iqxt",
@@ -29,8 +29,8 @@
       "mustChangePassword": false,
       "failedLoginAttempts": 0,
       "lockoutUntil": null,
-      "lastLoginAt": "2026-11-05T09:13:32.231Z",
-      "lastActiveAt": "2026-11-05T09:13:32.231Z"
+      "lastLoginAt": null,
+      "lastActiveAt": null
     }
   ],
   "leads": [

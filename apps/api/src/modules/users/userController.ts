@@ -52,7 +52,7 @@ export async function createUser(req: Request, res: Response, next: NextFunction
       role: data.role,
       phone: data.phone,
       isActive: data.isActive,
-      mustChangePassword: true, // Force user to set their password on initial login
+      mustChangePassword: false, // Default to false so user credentials configured by Admin are immediately usable without blocking navigation
     });
 
     if (req.user?.id) {

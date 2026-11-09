@@ -52,19 +52,24 @@ export async function authenticate(
       throw new UnauthorizedError('User account not found or deactivated');
     }
 
-    // 30-minute idle session timeout check
+    // 30-minute idle session timeout check:
+    // A session is active if the JWT token was recently minted/refreshed OR user had recent activity.
     const now = Date.now();
-    if (user.lastActiveAt) {
-      const lastActiveTime = new Date(user.lastActiveAt).getTime();
-      const idleMinutes = (now - lastActiveTime) / (60 * 1000);
-      if (idleMinutes > 30) {
+    const tokenIatMs = (decoded.iat || 0) * 1000;
+    const lastActiveMs = user.lastActiveAt ? new Date(user.lastActiveAt).getTime() : 0;
+    const effectiveActiveMs = Math.max(lastActiveMs, tokenIatMs);
+
+    // Only time out if BOTH the token was issued > 30 mins ago AND user has been inactive for > 30 mins
+    if (tokenIatMs > 0 && effectiveActiveMs > 0) {
+      const tokenAgeMinutes = (now - tokenIatMs) / (60 * 1000);
+      const idleMinutes = (now - effectiveActiveMs) / (60 * 1000);
+      if (tokenAgeMinutes > 30 && idleMinutes > 30) {
         throw new UnauthorizedError('Session timed out due to 30 minutes of inactivity. Please log in again.');
       }
     }
 
     // Update lastActiveAt periodically (e.g. throttle to at most once per minute)
-    const lastActiveTime = user.lastActiveAt ? new Date(user.lastActiveAt).getTime() : 0;
-    if (now - lastActiveTime > 60 * 1000) {
+    if (now - lastActiveMs > 60 * 1000) {
       userRepository.update(user.id, { lastActiveAt: new Date(now).toISOString() }).catch(() => {});
     }
 
@@ -74,11 +79,11 @@ export async function authenticate(
       const path = req.path || '';
       const originalUrl = req.originalUrl || '';
       const isAllowed =
-        path.includes('/change-password') ||
-        path.includes('/logout') ||
+        path.includes('change-password') ||
+        path.includes('logout') ||
         path.includes('/me') ||
-        originalUrl.includes('/change-password') ||
-        originalUrl.includes('/logout') ||
+        originalUrl.includes('change-password') ||
+        originalUrl.includes('logout') ||
         originalUrl.includes('/me');
 
       if (!isAllowed) {

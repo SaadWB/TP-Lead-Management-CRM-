@@ -37,7 +37,7 @@ export const config = {
   nodeEnv,
   jwtSecret: jwtSecret || 'dev-fallback-secret-key-tenderprocure-at-least-32-chars',
   jwtRefreshSecret: jwtRefreshSecret || jwtSecret || 'dev-fallback-refresh-secret-key-tenderprocure-32-chars',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   databaseUrl: process.env.DATABASE_URL || '',

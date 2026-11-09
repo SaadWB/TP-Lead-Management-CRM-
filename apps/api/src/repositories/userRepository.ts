@@ -206,7 +206,12 @@ export class UserRepository {
   ): Promise<User | null> {
     // 1. Immediately update memory store and persist locally (0ms)
     let userWithoutPass: User | null = null;
-    const index = dbStore.store.users.findIndex((u) => u.id === id);
+    let index = dbStore.store.users.findIndex((u) => u.id === id);
+    if (index === -1) {
+      // If user is not yet in memory store, ensure they are loaded from database first
+      await this.findById(id);
+      index = dbStore.store.users.findIndex((u) => u.id === id);
+    }
     if (index !== -1) {
       dbStore.store.users[index] = {
         ...dbStore.store.users[index],

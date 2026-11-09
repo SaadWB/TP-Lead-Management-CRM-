@@ -53,7 +53,9 @@ export function ForcePasswordChangeModal({
         if (res.data.token) {
           api.setToken(res.data.token);
         }
-        onSuccess(res.data.user);
+        if (typeof onSuccess === 'function') {
+          onSuccess(res.data.user || { ...user, mustChangePassword: false });
+        }
       } else {
         setError(res.message || 'Failed to update password');
       }
