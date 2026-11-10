@@ -52,7 +52,7 @@ export default function AdminLeadsPage() {
 function AdminLeadsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const currentKpi = searchParams.get('kpi');
+  const currentKpi = searchParams ? searchParams.get('kpi') : null;
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);

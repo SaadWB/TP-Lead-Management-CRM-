@@ -10,7 +10,8 @@
     "schema": "prisma/schema.prisma"
   },
   "scripts": {
-    "dev": "npm run dev --workspaces --parallel --if-present",
+    "dev": "npm run dev --workspace=@crm/web",
+    "dev:all": "node scripts/dev.js",
     "dev:api": "npm run dev --workspace=@crm/api",
     "dev:web": "npm run dev --workspace=@crm/web",
     "build": "npm run build --workspaces --if-present",
