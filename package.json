@@ -15,11 +15,11 @@
     "dev:api": "npm run dev --workspace=@crm/api",
     "dev:web": "npm run dev --workspace=@crm/web",
     "build": "npm run build --workspaces --if-present",
-    "postinstall": "npm run build --workspace=@crm/shared && prisma generate",
+    "postinstall": "npm run build --workspace=@crm/shared && npx prisma generate",
     "test": "npm run test --workspaces --if-present",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "db:test": "node scripts/testDb.js",
-    "prisma:generate": "prisma generate",
+    "prisma:generate": "npx prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:seed": "sucrase-node prisma/seed.ts"
   },
