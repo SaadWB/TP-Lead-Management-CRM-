@@ -1,6 +1,6 @@
 /**
  * Database Connection Test Script
- * Reads DATABASE_URL from apps/api/.env ONLY.
+ * Reads DATABASE_URL from apps/api/.env or root .env.
  * Never prints passwords or secrets.
  * Executes SELECT 1 through PrismaClient and outputs "Connected" or exact failure reason.
  */
@@ -8,16 +8,18 @@
 const fs = require('fs');
 const path = require('path');
 
-// 1. Locate and parse apps/api/.env ONLY
+// 1. Locate and parse apps/api/.env or root .env
 const candidatePaths = [
   path.resolve(process.cwd(), 'apps/api/.env'),
   path.resolve(__dirname, '../apps/api/.env'),
   path.resolve(__dirname, '../../apps/api/.env'),
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(__dirname, '../.env'),
 ];
 
 let envPath = candidatePaths.find((p) => fs.existsSync(p));
 if (!envPath) {
-  console.error('Failure: apps/api/.env file not found.');
+  console.error('Failure: .env file not found.');
   process.exit(1);
 }
 
@@ -40,7 +42,7 @@ for (const line of lines) {
 }
 
 if (!databaseUrl) {
-  console.error('Failure: DATABASE_URL not found in apps/api/.env');
+  console.error('Failure: DATABASE_URL not found in .env');
   process.exit(1);
 }
 

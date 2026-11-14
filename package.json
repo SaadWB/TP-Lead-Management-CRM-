@@ -10,15 +10,16 @@
     "schema": "prisma/schema.prisma"
   },
   "scripts": {
-    "dev": "npm run dev --workspaces --parallel --if-present",
+    "dev": "npm run dev --workspace=@crm/web",
+    "dev:all": "node scripts/dev.js",
     "dev:api": "npm run dev --workspace=@crm/api",
     "dev:web": "npm run dev --workspace=@crm/web",
     "build": "npm run build --workspaces --if-present",
-    "postinstall": "npm run build --workspace=@crm/shared && prisma generate",
+    "postinstall": "npm run build --workspace=@crm/shared && npx prisma@5 generate",
     "test": "npm run test --workspaces --if-present",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "db:test": "node scripts/testDb.js",
-    "prisma:generate": "prisma generate",
+    "prisma:generate": "npx prisma@5 generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:seed": "sucrase-node prisma/seed.ts"
   },

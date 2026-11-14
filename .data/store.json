@@ -4,33 +4,97 @@
       "id": "cmvwg3iiw00005o0tnw3lgmbl",
       "name": "Super Administrator",
       "email": "admin@tenderprocure.com",
-      "passwordHash": "$2a$12$lL02KPlS5445yVQHA3m/HOMMk9YgDRcwol9Y1xXnD5OsHFcA3Pclq",
       "role": "SUPER_ADMIN",
       "phone": null,
       "isActive": true,
-      "createdAt": "2026-10-31T13:36:57.954Z",
-      "updatedAt": "2026-11-05T10:48:15.811Z",
       "mustChangePassword": false,
       "failedLoginAttempts": 0,
       "lockoutUntil": null,
-      "lastLoginAt": null,
-      "lastActiveAt": null
+      "lastLoginAt": "2026-11-10T08:19:44.611Z",
+      "lastActiveAt": "2026-11-10T08:19:44.611Z",
+      "createdAt": "2026-10-31T13:36:57.954Z",
+      "updatedAt": "2026-11-10T08:19:44.619Z",
+      "passwordHash": "$2a$10$hzx9h375FzGmDJjqfYMQD.57VVDId.3CrQf9vfNOch3PQbYe6ePAC"
     },
     {
       "id": "cmw38krfc0000oti1ggc3iqxt",
       "name": "Shad Rajput",
       "email": "shadrajput04@gmail.com",
-      "passwordHash": "$2a$12$fpZL.EZX3viUtRwCZ2IJreAvAZgmxbEZZTfiySl6rfaMhQ6YlzHsq",
       "role": "TELECALLER",
       "phone": "9328027580",
       "isActive": true,
-      "createdAt": "2026-11-05T07:40:48.984Z",
-      "updatedAt": "2026-11-05T09:13:54.558Z",
       "mustChangePassword": false,
       "failedLoginAttempts": 0,
       "lockoutUntil": null,
-      "lastLoginAt": null,
-      "lastActiveAt": null
+      "lastLoginAt": "2026-11-10T08:30:24.932Z",
+      "lastActiveAt": "2026-11-10T08:43:55.839Z",
+      "createdAt": "2026-11-05T07:40:48.984Z",
+      "updatedAt": "2026-11-10T08:43:55.839Z",
+      "passwordHash": "$2a$10$1LQgeraPQXyO17yH/tCUe.n7IQpPsvCxFkcX2G54CeKMIKvJcBkiq"
+    },
+    {
+      "id": "cmw6hs6ux0000tgc22raz4zxb",
+      "name": "Journey Telecaller",
+      "email": "journey_telecaller@tenderprocure.com",
+      "role": "TELECALLER",
+      "phone": null,
+      "isActive": true,
+      "mustChangePassword": false,
+      "failedLoginAttempts": 0,
+      "lockoutUntil": null,
+      "lastLoginAt": "2026-11-07T14:24:59.521Z",
+      "lastActiveAt": "2026-11-07T14:24:59.521Z",
+      "createdAt": "2026-11-07T14:21:50.649Z",
+      "updatedAt": "2026-11-07T14:24:59.557Z",
+      "passwordHash": "$2a$10$My1iMbz2VZ0rvk2ZogD3yOGHk13nFl6HopeNKgY41B/VcBov.cMj2"
+    },
+    {
+      "id": "cmw6hs6yi0001tgc260359s5j",
+      "name": "Journey Salesman",
+      "email": "journey_salesman@tenderprocure.com",
+      "role": "SALESMAN",
+      "phone": null,
+      "isActive": true,
+      "mustChangePassword": false,
+      "failedLoginAttempts": 0,
+      "lockoutUntil": null,
+      "lastLoginAt": "2026-11-07T14:24:59.831Z",
+      "lastActiveAt": "2026-11-07T14:24:59.831Z",
+      "createdAt": "2026-11-07T14:21:50.779Z",
+      "updatedAt": "2026-11-07T14:24:59.868Z",
+      "passwordHash": "$2a$10$My1iMbz2VZ0rvk2ZogD3yOGHk13nFl6HopeNKgY41B/VcBov.cMj2"
+    },
+    {
+      "id": "usr_sales_test_1",
+      "name": "Salesman Test",
+      "email": "sales1@tenderprocure.com",
+      "role": "SALESMAN",
+      "phone": null,
+      "isActive": true,
+      "mustChangePassword": false,
+      "failedLoginAttempts": 0,
+      "lockoutUntil": null,
+      "lastLoginAt": "2026-11-07T14:24:59.781Z",
+      "lastActiveAt": "2026-11-07T14:24:59.781Z",
+      "createdAt": "2026-11-07T14:03:43.229Z",
+      "updatedAt": "2026-11-07T14:24:59.806Z",
+      "passwordHash": "$2a$10$a8o34Yi1yXVWBUhebHZkuOZckSExj0KZp9EKFf1oh.aiwS/D6A4qe"
+    },
+    {
+      "id": "usr_tele_test_1",
+      "name": "Telecaller Test",
+      "email": "telecaller1@tenderprocure.com",
+      "role": "TELECALLER",
+      "phone": null,
+      "isActive": true,
+      "mustChangePassword": false,
+      "failedLoginAttempts": 0,
+      "lockoutUntil": null,
+      "lastLoginAt": "2026-11-07T14:24:59.554Z",
+      "lastActiveAt": "2026-11-07T14:24:59.554Z",
+      "createdAt": "2026-11-07T14:03:43.035Z",
+      "updatedAt": "2026-11-07T14:24:59.591Z",
+      "passwordHash": "$2a$10$a8o34Yi1yXVWBUhebHZkuOZckSExj0KZp9EKFf1oh.aiwS/D6A4qe"
     }
   ],
   "leads": [
@@ -41,18 +105,1368 @@
       "phone": "9170131207",
       "email": "alsonsassociates@gmail.com",
       "priority": "MEDIUM",
-      "pipelineStage": "NEW",
+      "pipelineStage": "New Lead",
       "callAttempts": 0,
       "isRetry": false,
       "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
       "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
       "createdAt": "2026-11-05T10:36:44.550Z",
-      "updatedAt": "2026-11-05T10:36:44.550Z",
+      "updatedAt": "2026-11-07T08:31:36.737Z",
       "lastActivityAt": "2026-11-05T10:36:44.550Z",
-      "isDeleted": false
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1794061499931_vvr1",
+      "companyName": "E2E Test Enterprise 1794061499902",
+      "serviceProduct": "Security Guard Services & CCTV",
+      "contactPerson": "David Miller",
+      "phone": "9871122334",
+      "email": "david_1794061499902@testenterprise.com",
+      "priority": "HIGH",
+      "pipelineStage": "Connected – Discussed",
+      "salesStage": "CONVERTED",
+      "callAttempts": 1,
+      "isRetry": false,
+      "retryCount": 0,
+      "lastCallOutcome": "Connected – Discussed",
+      "lastContactDate": "2026-11-07T14:25:00.340Z",
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z",
+      "notes": "Initial inbound inquiry from website form.\n[2026-11-07 - DEMO_COMPLETED]: Demo successfully delivered to board. Proposal requested.\n[2026-11-07 - CONVERTED]: Contract signed for 1 year!",
+      "leadSource": "Website",
+      "assignedTelecallerId": "cmw6hs6ux0000tgc22raz4zxb",
+      "assignedSalesmanId": "cmw6hs6yi0001tgc260359s5j",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "convertedAt": "2026-11-07T14:25:00.614Z",
+      "dealValue": 75000,
+      "isDeleted": false,
+      "createdAt": "2026-11-07T14:24:59.938Z",
+      "updatedAt": "2026-11-07T14:25:00.656Z",
+      "lastActivityAt": "2026-11-07T14:24:59.938Z"
+    },
+    {
+      "id": "lead_1794061314266_1nyw",
+      "companyName": "E2E Test Enterprise 1794061314196",
+      "serviceProduct": "Security Guard Services & CCTV",
+      "contactPerson": "David Miller",
+      "phone": "9871122334",
+      "email": "david_1794061314198@testenterprise.com",
+      "priority": "HIGH",
+      "pipelineStage": "Connected – Discussed",
+      "salesStage": "CONVERTED",
+      "callAttempts": 1,
+      "isRetry": false,
+      "retryCount": 0,
+      "lastCallOutcome": "Connected – Discussed",
+      "lastContactDate": "2026-11-07T14:21:58.214Z",
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z",
+      "notes": "Initial inbound inquiry from website form.\n[2026-11-07 - DEMO_COMPLETED]: Demo successfully delivered to board. Proposal requested.\n[2026-11-07 - CONVERTED]: Contract signed for 1 year!",
+      "leadSource": "Website",
+      "assignedTelecallerId": "cmw6hs6ux0000tgc22raz4zxb",
+      "assignedSalesmanId": "cmw6hs6yi0001tgc260359s5j",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "convertedAt": "2026-11-07T14:22:05.581Z",
+      "dealValue": 75000,
+      "isDeleted": false,
+      "createdAt": "2026-11-07T14:21:54.274Z",
+      "updatedAt": "2026-11-07T14:22:05.688Z",
+      "lastActivityAt": "2026-11-07T14:21:54.274Z"
+    },
+    {
+      "id": "lead_1794060828332_lo4z",
+      "companyName": "Integration Test Corp",
+      "serviceProduct": "Security & Facility Mgmt",
+      "contactPerson": "John Tester",
+      "phone": "9876543210",
+      "email": "john@integrationtest.com",
+      "priority": "HIGH",
+      "pipelineStage": "Follow-up",
+      "callAttempts": 2,
+      "isRetry": false,
+      "retryCount": 0,
+      "lastCallOutcome": "Details Requested",
+      "lastContactDate": "2026-11-07T14:24:59.716Z",
+      "lastStatusUpdatedAt": "2026-11-10T08:23:55.950Z",
+      "nextFollowUpDate": "2026-11-08T14:24:59.716Z",
+      "nextAction": "Deliver compliance check presentation",
+      "notes": "Lead expressed high interest in subscription\n[2026-11-07]: Lead expressed high interest in subscription\n[2026-11-07]: Lead expressed high interest in subscription",
+      "assignedTelecallerId": "usr_tele_test_1",
+      "createdById": "usr_tele_test_1",
+      "isDeleted": false,
+      "createdAt": "2026-11-07T14:13:48.349Z",
+      "updatedAt": "2026-11-07T14:24:59.859Z",
+      "lastActivityAt": "2026-11-07T14:13:48.349Z"
+    },
+    {
+      "id": "lead_1793948451897_gu6x",
+      "companyName": "CALL SOFT TECHNOLOGY",
+      "serviceProduct": "Entry and Mid Level Desktop Computer (19) ; Entry and Mid Level Laptop (6) ; All in One PC (V2) (5)",
+      "phone": "9999786205",
+      "email": "callsoftt@gmail.com",
+      "priority": "LOW",
+      "pipelineStage": "Connected – Discussed",
+      "callAttempts": 1,
+      "isRetry": false,
+      "retryCount": 0,
+      "lastCallOutcome": "Connected – Discussed",
+      "lastContactDate": "2026-11-06T10:06:30.806Z",
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z",
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:51.898Z",
+      "updatedAt": "2026-11-07T10:24:30.734Z",
+      "lastActivityAt": "2026-11-06T07:00:51.898Z"
+    },
+    {
+      "id": "lead_1793948450496_p21x",
+      "companyName": "Ajivika Manpower and Consulting Services",
+      "serviceProduct": "Manpower Outsourcing Services (363) ; Facility Management Service- Manpower based (Version 2) (1) ; Manpower Outsourcing Services - Fixed Remuneration",
+      "phone": "7389834361",
+      "email": "amcsbm1@gmail.com",
+      "priority": "HIGH",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z",
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:50.497Z",
+      "updatedAt": "2026-11-07T08:31:27.579Z",
+      "lastActivityAt": "2026-11-06T07:00:50.497Z",
+      "lastCallOutcome": null
+    },
+    {
+      "id": "lead_1793948449095_dlah",
+      "companyName": "NEW IDEAL SPORTS & FITNESS",
+      "serviceProduct": "Outdoor Slide (V2) (3) ; 4 Stn Multi Gym,Treadmill,Cross Trainer,Recumbent Bike,Rear cult deltoid machine,Multi Adjustable bench,Hack Squats Machine,L",
+      "contactPerson": "Viashali",
+      "phone": "9873457002",
+      "email": "nimw.kamal@gmail.com",
+      "priority": "URGENT",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z",
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:49.096Z",
+      "updatedAt": "2026-11-07T08:31:19.756Z",
+      "lastActivityAt": "2026-11-06T07:00:49.096Z",
+      "lastCallOutcome": null
+    },
+    {
+      "id": "lead_1793948447693_nl6u",
+      "companyName": "LAKSHYARAJ ASSOCIATES",
+      "serviceProduct": "Manpower Outsourcing Services (325) ; Custom Bid for Services - Deployment of Service Engineer for Central Workshop Machines Servicing - NTPC Tanda (1",
+      "contactPerson": "Lakshy",
+      "phone": "7828763527",
+      "email": "lakshyaraj1223@gmail.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:47.695Z",
+      "updatedAt": "2026-11-06T07:00:47.695Z",
+      "lastActivityAt": "2026-11-06T07:00:47.695Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948446292_kdzx",
+      "companyName": "VS FACILITY SERVICES INDIA PRIVATE LIMITED",
+      "serviceProduct": "Manpower Outsourcing Services (126) ; Security Manpower Service (Version 2.0) (10) ; Hiring of Sanitation Service (2)",
+      "contactPerson": "Vikas",
+      "phone": "8273749999",
+      "email": "vsfacilityindia@gmail.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:46.294Z",
+      "updatedAt": "2026-11-06T07:00:46.294Z",
+      "lastActivityAt": "2026-11-06T07:00:46.294Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948444891_aliu",
+      "companyName": "AMPUG Solutions",
+      "serviceProduct": "Manpower Outsourcing Services (233) ; Cleaning, Sanitation and Disinfection Service (11) ; Manpower Outsourcing Services - Minimum wage - Skilled; Hig",
+      "phone": "8882720102",
+      "email": "business@ampug.in",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:44.893Z",
+      "updatedAt": "2026-11-07T08:31:29.981Z",
+      "lastActivityAt": "2026-11-06T07:00:44.893Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948443490_2dzs",
+      "companyName": "IONSTAR INDIA PRIVATE LIMITED",
+      "serviceProduct": "Split Air Conditioner, Wall Mount Type (V3) ISI Marked to IS 1391 (Part 2) (33) ; Split Air Conditioner, Wall Mount Type (V3) ISI Marked to IS 1391 (P",
+      "phone": "7303055517",
+      "email": "gem@uniboom.in",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:43.492Z",
+      "updatedAt": "2026-11-06T07:00:43.492Z",
+      "lastActivityAt": "2026-11-06T07:00:43.492Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948442089_6h8w",
+      "companyName": "ALPHA MANPOWER SERVICES PRIVATE LIMITED",
+      "serviceProduct": "Manpower Outsourcing Services (190) ; Security Manpower Service (Version 2.0) (63) ; Facility Management Service- Manpower based (Version 2) (14)",
+      "phone": "9899884818",
+      "email": "alphaprivatelimited1@gmail.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:42.091Z",
+      "updatedAt": "2026-11-06T07:00:42.091Z",
+      "lastActivityAt": "2026-11-06T07:00:42.091Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948440688_n0de",
+      "companyName": "EVOLUTION STAFFING LLP",
+      "serviceProduct": "Manpower Outsourcing Services (356) ; Custom Bid for Services - Maintenance of Park/ Lawn/ Central verges and Horticulutre Work (1) ; Hiring of Sanita",
+      "phone": "9990063131",
+      "email": "evolutionstaff08@gmail.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:40.689Z",
+      "updatedAt": "2026-11-07T08:31:31.551Z",
+      "lastActivityAt": "2026-11-06T07:00:40.689Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948439278_85a5",
+      "companyName": "RAMESHVARAM ENGITECH PRIVATE LIMITED",
+      "serviceProduct": "Manpower Outsourcing Services (26) ; Cleaning, Sanitation and Disinfection Service (1) ; Custom Bid for Services - Cost for 5984160 sq feet cleaning o",
+      "phone": "9386433922",
+      "email": "rameshvaramengitechpvt.ltd@gmail.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:39.279Z",
+      "updatedAt": "2026-11-06T07:00:39.279Z",
+      "lastActivityAt": "2026-11-06T07:00:39.279Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948437592_ved6",
+      "companyName": "REMARKABLE SIGHT SECURITY SERVICES",
+      "serviceProduct": "Manpower Outsourcing Services (334) ; Manpower Outsourcing Services - Minimum wage - Skilled; High School; Admin,Manpower Outsourcing Services - Minim",
+      "phone": "7566129036",
+      "email": "remarkablesightsecser@gmail.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "Connected – Discussed",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "lastCallOutcome": "Connected – Discussed",
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z",
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:37.594Z",
+      "updatedAt": "2026-11-07T08:30:24.154Z",
+      "lastActivityAt": "2026-11-06T07:00:37.594Z"
+    },
+    {
+      "id": "lead_1793948436190_5o96",
+      "companyName": "ONEIRIC APPLIANCES PRIVATE LIMITED",
+      "serviceProduct": "Split Air Conditioner, Wall Mount Type (V3) ISI Marked to IS 1391 (Part 2) (89) ; Split Air Conditioner, Wall Mount Type (V3) ISI Marked to IS 1391 (P",
+      "phone": "9289014511",
+      "email": "gem@oneiricapl.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:36.192Z",
+      "updatedAt": "2026-11-06T07:00:36.192Z",
+      "lastActivityAt": "2026-11-06T07:00:36.192Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948434789_ol6j",
+      "companyName": "Next Trade Enterprises",
+      "serviceProduct": "Manpower Outsourcing Services (552) ; Facility Management Service- Manpower based (Version 2) (12) ; Manpower Outsourcing Services - Minimum wage - Sk",
+      "contactPerson": "Ayush Panday",
+      "phone": "9301491267",
+      "email": "nexttradeenterprises@gmail.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:34.791Z",
+      "updatedAt": "2026-11-06T07:00:34.791Z",
+      "lastActivityAt": "2026-11-06T07:00:34.791Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948433387_ac85",
+      "companyName": "ADCOM SYSTEMS",
+      "serviceProduct": "Entry and Mid Level Laptop (81) ; Entry and Mid Level Desktop Computer (77) ; Entry and Mid Level Desktop Computer,A4 and Legal Size Multifunction Pri",
+      "contactPerson": "Lekha",
+      "phone": "9388308507",
+      "email": "adcomtvm@gmail.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:33.389Z",
+      "updatedAt": "2026-11-06T07:00:33.389Z",
+      "lastActivityAt": "2026-11-06T07:00:33.389Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948431986_d902",
+      "companyName": "J B SECURITY SERVICE",
+      "serviceProduct": "Manpower Outsourcing Services (604) ; Security Manpower Service (Version 2.0) (106) ; Hiring of Sanitation Service (11)",
+      "phone": "9818372786",
+      "email": "jbgroup_1994@yahoo.in",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:31.987Z",
+      "updatedAt": "2026-11-06T07:00:31.987Z",
+      "lastActivityAt": "2026-11-06T07:00:31.987Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948430582_2sy4",
+      "companyName": "DRONE SECURITY AGENCY",
+      "serviceProduct": "Manpower Outsourcing Services (344) ; Security Manpower Service (Version 2.0) (96) ; Facility Management Service- Manpower based (Version 2) (23)",
+      "phone": "7488428886",
+      "email": "dsanoida@gmail.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:30.584Z",
+      "updatedAt": "2026-11-06T07:00:30.584Z",
+      "lastActivityAt": "2026-11-06T07:00:30.584Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948429181_pnsa",
+      "companyName": "YURATECH GLOBAL PRIVATE LIMITED",
+      "serviceProduct": "Entry and Mid Level Desktop Computer (184) ; High End Desktop Computer (34) ; All in One PC (V2) (9)",
+      "phone": "7738367851",
+      "email": "info@yuratechglobal.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:29.182Z",
+      "updatedAt": "2026-11-06T07:00:29.182Z",
+      "lastActivityAt": "2026-11-06T07:00:29.182Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793948420863_258n",
+      "companyName": "JOSHI SHARMA & COMPANY",
+      "serviceProduct": "Financial Audit Services (14) ; Financial Advisory Services (8) ; Asset Valuation Services - Asset to be Valued, Valuation Report; Onsite (1)",
+      "phone": "9224342605",
+      "email": "satish@joshisharma.com",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T07:00:20.866Z",
+      "updatedAt": "2026-11-06T07:00:20.866Z",
+      "lastActivityAt": "2026-11-06T07:00:20.866Z",
+      "lastCallOutcome": null,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "lead_1793945540555_i6f1",
+      "companyName": "JAIN INDUSTRIAL LIGHTING CORPORATION",
+      "serviceProduct": "LED Lights All Type",
+      "contactPerson": "Rahul",
+      "phone": "9910969418",
+      "email": "jilco43@yahoo.co.in",
+      "priority": "MEDIUM",
+      "pipelineStage": "New Lead",
+      "callAttempts": 0,
+      "isRetry": false,
+      "retryCount": 0,
+      "lastStatusUpdatedAt": "2026-11-10T08:34:50.380Z",
+      "nextFollowUpDate": "2026-11-05T18:40:00.000Z",
+      "nextAction": "Demo ",
+      "notes": "Doing Mannualy",
+      "leadSource": "Cold Call",
+      "assignedTelecallerId": "cmw38krfc0000oti1ggc3iqxt",
+      "createdById": "cmvwg3iiw00005o0tnw3lgmbl",
+      "isDeleted": false,
+      "createdAt": "2026-11-06T06:12:20.557Z",
+      "updatedAt": "2026-11-07T08:31:12.181Z",
+      "lastActivityAt": "2026-11-06T06:12:20.557Z",
+      "lastCallOutcome": null
     }
   ],
-  "activities": [],
+  "activities": [
+    {
+      "id": "act_mig_1794296110941_wqu0x",
+      "leadId": "lead_1793875004546_ch6j",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T07:35:10.941Z"
+    },
+    {
+      "id": "act_mig_1794299035950_cxkc1",
+      "leadId": "lead_1793875004546_ch6j",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_oivv9",
+      "leadId": "lead_1794061499931_vvr1",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Demo",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_5hpyd",
+      "leadId": "lead_1794061314266_1nyw",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Demo",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_z37h5",
+      "leadId": "lead_1794060828332_lo4z",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Follow-up\" and last call outcome to \"Details Requested\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Connected – Discussed",
+          "oldOutcome": "Details Requested"
+        },
+        "migratedTo": {
+          "newPipeline": "Follow-up",
+          "newOutcome": "Details Requested"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_v8ycd",
+      "leadId": "lead_1793948451897_gu6x",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Attempting Contact",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_73erc",
+      "leadId": "lead_1793948450496_p21x",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_8c1oy",
+      "leadId": "lead_1793948449095_dlah",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_58tp8",
+      "leadId": "lead_1793948447693_nl6u",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_omhlq",
+      "leadId": "lead_1793948446292_kdzx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_l5xq6",
+      "leadId": "lead_1793948444891_aliu",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_jsela",
+      "leadId": "lead_1793948443490_2dzs",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_q6pxq",
+      "leadId": "lead_1793948442089_6h8w",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_clkah",
+      "leadId": "lead_1793948440688_n0de",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_qtnqs",
+      "leadId": "lead_1793948439278_85a5",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_9twh8",
+      "leadId": "lead_1793948437592_ved6",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_84ax0",
+      "leadId": "lead_1793948436190_5o96",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035950_o8r2a",
+      "leadId": "lead_1793948434789_ol6j",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035951_faefq",
+      "leadId": "lead_1793948433387_ac85",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035951_x4lui",
+      "leadId": "lead_1793948431986_d902",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035951_cd4et",
+      "leadId": "lead_1793948430582_2sy4",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035951_j9t0e",
+      "leadId": "lead_1793948429181_pnsa",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035951_brti7",
+      "leadId": "lead_1793948420863_258n",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "NEW",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299035951_98abf",
+      "leadId": "lead_1793945540555_i6f1",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:23:55.950Z"
+    },
+    {
+      "id": "act_mig_1794299690380_fzhgi",
+      "leadId": "lead_1793875004546_ch6j",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_eiuyw",
+      "leadId": "lead_1794061499931_vvr1",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Connected – Discussed",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_55wzs",
+      "leadId": "lead_1794061314266_1nyw",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Connected – Discussed",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_lz9hs",
+      "leadId": "lead_1793948451897_gu6x",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Connected – Discussed",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_xhk8g",
+      "leadId": "lead_1793948450496_p21x",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_smvum",
+      "leadId": "lead_1793948449095_dlah",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_x7bdl",
+      "leadId": "lead_1793948447693_nl6u",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_2p5hn",
+      "leadId": "lead_1793948446292_kdzx",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_zbv6q",
+      "leadId": "lead_1793948444891_aliu",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_t2xir",
+      "leadId": "lead_1793948443490_2dzs",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_5l2sj",
+      "leadId": "lead_1793948442089_6h8w",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_oxmb5",
+      "leadId": "lead_1793948440688_n0de",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_intpn",
+      "leadId": "lead_1793948439278_85a5",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_157hh",
+      "leadId": "lead_1793948437592_ved6",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"Connected\" and last call outcome to \"Connected – Discussed\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "Connected – Discussed",
+          "oldOutcome": "Connected – Discussed"
+        },
+        "migratedTo": {
+          "newPipeline": "Connected",
+          "newOutcome": "Connected – Discussed"
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_h5ezv",
+      "leadId": "lead_1793948436190_5o96",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_y8uy7",
+      "leadId": "lead_1793948434789_ol6j",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690380_tazsz",
+      "leadId": "lead_1793948433387_ac85",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690381_vpvd2",
+      "leadId": "lead_1793948431986_d902",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690381_dc564",
+      "leadId": "lead_1793948430582_2sy4",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690381_70jtg",
+      "leadId": "lead_1793948429181_pnsa",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690381_n6pvw",
+      "leadId": "lead_1793948420863_258n",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    },
+    {
+      "id": "act_mig_1794299690381_1hd6x",
+      "leadId": "lead_1793945540555_i6f1",
+      "userId": "usr_admin_1",
+      "type": "STAGE_CHANGED",
+      "description": "Round 7 Data Migration: Updated pipeline to \"New Lead\" and last call outcome to \"None\".",
+      "metadata": {
+        "migratedFrom": {
+          "oldStage": "New Lead",
+          "oldOutcome": ""
+        },
+        "migratedTo": {
+          "newPipeline": "New Lead",
+          "newOutcome": null
+        },
+        "noteAppended": null
+      },
+      "createdAt": "2026-11-10T08:34:50.380Z"
+    }
+  ],
   "assignmentHistories": [],
   "callLogs": [],
   "followUpTasks": [],
@@ -139,6 +1553,16 @@
       "order": 6,
       "createdAt": "2026-10-28T07:23:15.403Z",
       "updatedAt": "2026-10-28T07:23:15.403Z"
+    },
+    {
+      "id": "stg_cust_1794296107730_q7di",
+      "name": "NEW",
+      "color": "slate",
+      "isDefault": false,
+      "isActive": true,
+      "order": 7,
+      "createdAt": "2026-11-10T07:35:07.730Z",
+      "updatedAt": "2026-11-10T07:35:07.731Z"
     }
   ],
   "callOutcomeOptions": [

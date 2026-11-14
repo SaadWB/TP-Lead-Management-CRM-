@@ -1,29 +1,17 @@
 import { ApiResponse } from '@crm/shared';
 
 function getApiBase(): string {
-  // Explicit override via environment variable
-  if (process.env.NEXT_PUBLIC_API_URL) {
+  // Explicit override via environment variable (e.g. if pointing to a separate dedicated backend)
+  if (
+    process.env.NEXT_PUBLIC_API_URL &&
+    process.env.NEXT_PUBLIC_API_URL !== 'http://localhost:5000' &&
+    process.env.NEXT_PUBLIC_API_URL !== 'http://127.0.0.1:5000'
+  ) {
     return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
   }
 
-  // Client-side in browser
-  if (typeof window !== 'undefined') {
-    // In local development, communicate directly with the API server on port 5000.
-    // Using 127.0.0.1 bypasses Next.js proxy overhead and prevents Windows Node.js IPv6 ::1 lookup timeouts.
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://127.0.0.1:5000';
-    }
-    // In production on Vercel (unified domain), use same-origin relative URL handled by Vercel rewrites
-    return '';
-  }
-
-  // Server-side (SSR / Server Components)
-  if (process.env.API_URL) {
-    return process.env.API_URL.replace(/\/$/, '');
-  }
-
-  // Local development server-side fallback
-  return 'http://127.0.0.1:5000';
+  // Same-origin relative URL (handled natively by Next.js API routes on both localhost and Vercel)
+  return '';
 }
 
 class ApiClient {
