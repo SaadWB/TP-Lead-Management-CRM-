@@ -168,10 +168,10 @@ class StoreManager {
           }
         }
 
-        // Filter out any legacy dummy leads
+        // Preserve all historical leads and users - never filter out valid records
         if (Array.isArray(store.leads)) {
           const cleanLeads = store.leads.filter(
-            (l) => !l.id.startsWith('lead_10') &&
+            (l) => l && l.companyName &&
                    !l.companyName?.toLowerCase().includes('acme test') &&
                    !l.companyName?.toLowerCase().includes('noanswer corp') &&
                    !l.companyName?.toLowerCase().includes('round4 test') &&
@@ -183,9 +183,9 @@ class StoreManager {
           }
         }
 
-        // Filter out any legacy dummy users
+        // Preserve all team members and roles
         if (Array.isArray(store.users)) {
-          const cleanUsers = store.users.filter((u) => !u.id.startsWith('usr_'));
+          const cleanUsers = store.users.filter((u) => u && u.email);
           if (cleanUsers.length !== store.users.length) {
             store.users = cleanUsers;
             migrated = true;
@@ -369,6 +369,11 @@ class StoreManager {
         returnDays = 3;
       }
 
+      // Do not automatically reset leads that have active scheduled follow-ups or are assigned
+      if (lead.nextFollowUpDate && new Date(lead.nextFollowUpDate).getTime() >= new Date(todayStr).getTime()) {
+        continue;
+      }
+
       if (returnDays !== null && lead.lastContactDate && lead.pipelineStage !== 'New Lead' && lead.pipelineStage !== 'Closed') {
         const callDate = new Date(lead.lastContactDate);
         const callDateStr = callDate.toISOString().split('T')[0];
@@ -456,12 +461,18 @@ class StoreManager {
 
   public async syncFromDatabase(): Promise<void> {
     try {
-      const [dbUsers, dbLeads] = await Promise.all([
-        prisma.user.findMany(),
-        prisma.lead.findMany({
-          where: { isDeleted: false },
-          orderBy: { createdAt: 'desc' },
-        }),
+      this.lastDbSyncTime = Date.now();
+      const [dbUsers, dbLeads] = await Promise.race([
+        Promise.all([
+          prisma.user.findMany(),
+          prisma.lead.findMany({
+            where: { isDeleted: false },
+            orderBy: { createdAt: 'desc' },
+          }),
+        ]),
+        new Promise<[any[], any[]]>((_, reject) =>
+          setTimeout(() => reject(new Error('Database sync timeout (2500ms)')), 2500)
+        ),
       ]);
 
       if (dbUsers.length > 0) {

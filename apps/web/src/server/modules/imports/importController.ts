@@ -392,7 +392,7 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         city: null,
         state: null,
         priority: (record.priority as Priority) || 'MEDIUM',
-        pipelineStage: (record.pipelineStage as PipelineStage) || 'New Lead',
+        pipelineStage: (normalizeCallOutcome(record.pipelineStage) as PipelineStage) || 'New Lead',
         callAttempts: record.callAttempts || 0,
         isRetry: false,
         retryCount: 0,

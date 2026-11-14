@@ -19,6 +19,7 @@ import {
   Table,
   SlidersHorizontal,
   X,
+  Globe,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/Badge';
@@ -45,6 +46,7 @@ export function Sidebar({ onClose, className = '', isMobileDrawer = false }: Sid
   const adminNav: NavItem[] = [
     { title: 'Command Center', href: '/admin/dashboard', icon: LayoutDashboard },
     { title: 'Global Leads', href: '/admin/leads', icon: Layers },
+    { title: 'Website Leads', href: '/admin/website-leads', icon: Globe, badge: 'Direct' },
     { title: 'Upload & Assign', href: '/admin/import', icon: FileSpreadsheet, badge: 'Wizard' },
     { title: 'User Management', href: '/admin/users', icon: Users },
     { title: 'Reports & Funnels', href: '/admin/reports', icon: BarChart3 },

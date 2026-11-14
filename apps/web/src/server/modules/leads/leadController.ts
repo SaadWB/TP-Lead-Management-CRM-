@@ -14,7 +14,7 @@ import {
   TELECALLER_CALL_OUTCOMES,
 } from '@crm/shared';
 import { leadRepository, LeadFilterOptions } from '../../repositories/leadRepository';
-import { userRepository } from '../../repositories/userRepository';
+import { userRepository, areUserIdsEquivalent } from '../../repositories/userRepository';
 import { activityRepository } from '../../repositories/activityRepository';
 import { followUpTaskRepository } from '../../repositories/followUpTaskRepository';
 import { notificationService } from '../../services/notificationService';
@@ -35,13 +35,13 @@ function assertLeadAccess(user: Express.Request['user'], lead: { assignedTelecal
     return; // Super Admin has global access
   }
   if (user.role === USER_ROLES.TELECALLER) {
-    if (lead.assignedTelecallerId !== user.id) {
+    if (!areUserIdsEquivalent(lead.assignedTelecallerId, user.id)) {
       throw new ForbiddenError('You are not authorized to access this lead.');
     }
     return;
   }
   if (user.role === USER_ROLES.SALESMAN) {
-    if (lead.assignedSalesmanId !== user.id) {
+    if (!areUserIdsEquivalent(lead.assignedSalesmanId, user.id)) {
       throw new ForbiddenError('You are not authorized to access this lead.');
     }
     return;

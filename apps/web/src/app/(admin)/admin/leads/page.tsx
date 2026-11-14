@@ -361,13 +361,14 @@ function AdminLeadsContent() {
   }
 
   const filteredLeads = leads.filter((lead) => {
+    if (!lead) return false;
     if (outcomeFilter && lead.lastCallOutcome !== outcomeFilter) return false;
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
     return (
-      lead.companyName.toLowerCase().includes(q) ||
+      (lead.companyName || '').toLowerCase().includes(q) ||
       (lead.contactPerson && lead.contactPerson.toLowerCase().includes(q)) ||
-      lead.phone.toLowerCase().includes(q) ||
+      (lead.phone || '').toLowerCase().includes(q) ||
       (lead.serviceProduct && lead.serviceProduct.toLowerCase().includes(q))
     );
   });
@@ -799,22 +800,21 @@ function AdminLeadsContent() {
           <CardContent className="p-0">
             {/* Horizontal and vertical scroll container strictly bounded within card */}
             <div className="w-full max-w-full overflow-x-auto max-h-[72vh] relative scrollbar-thin">
-              <table className="w-full table-fixed text-left text-xs border-collapse" style={{ minWidth: 2004 }}>
+              <table className="w-full table-fixed text-left text-xs border-collapse" style={{ minWidth: 1824 }}>
                 <colgroup>
                   <col style={{ width: '48px' }} />
                   <col style={{ width: '56px' }} />
                   <col style={{ width: '220px' }} />
                   <col style={{ width: '160px' }} />
-                  <col style={{ width: '150px' }} />
-                  <col style={{ width: '110px' }} />
-                  <col style={{ width: '110px' }} />
                   <col style={{ width: '160px' }} />
+                  <col style={{ width: '110px' }} />
                   <col style={{ width: '180px' }} />
                   <col style={{ width: '160px' }} />
+                  <col style={{ width: '160px' }} />
                   <col style={{ width: '150px' }} />
                   <col style={{ width: '150px' }} />
-                  <col style={{ width: '170px' }} />
-                  <col style={{ width: '170px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '110px' }} />
                 </colgroup>
                 <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 select-none sticky top-0 z-20 shadow-soft-xs">
                   <tr>
@@ -841,6 +841,7 @@ function AdminLeadsContent() {
                       #
                     </th>
 
+                    {/* 1. Company */}
                     <th
                       style={{ width: 220, minWidth: 220, maxWidth: 220 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -849,6 +850,7 @@ function AdminLeadsContent() {
                       Company
                     </th>
 
+                    {/* 2. Contact */}
                     <th
                       style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -857,14 +859,16 @@ function AdminLeadsContent() {
                       Contact
                     </th>
 
+                    {/* 3. Phone */}
                     <th
-                      style={{ width: 150, minWidth: 150, maxWidth: 150 }}
+                      style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                       title="Phone & Click-to-Call / WhatsApp"
                     >
                       Phone
                     </th>
 
+                    {/* 4. Priority */}
                     <th
                       style={{ width: 110, minWidth: 110, maxWidth: 110 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -873,14 +877,7 @@ function AdminLeadsContent() {
                       Priority
                     </th>
 
-                    <th
-                      style={{ width: 160, minWidth: 160, maxWidth: 160 }}
-                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
-                      title="Pipeline Stage"
-                    >
-                      Pipeline
-                    </th>
-
+                    {/* 5. Outcome */}
                     <th
                       style={{ width: 180, minWidth: 180, maxWidth: 180 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -889,6 +886,16 @@ function AdminLeadsContent() {
                       Outcome
                     </th>
 
+                    {/* 6. Next Follow-up */}
+                    <th
+                      style={{ width: 160, minWidth: 160, maxWidth: 160 }}
+                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                      title="Next Scheduled Follow-up Date"
+                    >
+                      Next Follow-up
+                    </th>
+
+                    {/* 7. Telecaller */}
                     <th
                       style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -897,6 +904,7 @@ function AdminLeadsContent() {
                       Telecaller
                     </th>
 
+                    {/* 8. Sales Closer */}
                     <th
                       style={{ width: 150, minWidth: 150, maxWidth: 150 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -905,6 +913,7 @@ function AdminLeadsContent() {
                       Sales Closer
                     </th>
 
+                    {/* 9. Lead Source */}
                     <th
                       style={{ width: 150, minWidth: 150, maxWidth: 150 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -913,29 +922,22 @@ function AdminLeadsContent() {
                       Lead Source
                     </th>
 
+                    {/* 10. Last Updated */}
                     <th
-                      style={{ width: 170, minWidth: 170, maxWidth: 170 }}
-                      className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
-                      title="Next Scheduled Follow-up Date"
-                    >
-                      Next Follow-up
-                    </th>
-
-                    <th
-                      style={{ width: 170, minWidth: 170, maxWidth: 170 }}
+                      style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                       title="Last Updated Timestamp"
                     >
                       Last Updated
                     </th>
 
-                    {/* Actions Column moved to the very end */}
+                    {/* 11. Action */}
                     <th
                       style={{ width: 110, minWidth: 110, maxWidth: 110 }}
                       className="p-3 text-center font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                       title="Quick Actions"
                     >
-                      Actions
+                      Action
                     </th>
                   </tr>
                 </thead>
@@ -954,21 +956,20 @@ function AdminLeadsContent() {
                           <div className="w-1/2 h-2.5 bg-slate-200 rounded" />
                         </td>
                         <td style={{ width: 160 }} className="p-3"><div className="w-2/3 h-3 bg-slate-200 rounded" /></td>
-                        <td style={{ width: 150 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 160 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
                         <td style={{ width: 110 }} className="p-3"><div className="w-16 h-5 bg-slate-200 rounded" /></td>
-                        <td style={{ width: 110 }} className="p-3"><div className="w-16 h-5 bg-slate-200 rounded" /></td>
-                        <td style={{ width: 160 }} className="p-3"><div className="w-20 h-5 bg-slate-200 rounded" /></td>
                         <td style={{ width: 180 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 160 }} className="p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
                         <td style={{ width: 160 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
                         <td style={{ width: 150 }} className="p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
                         <td style={{ width: 150 }} className="p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
-                        <td style={{ width: 170 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
-                        <td style={{ width: 170 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 160 }} className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                        <td style={{ width: 110 }} className="p-3"><div className="w-16 h-6 bg-slate-200 rounded mx-auto" /></td>
                       </tr>
                     ))
                   ) : filteredLeads.length === 0 ? (
                     <tr>
-                      <td colSpan={14} className="p-8 text-center text-slate-400">
+                      <td colSpan={13} className="p-8 text-center text-slate-400">
                         No leads found matching current query.
                       </td>
                     </tr>
@@ -1021,7 +1022,7 @@ function AdminLeadsContent() {
                             {index + 1}
                           </td>
 
-                          {/* Company */}
+                          {/* 1. Company */}
                           <td
                             style={{ width: 220, minWidth: 220, maxWidth: 220 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -1041,7 +1042,7 @@ function AdminLeadsContent() {
                             </span>
                           </td>
 
-                          {/* Contact Person */}
+                          {/* 2. Contact */}
                           <td
                             style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                             className="p-3 font-semibold text-slate-700 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -1054,9 +1055,9 @@ function AdminLeadsContent() {
                             </span>
                           </td>
 
-                          {/* Phone */}
+                          {/* 3. Phone */}
                           <td
-                            style={{ width: 150, minWidth: 150, maxWidth: 150 }}
+                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                             onClick={(e) => e.stopPropagation()}
                             title={`Phone: ${lead.phone}`}
@@ -1081,7 +1082,7 @@ function AdminLeadsContent() {
                             </div>
                           </td>
 
-                          {/* Priority with inline Admin dropdown */}
+                          {/* 4. Priority */}
                           <td
                             style={{ width: 110, minWidth: 110, maxWidth: 110 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -1101,30 +1102,7 @@ function AdminLeadsContent() {
                             </select>
                           </td>
 
-                          {/* Pipeline Stage with inline Admin dropdown */}
-                          <td
-                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
-                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
-                            onClick={(e) => e.stopPropagation()}
-                            title={`Pipeline Stage: ${lead.pipelineStage}`}
-                          >
-                            <select
-                              value={lead.pipelineStage}
-                              onChange={(e) => handleSinglePipelineUpdate(lead.id, e.target.value)}
-                              className={`w-full max-w-full truncate text-[11px] font-bold rounded px-1.5 py-1 border cursor-pointer ${stage.bg} ${stage.text} ${stage.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
-                            >
-                              {pipelineOptions.map((opt) => {
-                                const optStage = getStageColor(opt);
-                                return (
-                                  <option key={opt} value={opt} className={`${optStage.bg} ${optStage.text} font-bold`}>
-                                    {opt}
-                                  </option>
-                                );
-                              })}
-                            </select>
-                          </td>
-
-                          {/* Outcome with inline Admin dropdown */}
+                          {/* 5. Outcome */}
                           <td
                             style={{ width: 180, minWidth: 180, maxWidth: 180 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -1148,7 +1126,22 @@ function AdminLeadsContent() {
                             </select>
                           </td>
 
-                          {/* Assigned Telecaller (Interactive Super Admin Assign) */}
+                          {/* 6. Next Follow-up */}
+                          <td
+                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
+                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-slate-700 font-mono text-[11px]"
+                            title={lead.nextFollowUpDate ? `Next Follow-up: ${formatDate(lead.nextFollowUpDate)}` : 'No follow-up scheduled'}
+                          >
+                            {lead.nextFollowUpDate ? (
+                              <span className="inline-block max-w-full truncate px-2 py-0.5 rounded text-[11px] font-medium bg-slate-50 border border-slate-200">
+                                {formatDate(lead.nextFollowUpDate)}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-normal italic text-xs font-sans">—</span>
+                            )}
+                          </td>
+
+                          {/* 7. Telecaller */}
                           <td
                             style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -1173,7 +1166,7 @@ function AdminLeadsContent() {
                             </select>
                           </td>
 
-                          {/* Sales Closer */}
+                          {/* 8. Sales Closer */}
                           <td
                             style={{ width: 150, minWidth: 150, maxWidth: 150 }}
                             className="p-3 text-slate-700 font-medium overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -1186,7 +1179,7 @@ function AdminLeadsContent() {
                             </span>
                           </td>
 
-                          {/* Lead Source */}
+                          {/* 9. Lead Source */}
                           <td
                             style={{ width: 150, minWidth: 150, maxWidth: 150 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
@@ -1211,24 +1204,9 @@ function AdminLeadsContent() {
                             )}
                           </td>
 
-                          {/* Next Follow-up */}
+                          {/* 10. Last Updated */}
                           <td
-                            style={{ width: 170, minWidth: 170, maxWidth: 170 }}
-                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-slate-700 font-mono text-[11px]"
-                            title={lead.nextFollowUpDate ? `Next Follow-up: ${formatDate(lead.nextFollowUpDate)}` : 'No follow-up scheduled'}
-                          >
-                            {lead.nextFollowUpDate ? (
-                              <span className="inline-block max-w-full truncate px-2 py-0.5 rounded text-[11px] font-medium bg-slate-50 border border-slate-200">
-                                {formatDate(lead.nextFollowUpDate)}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 font-normal italic text-xs font-sans">—</span>
-                            )}
-                          </td>
-
-                          {/* Last Updated */}
-                          <td
-                            style={{ width: 170, minWidth: 170, maxWidth: 170 }}
+                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                             className="p-3 text-slate-500 font-mono text-[11px] overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                             title={`Last updated: ${formatDate(lead.updatedAt || lead.createdAt)}`}
                           >
@@ -1237,7 +1215,7 @@ function AdminLeadsContent() {
                             </span>
                           </td>
 
-                          {/* Actions Column (placed at the very end of the row) */}
+                          {/* 11. Action */}
                           <td
                             style={{ width: 110, minWidth: 110, maxWidth: 110 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-center"
@@ -1258,6 +1236,16 @@ function AdminLeadsContent() {
                               <button
                                 onClick={() => setDeleteTarget(lead)}
                                 className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer shrink-0"
+                                title="Delete Lead"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                                 title="Delete Lead"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />

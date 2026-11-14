@@ -1,6 +1,7 @@
 import { Lead, PipelineStage, Priority, CallOutcome, normalizeCallOutcome } from '@crm/shared';
 import { dbStore } from './dbStore';
 import { prisma } from '../config/prisma';
+import { areUserIdsEquivalent, resolveUserAlias } from './userRepository';
 
 function mapPrismaLeadToShared(l: any): Lead {
   return {
@@ -69,8 +70,12 @@ export interface LeadFilterOptions {
 export class LeadRepository {
   private enrichLead(lead: Lead, store = dbStore.store, userMap?: Map<string, any>): Lead {
     const users = userMap || new Map(store.users.map((u) => [u.id, u]));
-    const telecaller = lead.assignedTelecallerId ? users.get(lead.assignedTelecallerId) || null : null;
-    const salesman = lead.assignedSalesmanId ? users.get(lead.assignedSalesmanId) || null : null;
+    const findUser = (id?: string | null) => {
+      if (!id) return null;
+      return users.get(id) || (resolveUserAlias(id) ? users.get(resolveUserAlias(id)!) : null) || null;
+    };
+    const telecaller = findUser(lead.assignedTelecallerId);
+    const salesman = findUser(lead.assignedSalesmanId);
 
     const activities = store.activities
       .filter((a) => a.leadId === lead.id)
@@ -138,10 +143,14 @@ export class LeadRepository {
     if (leads.length === 0) return [];
     const store = dbStore.store;
     const userMap = new Map(store.users.map((u) => [u.id, u]));
+    const findUser = (id?: string | null) => {
+      if (!id) return null;
+      return userMap.get(id) || (resolveUserAlias(id) ? userMap.get(resolveUserAlias(id)!) : null) || null;
+    };
 
     return leads.map((lead) => {
-      const telecaller = lead.assignedTelecallerId ? userMap.get(lead.assignedTelecallerId) || null : null;
-      const salesman = lead.assignedSalesmanId ? userMap.get(lead.assignedSalesmanId) || null : null;
+      const telecaller = findUser(lead.assignedTelecallerId);
+      const salesman = findUser(lead.assignedSalesmanId);
 
       return {
         ...lead,
@@ -260,21 +269,19 @@ export class LeadRepository {
     }
 
     if (options.leadSource) {
+      const srcQuery = options.leadSource.toLowerCase();
       filtered = filtered.filter(
-        (l) => l.leadSource && l.leadSource.toLowerCase() === options.leadSource!.toLowerCase()
+        (l) => l.leadSource && (l.leadSource.toLowerCase() === srcQuery || l.leadSource.toLowerCase().includes(srcQuery))
       );
     }
     if (options.assignedTelecallerId) {
-      filtered = filtered.filter((l) => l.assignedTelecallerId === options.assignedTelecallerId);
+      filtered = filtered.filter((l) => areUserIdsEquivalent(l.assignedTelecallerId, options.assignedTelecallerId));
     }
     if (options.assignedSalesmanId) {
-      filtered = filtered.filter((l) => l.assignedSalesmanId === options.assignedSalesmanId);
+      filtered = filtered.filter((l) => areUserIdsEquivalent(l.assignedSalesmanId, options.assignedSalesmanId));
     }
     if (options.isUnassigned) {
       filtered = filtered.filter((l) => !l.assignedTelecallerId && !l.assignedSalesmanId);
-    }
-    if (options.leadSource) {
-      filtered = filtered.filter((l) => l.leadSource?.toLowerCase().includes(options.leadSource!.toLowerCase()));
     }
     if (options.search) {
       const q = options.search.toLowerCase().trim();

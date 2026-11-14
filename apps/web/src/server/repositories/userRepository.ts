@@ -21,12 +21,42 @@ function mapPrismaUserToShared(dbUser: any): User & { passwordHash: string } {
   };
 }
 
+export const USER_ALIAS_MAP: Record<string, string> = {
+  usr_tele_test_1: 'usr_tele_1',
+  usr_tele_1: 'usr_tele_test_1',
+  usr_sales_test_1: 'usr_sales_1',
+  usr_sales_1: 'usr_sales_test_1',
+  cmvwg3iiw00005o0tnw3lgmbl: 'usr_admin_1',
+  usr_admin_1: 'cmvwg3iiw00005o0tnw3lgmbl',
+  usr_1792905505215_5rdan: 'cmw38krfc0000oti1ggc3iqxt',
+  cmw38krfc0000oti1ggc3iqxt: 'usr_1792905505215_5rdan',
+};
+
+export function areUserIdsEquivalent(id1: string | null | undefined, id2: string | null | undefined): boolean {
+  if (!id1 || !id2) return false;
+  if (id1 === id2) return true;
+  return USER_ALIAS_MAP[id1] === id2 || USER_ALIAS_MAP[id2] === id1;
+}
+
+export function resolveUserAlias(id: string | null | undefined): string | null {
+  if (!id) return null;
+  return USER_ALIAS_MAP[id] || id;
+}
+
 export class UserRepository {
   async findById(id: string): Promise<(User & { passwordHash?: string }) | null> {
     // Fast in-memory lookup first (0ms)
     const memUser = dbStore.store.users.find((u) => u.id === id);
     if (memUser) {
       return { ...memUser };
+    }
+
+    // Check alias mappings for backward compatibility between historical and new user IDs
+    if (USER_ALIAS_MAP[id]) {
+      const aliasUser = dbStore.store.users.find((u) => u.id === USER_ALIAS_MAP[id]);
+      if (aliasUser) {
+        return { ...aliasUser };
+      }
     }
 
     // Fallback to database if not in memory
@@ -113,14 +143,34 @@ export class UserRepository {
       users = users.filter((u) => u.isActive === filter.isActive);
     }
 
+    // Deduplicate users by email for a clean, professional User Management roster
+    const seenEmails = new Set<string>();
+    const uniqueUsers: typeof users = [];
+    for (const u of users) {
+      const emailKey = (u.email || '').toLowerCase().trim();
+      if (!seenEmails.has(emailKey)) {
+        seenEmails.add(emailKey);
+        uniqueUsers.push(u);
+      }
+    }
+
     const telecallerCounts = new Map<string, number>();
     const salesmanCounts = new Map<string, number>();
     for (const l of store.leads) {
       if (l.assignedTelecallerId) {
         telecallerCounts.set(l.assignedTelecallerId, (telecallerCounts.get(l.assignedTelecallerId) || 0) + 1);
+        // Also map to alias ID
+        const aliasId = ALIAS_MAP[l.assignedTelecallerId];
+        if (aliasId) {
+          telecallerCounts.set(aliasId, (telecallerCounts.get(aliasId) || 0) + 1);
+        }
       }
       if (l.assignedSalesmanId) {
         salesmanCounts.set(l.assignedSalesmanId, (salesmanCounts.get(l.assignedSalesmanId) || 0) + 1);
+        const aliasId = ALIAS_MAP[l.assignedSalesmanId];
+        if (aliasId) {
+          salesmanCounts.set(aliasId, (salesmanCounts.get(aliasId) || 0) + 1);
+        }
       }
     }
 
@@ -131,7 +181,7 @@ export class UserRepository {
       }
     }
 
-    return users.map(({ passwordHash, ...rest }) => ({
+    return uniqueUsers.map(({ passwordHash, ...rest }) => ({
       ...rest,
       _count: {
         assignedTelecallerLeads: telecallerCounts.get(rest.id) || 0,

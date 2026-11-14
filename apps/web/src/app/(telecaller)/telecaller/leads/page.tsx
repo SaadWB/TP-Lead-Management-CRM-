@@ -139,14 +139,19 @@ export default function TelecallerMyLeadsPage() {
   const [outcomeFilter, setOutcomeFilter] = useState<string>(initialFilters?.outcomeFilter || '');
   const [priorityFilter, setPriorityFilter] = useState<string>(initialFilters?.priorityFilter || '');
 
-  // Date filter state
+  // Date filter state - default to ALL so historical leads are not hidden by default
   const [dateField, setDateField] = useState<'createdAt' | 'updatedAt' | 'nextFollowUpDate'>(
     initialFilters?.dateField || 'createdAt'
   );
-  const [datePreset, setDatePreset] = useState<string>(initialFilters?.datePreset || 'ALL');
+  const [datePreset, setDatePreset] = useState<string>(
+    initialFilters?.datePreset && initialFilters.datePreset !== 'TODAY' ? initialFilters.datePreset : 'ALL'
+  );
   const [customFromDate, setCustomFromDate] = useState<string>(initialFilters?.customFromDate || '');
   const [customToDate, setCustomToDate] = useState<string>(initialFilters?.customToDate || '');
   const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+
+  // Pin recently modified lead IDs to keep them visible when changing status/outcome
+  const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<string>>(new Set());
 
   // Sorting state
   const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'nextFollowUpDate' | 'companyName'>(
@@ -303,6 +308,11 @@ export default function TelecallerMyLeadsPage() {
   // Filter leads client-side for ultra-fast response
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
+      // Pin recently modified leads so data does not vanish unexpectedly upon updating outcome or pipeline
+      if (recentlyUpdatedIds.has(lead.id)) {
+        return true;
+      }
+
       // 1. Pipeline filter
       if (pipelineFilter !== 'ALL') {
         const normLeadPipeline = normalizeCallOutcome(lead.pipelineStage);
@@ -316,17 +326,17 @@ export default function TelecallerMyLeadsPage() {
         return false;
       }
 
-      // 3. Priority filter
-      if (priorityFilter && lead.priority !== priorityFilter) {
+      // 3. Priority filter (case-insensitive)
+      if (priorityFilter && (lead.priority || '').toUpperCase() !== priorityFilter.toUpperCase()) {
         return false;
       }
 
       // 4. Search query (company, contact person, phone, email)
       if (searchTerm) {
         const q = searchTerm.toLowerCase().trim();
-        const matchesCompany = lead.companyName.toLowerCase().includes(q);
+        const matchesCompany = !!(lead.companyName && lead.companyName.toLowerCase().includes(q));
         const matchesContact = !!(lead.contactPerson && lead.contactPerson.toLowerCase().includes(q));
-        const matchesPhone = lead.phone.toLowerCase().includes(q);
+        const matchesPhone = !!(lead.phone && lead.phone.toLowerCase().includes(q));
         const matchesEmail = !!(lead.email && lead.email.toLowerCase().includes(q));
         const matchesProduct = !!(lead.serviceProduct && lead.serviceProduct.toLowerCase().includes(q));
         if (!matchesCompany && !matchesContact && !matchesPhone && !matchesEmail && !matchesProduct) {
@@ -357,7 +367,7 @@ export default function TelecallerMyLeadsPage() {
 
       return true;
     });
-  }, [leads, pipelineFilter, outcomeFilter, priorityFilter, searchTerm, datePreset, dateField, fromDate, toDate]);
+  }, [leads, pipelineFilter, outcomeFilter, priorityFilter, searchTerm, datePreset, dateField, fromDate, toDate, recentlyUpdatedIds]);
 
   // Sort leads client-side
   const sortedLeads = useMemo(() => {
@@ -477,6 +487,7 @@ export default function TelecallerMyLeadsPage() {
   async function handlePipelineChange(lead: Lead, newStage: string) {
     if (lead.pipelineStage === newStage) return;
     const previousLead = { ...lead };
+    setRecentlyUpdatedIds((prev) => new Set([...prev, lead.id]));
 
     // Optimistic update
     setLeads((prev) =>
@@ -562,6 +573,7 @@ export default function TelecallerMyLeadsPage() {
     extraPayload: { nextFollowUpDate?: string; nextAction?: string; notes?: string } = {}
   ) {
     const previousLead = { ...lead };
+    setRecentlyUpdatedIds((prev) => new Set([...prev, lead.id]));
 
     // Optimistic update
     setLeads((prev) =>
@@ -607,6 +619,7 @@ export default function TelecallerMyLeadsPage() {
   async function handleNextActionBlur(lead: Lead, val: string) {
     if ((lead.nextAction || '') === val) return;
     const previousLead = { ...lead };
+    setRecentlyUpdatedIds((prev) => new Set([...prev, lead.id]));
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, { nextAction: val });
       if (res.success && res.data) {
@@ -623,6 +636,7 @@ export default function TelecallerMyLeadsPage() {
   async function handleFollowUpDateChange(lead: Lead, val: string) {
     if ((lead.nextFollowUpDate || '') === val) return;
     const previousLead = { ...lead };
+    setRecentlyUpdatedIds((prev) => new Set([...prev, lead.id]));
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, {
         nextFollowUpDate: val ? new Date(val).toISOString() : null,
@@ -641,6 +655,7 @@ export default function TelecallerMyLeadsPage() {
   async function handlePriorityChange(lead: Lead, newPriority: Priority) {
     if (lead.priority === newPriority) return;
     const previousLead = { ...lead };
+    setRecentlyUpdatedIds((prev) => new Set([...prev, lead.id]));
     setLeads((prev) =>
       prev.map((l) => (l.id === lead.id ? { ...l, priority: newPriority } : l))
     );
@@ -663,6 +678,7 @@ export default function TelecallerMyLeadsPage() {
   async function handleNotesBlur(lead: Lead, val: string) {
     if ((lead.notes || '') === val) return;
     const previousLead = { ...lead };
+    setRecentlyUpdatedIds((prev) => new Set([...prev, lead.id]));
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, { notes: val });
       if (res.success && res.data) {
@@ -1269,19 +1285,35 @@ export default function TelecallerMyLeadsPage() {
         <div className="hidden md:flex bg-white rounded-xl border border-slate-200 shadow-soft-sm overflow-hidden flex-col">
           {/* Scrollable Container with Fixed Columns */}
           <div className="overflow-x-auto max-h-[72vh] scrollbar-thin">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse table-fixed" style={{ minWidth: 1978 }}>
+              {/* Rigid Column Groups for Pixel-Perfect Row Alignment */}
+              <colgroup>
+                <col style={{ width: 48 }} />
+                <col style={{ width: 260 }} />
+                <col style={{ width: 170 }} />
+                <col style={{ width: 120 }} />
+                <col style={{ width: 180 }} />
+                <col style={{ width: 200 }} />
+                <col style={{ width: 190 }} />
+                <col style={{ width: 190 }} />
+                <col style={{ width: 140 }} />
+                <col style={{ width: 220 }} />
+                <col style={{ width: 140 }} />
+                <col style={{ width: 120 }} />
+              </colgroup>
+
               {/* Sticky Table Header */}
               <thead className="bg-slate-900 text-slate-200 text-[11px] uppercase tracking-wider font-bold sticky top-0 z-20 shadow-soft-xs">
                 <tr>
                   {/* Sticky Column 1: # */}
-                  <th className="sticky left-0 z-30 bg-slate-900 w-12 min-w-[48px] max-w-[48px] p-3 text-center border-r border-slate-800">
+                  <th className="sticky left-0 z-30 bg-slate-900 p-3 text-center border-r border-slate-800">
                     #
                   </th>
 
                   {/* Sticky Column 2: Company & Contact */}
                   <th
                     onClick={() => handleHeaderSort('companyName')}
-                    className="sticky left-[48px] z-30 bg-slate-900 w-64 min-w-[240px] max-w-[280px] p-3 border-r border-slate-800 cursor-pointer hover:text-white"
+                    className="sticky left-[48px] z-30 bg-slate-900 p-3 border-r border-slate-800 cursor-pointer hover:text-white"
                   >
                     <div className="flex items-center justify-between">
                       <span>Company & Contact</span>
@@ -1294,24 +1326,24 @@ export default function TelecallerMyLeadsPage() {
                   </th>
 
                   {/* Phone */}
-                  <th className="w-36 min-w-[140px] p-3">Phone</th>
+                  <th className="p-3">Phone</th>
 
                   {/* Priority */}
-                  <th className="w-32 min-w-[120px] p-3">Priority</th>
+                  <th className="p-3">Priority</th>
 
                   {/* Pipeline Status (Dropdown) */}
-                  <th className="w-48 min-w-[180px] p-3">Pipeline Status</th>
+                  <th className="p-3">Pipeline Status</th>
 
                   {/* Last Call Outcome (Dropdown) */}
-                  <th className="w-56 min-w-[220px] p-3">Last Call Outcome</th>
+                  <th className="p-3">Last Call Outcome</th>
 
                   {/* Next Action (Editable) */}
-                  <th className="w-52 min-w-[200px] p-3">Next Action</th>
+                  <th className="p-3">Next Action</th>
 
                   {/* Next Follow-up (Editable) */}
                   <th
                     onClick={() => handleHeaderSort('nextFollowUpDate')}
-                    className="w-48 min-w-[190px] p-3 cursor-pointer hover:text-white"
+                    className="p-3 cursor-pointer hover:text-white"
                   >
                     <div className="flex items-center justify-between">
                       <span>Next Follow-up</span>
@@ -1326,7 +1358,7 @@ export default function TelecallerMyLeadsPage() {
                   {/* Last Updated (Sortable) */}
                   <th
                     onClick={() => handleHeaderSort('updatedAt')}
-                    className="w-36 min-w-[140px] p-3 cursor-pointer hover:text-white"
+                    className="p-3 cursor-pointer hover:text-white"
                   >
                     <div className="flex items-center justify-between">
                       <span>Last Updated</span>
@@ -1339,20 +1371,20 @@ export default function TelecallerMyLeadsPage() {
                   </th>
 
                   {/* Notes (Editable) */}
-                  <th className="w-64 min-w-[240px] p-3">Notes</th>
+                  <th className="p-3">Notes</th>
 
                   {/* Lead Source (Read-only) */}
-                  <th className="w-36 min-w-[130px] p-3 hidden lg:table-cell">Lead Source</th>
+                  <th className="p-3">Lead Source</th>
 
                   {/* Action Buttons */}
-                  <th className="w-24 min-w-[90px] p-3 text-center">Actions</th>
+                  <th className="p-3 text-center">Actions</th>
                 </tr>
               </thead>
 
               <tbody className="divide-y divide-slate-100 bg-white">
                 {paginatedLeads.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="p-12 text-center text-slate-400">
+                    <td colSpan={12} className="p-12 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <AlertTriangle className="h-8 w-8 text-slate-300" />
                         <span className="font-bold text-sm text-slate-700">No leads match current filters</span>
@@ -1370,6 +1402,7 @@ export default function TelecallerMyLeadsPage() {
                     const isOpenLead = lead.pipelineStage !== 'Closed';
                     const isMissingAction = isOpenLead && !lead.nextAction?.trim();
                     const isMissingFollowUp = isOpenLead && !lead.nextFollowUpDate;
+                    const normalizedStage = normalizeCallOutcome(lead.pipelineStage) || lead.pipelineStage || 'New Lead';
 
                     return (
                       <tr
@@ -1381,18 +1414,18 @@ export default function TelecallerMyLeadsPage() {
                         }}
                       >
                         {/* Sticky Column 1: # */}
-                        <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/90 w-12 min-w-[48px] max-w-[48px] p-3 text-center font-bold text-slate-400 border-r border-slate-100 select-none">
+                        <td className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/90 p-3 text-center font-bold text-slate-400 border-r border-slate-100 select-none">
                           {rowNumber}
                         </td>
 
                         {/* Sticky Column 2: Company & Contact */}
-                        <td className="sticky left-[48px] z-10 bg-white group-hover:bg-slate-50/90 w-64 min-w-[240px] max-w-[280px] p-3 border-r border-slate-100">
+                        <td className="sticky left-[48px] z-10 bg-white group-hover:bg-slate-50/90 p-3 border-r border-slate-100">
                           <div className="flex flex-col min-w-0">
                             <span
                               className="font-bold text-slate-900 truncate hover:text-sky-600 transition-colors cursor-pointer"
                               title={lead.companyName}
                             >
-                              {lead.companyName}
+                              {lead.companyName || 'Unnamed Lead'}
                             </span>
                             <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate mt-0.5">
                               <span className="font-semibold text-slate-700">{lead.contactPerson || 'No contact'}</span>
@@ -1414,7 +1447,7 @@ export default function TelecallerMyLeadsPage() {
                         </td>
 
                         {/* Phone with Click-to-Call & WhatsApp */}
-                        <td className="w-40 min-w-[160px] p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center gap-2">
                             <a
                               href={`tel:${lead.phone}`}
@@ -1422,31 +1455,35 @@ export default function TelecallerMyLeadsPage() {
                               title={`Dial ${lead.phone}`}
                             >
                               <Phone className="h-3 w-3 shrink-0" />
-                              <span>{lead.phone}</span>
+                              <span className="truncate">{lead.phone || 'No Phone'}</span>
                             </a>
-                            <WhatsAppButton
-                              phone={lead.phone}
-                              leadId={lead.id}
-                              leadName={lead.contactPerson || lead.companyName}
-                              size="sm"
-                              showText={false}
-                            />
-                            <button
-                              onClick={() => {
-                                setActiveCallLead(lead);
-                              }}
-                              className="p-1 rounded hover:bg-emerald-50 text-emerald-600 cursor-pointer"
-                              title="Log Call Outcome"
-                            >
-                              <Phone className="h-3.5 w-3.5" />
-                            </button>
+                            {lead.phone && (
+                              <>
+                                <WhatsAppButton
+                                  phone={lead.phone}
+                                  leadId={lead.id}
+                                  leadName={lead.contactPerson || lead.companyName}
+                                  size="sm"
+                                  showText={false}
+                                />
+                                <button
+                                  onClick={() => {
+                                    setActiveCallLead(lead);
+                                  }}
+                                  className="p-1 rounded hover:bg-emerald-50 text-emerald-600 cursor-pointer"
+                                  title="Log Call Outcome"
+                                >
+                                  <Phone className="h-3.5 w-3.5" />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
 
                         {/* Priority Dropdown */}
-                        <td className="w-32 min-w-[120px] p-3" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
                           <select
-                            value={lead.priority}
+                            value={(lead.priority || 'MEDIUM').toUpperCase()}
                             onChange={(e) => handlePriorityChange(lead, e.target.value as Priority)}
                             className={`w-full text-[11px] font-bold rounded-lg px-2 py-1 border cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs ${priorityMeta.bg} ${priorityMeta.text} ${priorityMeta.border}`}
                           >
@@ -1461,13 +1498,13 @@ export default function TelecallerMyLeadsPage() {
                           </select>
                         </td>
 
-                        {/* Pipeline Status Dropdown (Round 8: Dropdown instead of pills) */}
-                        <td className="w-48 min-w-[180px] p-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Pipeline Status Dropdown */}
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
                           <select
-                            value={lead.pipelineStage}
+                            value={normalizedStage}
                             onChange={(e) => handlePipelineChange(lead, e.target.value)}
                             className={`w-full text-xs font-bold rounded-lg px-2.5 py-1.5 border cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs transition-colors ${getPipelineBadgeColor(
-                              lead.pipelineStage
+                              normalizedStage
                             )}`}
                           >
                             {PIPELINE_STAGE_LIST.map((stage) => {
@@ -1482,7 +1519,7 @@ export default function TelecallerMyLeadsPage() {
                         </td>
 
                         {/* Last Call Outcome Dropdown */}
-                        <td className="w-56 min-w-[220px] p-3" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
                           {(() => {
                             const ocMeta = getOutcomeColor(lead.lastCallOutcome);
                             return (
@@ -1510,9 +1547,10 @@ export default function TelecallerMyLeadsPage() {
                         </td>
 
                         {/* Next Action (Editable with Missing warning) */}
-                        <td className="w-52 min-w-[200px] p-3" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex flex-col gap-1">
                             <input
+                              key={`action_${lead.id}_${lead.nextAction || ''}`}
                               type="text"
                               defaultValue={lead.nextAction || ''}
                               onBlur={(e) => handleNextActionBlur(lead, e.target.value)}
@@ -1528,9 +1566,10 @@ export default function TelecallerMyLeadsPage() {
                         </td>
 
                         {/* Next Follow-up (Editable with Missing warning) */}
-                        <td className="w-48 min-w-[190px] p-3" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex flex-col gap-1">
                             <input
+                              key={`followup_${lead.id}_${lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}`}
                               type="datetime-local"
                               defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
                               onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
@@ -1551,13 +1590,14 @@ export default function TelecallerMyLeadsPage() {
                         </td>
 
                         {/* Last Updated */}
-                        <td className="w-36 min-w-[140px] p-3 text-slate-500 text-[11px] whitespace-nowrap">
+                        <td className="p-3 text-slate-500 text-[11px] whitespace-nowrap">
                           {formatDateTime(lead.lastActivityAt || lead.updatedAt)}
                         </td>
 
                         {/* Notes (Editable) */}
-                        <td className="w-64 min-w-[240px] p-3" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
                           <input
+                            key={`notes_${lead.id}_${lead.notes || ''}`}
                             type="text"
                             defaultValue={lead.notes || ''}
                             onBlur={(e) => handleNotesBlur(lead, e.target.value)}
@@ -1566,8 +1606,8 @@ export default function TelecallerMyLeadsPage() {
                           />
                         </td>
 
-                        {/* Lead Source (Read-only, hidden on small screens) */}
-                        <td className="w-36 min-w-[130px] p-3 hidden lg:table-cell min-w-0" onClick={(e) => e.stopPropagation()}>
+                        {/* Lead Source (Read-only) */}
+                        <td className="p-3 min-w-0" onClick={(e) => e.stopPropagation()}>
                           {lead.leadSource ? (
                             <span
                               className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 truncate max-w-full"
@@ -1582,22 +1622,26 @@ export default function TelecallerMyLeadsPage() {
                         </td>
 
                         {/* Action Buttons */}
-                        <td className="w-32 min-w-[120px] p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
-                            <a
-                              href={`tel:${lead.phone}`}
-                              className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                              title={`Call ${lead.phone}`}
-                            >
-                              <Phone className="h-3.5 w-3.5" />
-                            </a>
-                            <WhatsAppButton
-                              phone={lead.phone}
-                              leadId={lead.id}
-                              leadName={lead.contactPerson || lead.companyName}
-                              size="sm"
-                              showText={false}
-                            />
+                            {lead.phone && (
+                              <>
+                                <a
+                                  href={`tel:${lead.phone}`}
+                                  className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                  title={`Call ${lead.phone}`}
+                                >
+                                  <Phone className="h-3.5 w-3.5" />
+                                </a>
+                                <WhatsAppButton
+                                  phone={lead.phone}
+                                  leadId={lead.id}
+                                  leadName={lead.contactPerson || lead.companyName}
+                                  size="sm"
+                                  showText={false}
+                                />
+                              </>
+                            )}
                             <button
                               onClick={() => {
                                 setSelectedLeadId(lead.id);
