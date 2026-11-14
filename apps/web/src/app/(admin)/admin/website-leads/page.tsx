@@ -259,7 +259,10 @@ export default function AdminWebsiteLeadsPage() {
 
   if (user?.role !== USER_ROLES.SUPER_ADMIN) {
     return (
-      <AppLayout>
+      <AppLayout
+        title="Website Leads"
+        subtitle="Restricted to Super Administrators"
+      >
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-center">
           <AlertTriangle className="h-12 w-12 text-amber-500" />
           <h2 className="text-xl font-bold text-slate-900">Access Restricted</h2>
@@ -272,7 +275,13 @@ export default function AdminWebsiteLeadsPage() {
   }
 
   return (
-    <AppLayout>
+    <AppLayout
+      title="Website Leads"
+      subtitle="Direct inquiries, RFP requests, and consultation forms generated from website landing pages."
+      searchTerm={searchTerm}
+      onSearchChange={setSearchTerm}
+      searchPlaceholder="Filter website inquiries by name, company, email, phone..."
+    >
       <div className="space-y-6">
         {/* Module Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

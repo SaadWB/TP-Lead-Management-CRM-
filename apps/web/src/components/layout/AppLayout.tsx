@@ -7,7 +7,7 @@ import { useHeaderContext } from './PageHeaderContext';
 
 interface AppLayoutProps {
   children: ReactNode;
-  title: string;
+  title?: string;
   subtitle?: string;
   onOpenCreateLead?: () => void;
   searchTerm?: string;
@@ -17,7 +17,7 @@ interface AppLayoutProps {
 
 export function AppLayout({
   children,
-  title,
+  title = '',
   subtitle,
   onOpenCreateLead,
   searchTerm,
