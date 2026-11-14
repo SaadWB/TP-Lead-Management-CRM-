@@ -1246,16 +1246,6 @@ function AdminLeadsContent() {
                       );
                     })
                   )}
-                                title="Delete Lead"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
                 </tbody>
               </table>
             </div>
