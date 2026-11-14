@@ -1,5 +1,6 @@
 import { FollowUpTask, TaskStatus, TaskType } from '@crm/shared';
-import { dbStore } from './dbStore';
+import { prisma } from '../config/prisma';
+import { resolveUserAlias } from './userRepository';
 
 export interface TaskFilterOptions {
   assignedUserId?: string;
@@ -10,62 +11,94 @@ export interface TaskFilterOptions {
 }
 
 export class FollowUpTaskRepository {
-  private enrichTask(t: FollowUpTask): FollowUpTask {
-    const assignee = dbStore.store.users.find((u) => u.id === t.assignedUserId);
-    const lead = dbStore.store.leads.find((l) => l.id === t.leadId);
-    const isOverdue = t.status === 'PENDING' && new Date(t.dueDate).getTime() < new Date().setHours(0, 0, 0, 0);
+  private formatTask(t: any): FollowUpTask {
+    const todayMidnight = new Date().setHours(0, 0, 0, 0);
+    const dueDate = new Date(t.dueDate);
+    const isOverdue = t.status === 'PENDING' && dueDate.getTime() < todayMidnight;
 
     return {
-      ...t,
-      assignedUser: assignee ? { id: assignee.id, name: assignee.name, email: assignee.email } : undefined,
-      lead: lead
+      id: t.id,
+      leadId: t.leadId,
+      assignedUserId: t.assignedUserId,
+      assignedUser: t.assignedUser
+        ? { id: t.assignedUser.id, name: t.assignedUser.name, email: t.assignedUser.email }
+        : undefined,
+      lead: t.lead
         ? {
-            id: lead.id,
-            companyName: lead.companyName,
-            contactPerson: lead.contactPerson,
-            phone: lead.phone,
-            pipelineStage: lead.pipelineStage,
+            id: t.lead.id,
+            companyName: t.lead.companyName,
+            contactPerson: t.lead.contactPerson || undefined,
+            phone: t.lead.phone,
+            pipelineStage: t.lead.pipelineStage,
           }
         : undefined,
+      taskType: t.taskType as TaskType,
+      dueDate: dueDate.toISOString().split('T')[0],
+      dueTime: t.dueTime || null,
+      notes: t.notes || null,
+      status: t.status as TaskStatus,
       isOverdue,
+      completedAt: t.completedAt ? new Date(t.completedAt).toISOString() : undefined,
+      createdAt: new Date(t.createdAt).toISOString(),
+      updatedAt: new Date(t.updatedAt).toISOString(),
     };
   }
 
   async findById(id: string): Promise<FollowUpTask | null> {
-    const task = dbStore.store.followUpTasks.find((t) => t.id === id);
+    const task = await prisma.followUpTask.findUnique({
+      where: { id },
+      include: {
+        assignedUser: { select: { id: true, name: true, email: true } },
+        lead: { select: { id: true, companyName: true, contactPerson: true, phone: true, pipelineStage: true } },
+      },
+    });
     if (!task) return null;
-    return this.enrichTask(task);
+    return this.formatTask(task);
   }
 
   async findMany(filter: TaskFilterOptions = {}): Promise<FollowUpTask[]> {
-    let tasks = [...dbStore.store.followUpTasks];
+    const where: any = {};
 
     if (filter.assignedUserId) {
-      tasks = tasks.filter((t) => t.assignedUserId === filter.assignedUserId);
+      const effId = resolveUserAlias(filter.assignedUserId) || filter.assignedUserId;
+      where.assignedUserId = effId;
     }
     if (filter.leadId) {
-      tasks = tasks.filter((t) => t.leadId === filter.leadId);
+      where.leadId = filter.leadId;
     }
     if (filter.status) {
-      tasks = tasks.filter((t) => t.status === filter.status);
+      where.status = filter.status;
     }
     if (filter.taskType) {
-      tasks = tasks.filter((t) => t.taskType === filter.taskType);
+      where.taskType = filter.taskType;
     }
 
     if (filter.timeFilter && filter.timeFilter !== 'ALL') {
-      const todayStr = new Date().toISOString().split('T')[0];
-      tasks = tasks.filter((t) => {
-        const d = t.dueDate.split('T')[0];
-        if (filter.timeFilter === 'TODAY') return d === todayStr;
-        if (filter.timeFilter === 'OVERDUE') return d < todayStr && t.status === 'PENDING';
-        if (filter.timeFilter === 'UPCOMING') return d > todayStr;
-        return true;
-      });
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      if (filter.timeFilter === 'TODAY') {
+        where.dueDate = { gte: todayStart, lte: todayEnd };
+      } else if (filter.timeFilter === 'OVERDUE') {
+        where.dueDate = { lt: todayStart };
+        where.status = 'PENDING';
+      } else if (filter.timeFilter === 'UPCOMING') {
+        where.dueDate = { gt: todayEnd };
+      }
     }
 
-    tasks.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-    return tasks.map((t) => this.enrichTask(t));
+    const tasks = await prisma.followUpTask.findMany({
+      where,
+      include: {
+        assignedUser: { select: { id: true, name: true, email: true } },
+        lead: { select: { id: true, companyName: true, contactPerson: true, phone: true, pipelineStage: true } },
+      },
+      orderBy: { dueDate: 'asc' },
+    });
+
+    return tasks.map((t) => this.formatTask(t));
   }
 
   async create(data: {
@@ -76,35 +109,61 @@ export class FollowUpTaskRepository {
     dueTime?: string | null;
     notes?: string | null;
   }): Promise<FollowUpTask> {
-    const newTask: FollowUpTask = {
-      id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      leadId: data.leadId,
-      assignedUserId: data.assignedUserId,
-      taskType: data.taskType,
-      dueDate: data.dueDate,
-      dueTime: data.dueTime || null,
-      notes: data.notes || null,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    dbStore.store.followUpTasks.push(newTask);
-    dbStore.persist();
-    return this.enrichTask(newTask);
+    const effectiveUserId = resolveUserAlias(data.assignedUserId) || data.assignedUserId;
+    const task = await prisma.followUpTask.create({
+      data: {
+        leadId: data.leadId,
+        assignedUserId: effectiveUserId,
+        taskType: data.taskType,
+        dueDate: new Date(data.dueDate),
+        dueTime: data.dueTime || null,
+        notes: data.notes || null,
+        status: 'PENDING',
+      },
+      include: {
+        assignedUser: { select: { id: true, name: true, email: true } },
+        lead: { select: { id: true, companyName: true, contactPerson: true, phone: true, pipelineStage: true } },
+      },
+    });
+
+    return this.formatTask(task);
   }
 
   async update(id: string, data: Partial<FollowUpTask>): Promise<FollowUpTask | null> {
-    const index = dbStore.store.followUpTasks.findIndex((t) => t.id === id);
-    if (index === -1) return null;
+    const updateData: any = {};
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+      if (data.status === 'COMPLETED') {
+        updateData.completedAt = data.completedAt ? new Date(data.completedAt) : new Date();
+      }
+    }
+    if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate);
+    if (data.dueTime !== undefined) updateData.dueTime = data.dueTime;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.taskType !== undefined) updateData.taskType = data.taskType;
+    if (data.assignedUserId !== undefined) {
+      updateData.assignedUserId = resolveUserAlias(data.assignedUserId) || data.assignedUserId;
+    }
 
-    dbStore.store.followUpTasks[index] = {
-      ...dbStore.store.followUpTasks[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-      ...(data.status === 'COMPLETED' && !data.completedAt ? { completedAt: new Date().toISOString() } : {}),
-    };
-    dbStore.persist();
-    return this.enrichTask(dbStore.store.followUpTasks[index]);
+    const task = await prisma.followUpTask.update({
+      where: { id },
+      data: updateData,
+      include: {
+        assignedUser: { select: { id: true, name: true, email: true } },
+        lead: { select: { id: true, companyName: true, contactPerson: true, phone: true, pipelineStage: true } },
+      },
+    });
+
+    return this.formatTask(task);
+  }
+
+  async delete(id: string): Promise<boolean> {
+    try {
+      await prisma.followUpTask.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

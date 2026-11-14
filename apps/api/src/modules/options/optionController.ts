@@ -1,9 +1,29 @@
 import { Request, Response, NextFunction } from 'express';
-import { dbStore } from '../../repositories/dbStore';
+import { prisma } from '../../config/prisma';
 import { auditLogRepository } from '../../repositories/auditLogRepository';
-import { NotFoundError, BadRequestError, ForbiddenError } from '../../utils/errors';
+import { NotFoundError, BadRequestError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
-import { USER_ROLES, PipelineStageOption, CallOutcomeOption, LeadSourceOption } from '@crm/shared';
+import { USER_ROLES } from '@crm/shared';
+
+function mapOutcomeWithFlags(o: any) {
+  return {
+    id: o.id,
+    name: o.name,
+    color: o.color,
+    suggestedPipelineStage: o.suggestedPipelineStage,
+    flags: {
+      requiresDateTime: Boolean(o.requiresDateTime),
+      requiresNextFollowUp: Boolean(o.requiresNextFollowUp),
+      closesLead: Boolean(o.closesLead),
+      autoReturnNewLeadsDays: o.autoReturnNewLeadsDays ?? null,
+    },
+    isDefault: o.isDefault,
+    isActive: o.isActive,
+    order: o.order,
+    createdAt: o.createdAt ? new Date(o.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: o.updatedAt ? new Date(o.updatedAt).toISOString() : new Date().toISOString(),
+  };
+}
 
 /**
  * List Pipeline and Outcome options
@@ -11,42 +31,69 @@ import { USER_ROLES, PipelineStageOption, CallOutcomeOption, LeadSourceOption } 
  */
 export async function listOptions(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const store = dbStore.store;
     const isSuperAdmin = req.user?.role === USER_ROLES.SUPER_ADMIN;
     const includeInactive = req.query.includeInactive === 'true' && isSuperAdmin;
 
-    let stages = [...(store.pipelineStageOptions || [])];
-    let outcomes = [...(store.callOutcomeOptions || [])];
-    let sources = [...(store.leadSourceOptions || [])];
+    const where: any = includeInactive ? {} : { isActive: true };
 
-    if (!includeInactive) {
-      stages = stages.filter((s) => s.isActive);
-      outcomes = outcomes.filter((o) => o.isActive);
-      sources = sources.filter((s) => s.isActive);
-    }
+    const [stages, outcomes, sources] = await Promise.all([
+      prisma.pipelineStageOption.findMany({ where, orderBy: { order: 'asc' } }),
+      prisma.callOutcomeOption.findMany({ where, orderBy: { order: 'asc' } }),
+      prisma.leadSourceOption.findMany({ where, orderBy: { order: 'asc' } }),
+    ]);
 
-    // Attach lead counts
-    const leads = store.leads || [];
-    const enrichedStages = stages
-      .sort((a, b) => a.order - b.order)
-      .map((s) => ({
-        ...s,
-        leadCount: leads.filter((l) => l.pipelineStage?.toLowerCase() === s.name.toLowerCase()).length,
-      }));
+    // Attach lead counts directly from database
+    const [stageCounts, outcomeCounts, sourceCounts] = await Promise.all([
+      prisma.lead.groupBy({
+        by: ['pipelineStage'],
+        _count: { id: true },
+        where: { isDeleted: false },
+      }),
+      prisma.lead.groupBy({
+        by: ['lastCallOutcome'],
+        _count: { id: true },
+        where: { isDeleted: false, lastCallOutcome: { not: null } },
+      }),
+      prisma.lead.groupBy({
+        by: ['leadSource'],
+        _count: { id: true },
+        where: { isDeleted: false, leadSource: { not: null } },
+      }),
+    ]);
 
-    const enrichedOutcomes = outcomes
-      .sort((a, b) => a.order - b.order)
-      .map((o) => ({
-        ...o,
-        leadCount: leads.filter((l) => l.lastCallOutcome?.toLowerCase() === o.name.toLowerCase()).length,
-      }));
+    const stageMap = new Map<string, number>();
+    stageCounts.forEach((sc) => {
+      if (sc.pipelineStage) stageMap.set(sc.pipelineStage.toLowerCase(), sc._count.id);
+    });
 
-    const enrichedSources = sources
-      .sort((a, b) => a.order - b.order)
-      .map((s) => ({
-        ...s,
-        leadCount: leads.filter((l) => l.leadSource?.toLowerCase() === s.name.toLowerCase()).length,
-      }));
+    const outcomeMap = new Map<string, number>();
+    outcomeCounts.forEach((oc) => {
+      if (oc.lastCallOutcome) outcomeMap.set(oc.lastCallOutcome.toLowerCase(), oc._count.id);
+    });
+
+    const sourceMap = new Map<string, number>();
+    sourceCounts.forEach((src) => {
+      if (src.leadSource) sourceMap.set(src.leadSource.toLowerCase(), src._count.id);
+    });
+
+    const enrichedStages = stages.map((s) => ({
+      ...s,
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
+      leadCount: stageMap.get(s.name.toLowerCase()) || 0,
+    }));
+
+    const enrichedOutcomes = outcomes.map((o) => ({
+      ...mapOutcomeWithFlags(o),
+      leadCount: outcomeMap.get(o.name.toLowerCase()) || 0,
+    }));
+
+    const enrichedSources = sources.map((s) => ({
+      ...s,
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
+      leadCount: sourceMap.get(s.name.toLowerCase()) || 0,
+    }));
 
     sendSuccess(res, {
       pipelineStages: enrichedStages,
@@ -69,31 +116,25 @@ export async function createPipelineStage(req: Request, res: Response, next: Nex
     }
     const cleanName = name.trim();
 
-    const store = dbStore.store;
-    if (!store.pipelineStageOptions) store.pipelineStageOptions = [];
-
-    const isDuplicate = store.pipelineStageOptions.some(
-      (s) => s.name.toLowerCase() === cleanName.toLowerCase()
-    );
-    if (isDuplicate) {
+    const existing = await prisma.pipelineStageOption.findFirst({
+      where: { name: cleanName },
+    });
+    if (existing) {
       throw new BadRequestError(`Pipeline stage "${cleanName}" already exists.`);
     }
 
-    const maxOrder = store.pipelineStageOptions.reduce((max, s) => Math.max(max, s.order ?? 0), -1);
-    const now = new Date().toISOString();
-    const newStage: PipelineStageOption = {
-      id: `stg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      name: cleanName,
-      color: color || 'blue',
-      isDefault: false,
-      isActive: true,
-      order: maxOrder + 1,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const maxOrderAggregate = await prisma.pipelineStageOption.aggregate({ _max: { order: true } });
+    const maxOrder = maxOrderAggregate._max.order ?? -1;
 
-    store.pipelineStageOptions.push(newStage);
-    dbStore.persist();
+    const newStage = await prisma.pipelineStageOption.create({
+      data: {
+        name: cleanName,
+        color: color || 'blue',
+        isDefault: false,
+        isActive: true,
+        order: maxOrder + 1,
+      },
+    });
 
     await auditLogRepository.create({
       userId: req.user!.id,
@@ -117,8 +158,7 @@ export async function updatePipelineStage(req: Request, res: Response, next: Nex
     const { id } = req.params;
     const { name, color, isActive } = req.body;
 
-    const store = dbStore.store;
-    const stage = store.pipelineStageOptions?.find((s) => s.id === id);
+    const stage = await prisma.pipelineStageOption.findUnique({ where: { id } });
     if (!stage) {
       throw new NotFoundError('Pipeline stage not found.');
     }
@@ -126,65 +166,59 @@ export async function updatePipelineStage(req: Request, res: Response, next: Nex
     const oldName = stage.name;
     let nameChanged = false;
     let updatedLeadsCount = 0;
+    const updateData: any = {};
 
     if (name !== undefined) {
-      if (typeof name !== 'string' || !name.trim()) {
+      if (!name || typeof name !== 'string' || !name.trim()) {
         throw new BadRequestError('Pipeline stage name cannot be empty.');
       }
       const cleanName = name.trim();
       if (cleanName.toLowerCase() !== stage.name.toLowerCase()) {
-        const isDuplicate = store.pipelineStageOptions.some(
-          (s) => s.id !== id && s.name.toLowerCase() === cleanName.toLowerCase()
-        );
-        if (isDuplicate) {
+        const duplicate = await prisma.pipelineStageOption.findFirst({
+          where: { name: cleanName, id: { not: id } },
+        });
+        if (duplicate) {
           throw new BadRequestError(`Pipeline stage "${cleanName}" already exists.`);
         }
-
-        stage.name = cleanName;
+        updateData.name = cleanName;
         nameChanged = true;
 
-        // Automatically update all existing leads using this stage name
-        for (const lead of store.leads) {
-          if (lead.pipelineStage === oldName) {
-            lead.pipelineStage = cleanName;
-            lead.lastStatusUpdatedAt = new Date().toISOString();
-            updatedLeadsCount++;
-          }
-        }
+        const updateRes = await prisma.lead.updateMany({
+          where: { pipelineStage: oldName },
+          data: { pipelineStage: cleanName, lastStatusUpdatedAt: new Date() },
+        });
+        updatedLeadsCount = updateRes.count;
       }
     }
 
-    if (color !== undefined) {
-      stage.color = color;
-    }
+    if (color !== undefined) updateData.color = color;
+    if (isActive !== undefined) updateData.isActive = Boolean(isActive);
 
-    if (isActive !== undefined) {
-      stage.isActive = Boolean(isActive);
-    }
-
-    stage.updatedAt = new Date().toISOString();
-    dbStore.persist();
+    const updated = await prisma.pipelineStageOption.update({
+      where: { id },
+      data: updateData,
+    });
 
     await auditLogRepository.create({
       userId: req.user!.id,
       action: 'UPDATE_PIPELINE_STAGE',
       entity: 'PIPELINE_STAGE',
-      entityId: stage.id,
+      entityId: updated.id,
       details: {
         oldName: nameChanged ? oldName : undefined,
-        newName: nameChanged ? stage.name : undefined,
+        newName: nameChanged ? updated.name : undefined,
         updatedLeadsCount: nameChanged ? updatedLeadsCount : undefined,
-        color: stage.color,
-        isActive: stage.isActive,
+        color: updated.color,
+        isActive: updated.isActive,
       },
     });
 
     sendSuccess(
       res,
-      stage,
+      updated,
       nameChanged && updatedLeadsCount > 0
-        ? `Pipeline stage renamed to "${stage.name}". Updated ${updatedLeadsCount} existing leads.`
-        : `Pipeline stage "${stage.name}" updated.`
+        ? `Pipeline stage renamed to "${updated.name}". Updated ${updatedLeadsCount} existing leads.`
+        : `Pipeline stage "${updated.name}" updated.`
     );
   } catch (error) {
     next(error);
@@ -193,21 +227,18 @@ export async function updatePipelineStage(req: Request, res: Response, next: Nex
 
 /**
  * Delete Pipeline Stage (Admin only)
- * Never hard-delete if used by leads.
  */
 export async function deletePipelineStage(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const store = dbStore.store;
-    const index = store.pipelineStageOptions?.findIndex((s) => s.id === id);
-    if (index === undefined || index === -1) {
+    const stage = await prisma.pipelineStageOption.findUnique({ where: { id } });
+    if (!stage) {
       throw new NotFoundError('Pipeline stage not found.');
     }
 
-    const stage = store.pipelineStageOptions[index];
-    const usedCount = (store.leads || []).filter(
-      (l) => l.pipelineStage?.toLowerCase() === stage.name.toLowerCase()
-    ).length;
+    const usedCount = await prisma.lead.count({
+      where: { pipelineStage: stage.name, isDeleted: false },
+    });
 
     if (usedCount > 0) {
       throw new BadRequestError(
@@ -215,8 +246,7 @@ export async function deletePipelineStage(req: Request, res: Response, next: Nex
       );
     }
 
-    store.pipelineStageOptions.splice(index, 1);
-    dbStore.persist();
+    await prisma.pipelineStageOption.delete({ where: { id } });
 
     await auditLogRepository.create({
       userId: req.user!.id,
@@ -242,16 +272,16 @@ export async function reorderPipelineStages(req: Request, res: Response, next: N
       throw new BadRequestError('orderedIds must be an array of string IDs.');
     }
 
-    const store = dbStore.store;
-    orderedIds.forEach((id: string, index: number) => {
-      const stage = store.pipelineStageOptions?.find((s) => s.id === id);
-      if (stage) {
-        stage.order = index;
-        stage.updatedAt = new Date().toISOString();
-      }
-    });
+    await Promise.all(
+      orderedIds.map((id: string, index: number) =>
+        prisma.pipelineStageOption.update({
+          where: { id },
+          data: { order: index },
+        }).catch(() => {})
+      )
+    );
 
-    dbStore.persist();
+    const reordered = await prisma.pipelineStageOption.findMany({ orderBy: { order: 'asc' } });
 
     await auditLogRepository.create({
       userId: req.user!.id,
@@ -260,7 +290,7 @@ export async function reorderPipelineStages(req: Request, res: Response, next: N
       details: { orderedIds },
     });
 
-    sendSuccess(res, store.pipelineStageOptions, 'Pipeline stages reordered.');
+    sendSuccess(res, reordered, 'Pipeline stages reordered.');
   } catch (error) {
     next(error);
   }
@@ -281,24 +311,21 @@ export async function createCallOutcome(req: Request, res: Response, next: NextF
       throw new BadRequestError('"Special Inquiry" has been permanently removed and cannot be added.');
     }
 
-    const store = dbStore.store;
-    if (!store.callOutcomeOptions) store.callOutcomeOptions = [];
-
-    const isDuplicate = store.callOutcomeOptions.some(
-      (o) => o.name.toLowerCase() === cleanName.toLowerCase()
-    );
-    if (isDuplicate) {
+    const existing = await prisma.callOutcomeOption.findFirst({
+      where: { name: cleanName },
+    });
+    if (existing) {
       throw new BadRequestError(`Call outcome "${cleanName}" already exists.`);
     }
 
-    const maxOrder = store.callOutcomeOptions.reduce((max, o) => Math.max(max, o.order ?? 0), -1);
-    const now = new Date().toISOString();
-    const newOutcome: CallOutcomeOption = {
-      id: `outc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      name: cleanName,
-      color: color || 'indigo',
-      suggestedPipelineStage: suggestedPipelineStage || 'Follow-up',
-      flags: {
+    const maxOrderAggregate = await prisma.callOutcomeOption.aggregate({ _max: { order: true } });
+    const maxOrder = maxOrderAggregate._max.order ?? -1;
+
+    const newOutcome = await prisma.callOutcomeOption.create({
+      data: {
+        name: cleanName,
+        color: color || 'indigo',
+        suggestedPipelineStage: suggestedPipelineStage || 'Follow-up',
         requiresDateTime: !!flags?.requiresDateTime,
         requiresNextFollowUp: !!flags?.requiresNextFollowUp,
         closesLead: !!flags?.closesLead,
@@ -306,26 +333,23 @@ export async function createCallOutcome(req: Request, res: Response, next: NextF
           typeof flags?.autoReturnNewLeadsDays === 'number' && flags.autoReturnNewLeadsDays > 0
             ? flags.autoReturnNewLeadsDays
             : null,
+        isDefault: false,
+        isActive: true,
+        order: maxOrder + 1,
       },
-      isDefault: false,
-      isActive: true,
-      order: maxOrder + 1,
-      createdAt: now,
-      updatedAt: now,
-    };
+    });
 
-    store.callOutcomeOptions.push(newOutcome);
-    dbStore.persist();
+    const mapped = mapOutcomeWithFlags(newOutcome);
 
     await auditLogRepository.create({
       userId: req.user!.id,
       action: 'CREATE_CALL_OUTCOME',
       entity: 'CALL_OUTCOME',
       entityId: newOutcome.id,
-      details: { name: cleanName, color: newOutcome.color, flags: newOutcome.flags, suggestedPipelineStage },
+      details: { name: cleanName, color: newOutcome.color, flags: mapped.flags, suggestedPipelineStage },
     });
 
-    sendSuccess(res, newOutcome, `Call outcome "${cleanName}" created successfully.`);
+    sendSuccess(res, mapped, `Call outcome "${cleanName}" created successfully.`);
   } catch (error) {
     next(error);
   }
@@ -339,8 +363,7 @@ export async function updateCallOutcome(req: Request, res: Response, next: NextF
     const { id } = req.params;
     const { name, color, suggestedPipelineStage, flags, isActive } = req.body;
 
-    const store = dbStore.store;
-    const outcome = store.callOutcomeOptions?.find((o) => o.id === id);
+    const outcome = await prisma.callOutcomeOption.findUnique({ where: { id } });
     if (!outcome) {
       throw new NotFoundError('Call outcome not found.');
     }
@@ -348,9 +371,10 @@ export async function updateCallOutcome(req: Request, res: Response, next: NextF
     const oldName = outcome.name;
     let nameChanged = false;
     let updatedLeadsCount = 0;
+    const updateData: any = {};
 
     if (name !== undefined) {
-      if (typeof name !== 'string' || !name.trim()) {
+      if (!name || typeof name !== 'string' || !name.trim()) {
         throw new BadRequestError('Call outcome name cannot be empty.');
       }
       const cleanName = name.trim();
@@ -359,87 +383,73 @@ export async function updateCallOutcome(req: Request, res: Response, next: NextF
           throw new BadRequestError('"Special Inquiry" has been permanently removed.');
         }
 
-        const isDuplicate = store.callOutcomeOptions.some(
-          (o) => o.id !== id && o.name.toLowerCase() === cleanName.toLowerCase()
-        );
-        if (isDuplicate) {
+        const duplicate = await prisma.callOutcomeOption.findFirst({
+          where: { name: cleanName, id: { not: id } },
+        });
+        if (duplicate) {
           throw new BadRequestError(`Call outcome "${cleanName}" already exists.`);
         }
 
-        outcome.name = cleanName;
+        updateData.name = cleanName;
         nameChanged = true;
 
-        // Automatically update existing leads
-        for (const lead of store.leads) {
-          if (lead.lastCallOutcome === oldName) {
-            lead.lastCallOutcome = cleanName;
-            lead.lastStatusUpdatedAt = new Date().toISOString();
-            updatedLeadsCount++;
-          }
-        }
+        const updateRes = await prisma.lead.updateMany({
+          where: { lastCallOutcome: oldName },
+          data: { lastCallOutcome: cleanName, lastStatusUpdatedAt: new Date() },
+        });
+        updatedLeadsCount = updateRes.count;
 
-        // Also update callLogs
-        for (const cl of store.callLogs) {
-          if (cl.outcome === oldName) {
-            cl.outcome = cleanName;
-          }
-        }
+        await prisma.callLog.updateMany({
+          where: { outcome: oldName },
+          data: { outcome: cleanName },
+        });
       }
     }
 
-    if (color !== undefined) {
-      outcome.color = color;
-    }
-
-    if (suggestedPipelineStage !== undefined) {
-      outcome.suggestedPipelineStage = suggestedPipelineStage;
-    }
-
+    if (color !== undefined) updateData.color = color;
+    if (suggestedPipelineStage !== undefined) updateData.suggestedPipelineStage = suggestedPipelineStage;
     if (flags !== undefined) {
-      outcome.flags = {
-        ...outcome.flags,
-        requiresDateTime: flags.requiresDateTime !== undefined ? !!flags.requiresDateTime : outcome.flags.requiresDateTime,
-        requiresNextFollowUp:
-          flags.requiresNextFollowUp !== undefined ? !!flags.requiresNextFollowUp : outcome.flags.requiresNextFollowUp,
-        closesLead: flags.closesLead !== undefined ? !!flags.closesLead : outcome.flags.closesLead,
-        autoReturnNewLeadsDays:
-          flags.autoReturnNewLeadsDays !== undefined
-            ? typeof flags.autoReturnNewLeadsDays === 'number' && flags.autoReturnNewLeadsDays > 0
-              ? flags.autoReturnNewLeadsDays
-              : null
-            : outcome.flags.autoReturnNewLeadsDays,
-      };
+      if (flags.requiresDateTime !== undefined) updateData.requiresDateTime = Boolean(flags.requiresDateTime);
+      if (flags.requiresNextFollowUp !== undefined) updateData.requiresNextFollowUp = Boolean(flags.requiresNextFollowUp);
+      if (flags.closesLead !== undefined) updateData.closesLead = Boolean(flags.closesLead);
+      if (flags.autoReturnNewLeadsDays !== undefined) {
+        updateData.autoReturnNewLeadsDays =
+          typeof flags.autoReturnNewLeadsDays === 'number' && flags.autoReturnNewLeadsDays > 0
+            ? flags.autoReturnNewLeadsDays
+            : null;
+      }
     }
+    if (isActive !== undefined) updateData.isActive = Boolean(isActive);
 
-    if (isActive !== undefined) {
-      outcome.isActive = Boolean(isActive);
-    }
+    const updated = await prisma.callOutcomeOption.update({
+      where: { id },
+      data: updateData,
+    });
 
-    outcome.updatedAt = new Date().toISOString();
-    dbStore.persist();
+    const mapped = mapOutcomeWithFlags(updated);
 
     await auditLogRepository.create({
       userId: req.user!.id,
       action: 'UPDATE_CALL_OUTCOME',
       entity: 'CALL_OUTCOME',
-      entityId: outcome.id,
+      entityId: updated.id,
       details: {
         oldName: nameChanged ? oldName : undefined,
-        newName: nameChanged ? outcome.name : undefined,
+        newName: nameChanged ? updated.name : undefined,
         updatedLeadsCount: nameChanged ? updatedLeadsCount : undefined,
-        color: outcome.color,
-        flags: outcome.flags,
-        suggestedPipelineStage: outcome.suggestedPipelineStage,
-        isActive: outcome.isActive,
+        color: updated.color,
+        flags: mapped.flags,
+        suggestedPipelineStage: updated.suggestedPipelineStage,
+        isActive: updated.isActive,
       },
     });
 
     sendSuccess(
       res,
-      outcome,
+      mapped,
       nameChanged && updatedLeadsCount > 0
-        ? `Call outcome renamed to "${outcome.name}". Updated ${updatedLeadsCount} existing leads.`
-        : `Call outcome "${outcome.name}" updated.`
+        ? `Call outcome renamed to "${updated.name}". Updated ${updatedLeadsCount} existing leads.`
+        : `Call outcome "${updated.name}" updated.`
     );
   } catch (error) {
     next(error);
@@ -448,21 +458,18 @@ export async function updateCallOutcome(req: Request, res: Response, next: NextF
 
 /**
  * Delete Call Outcome (Admin only)
- * Never hard-delete if used by leads.
  */
 export async function deleteCallOutcome(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const store = dbStore.store;
-    const index = store.callOutcomeOptions?.findIndex((o) => o.id === id);
-    if (index === undefined || index === -1) {
+    const outcome = await prisma.callOutcomeOption.findUnique({ where: { id } });
+    if (!outcome) {
       throw new NotFoundError('Call outcome not found.');
     }
 
-    const outcome = store.callOutcomeOptions[index];
-    const usedCount = (store.leads || []).filter(
-      (l) => l.lastCallOutcome?.toLowerCase() === outcome.name.toLowerCase()
-    ).length;
+    const usedCount = await prisma.lead.count({
+      where: { lastCallOutcome: outcome.name, isDeleted: false },
+    });
 
     if (usedCount > 0) {
       throw new BadRequestError(
@@ -470,8 +477,7 @@ export async function deleteCallOutcome(req: Request, res: Response, next: NextF
       );
     }
 
-    store.callOutcomeOptions.splice(index, 1);
-    dbStore.persist();
+    await prisma.callOutcomeOption.delete({ where: { id } });
 
     await auditLogRepository.create({
       userId: req.user!.id,
@@ -497,16 +503,16 @@ export async function reorderCallOutcomes(req: Request, res: Response, next: Nex
       throw new BadRequestError('orderedIds must be an array of string IDs.');
     }
 
-    const store = dbStore.store;
-    orderedIds.forEach((id: string, index: number) => {
-      const outcome = store.callOutcomeOptions?.find((o) => o.id === id);
-      if (outcome) {
-        outcome.order = index;
-        outcome.updatedAt = new Date().toISOString();
-      }
-    });
+    await Promise.all(
+      orderedIds.map((id: string, index: number) =>
+        prisma.callOutcomeOption.update({
+          where: { id },
+          data: { order: index },
+        }).catch(() => {})
+      )
+    );
 
-    dbStore.persist();
+    const reordered = await prisma.callOutcomeOption.findMany({ orderBy: { order: 'asc' } });
 
     await auditLogRepository.create({
       userId: req.user!.id,
@@ -515,7 +521,7 @@ export async function reorderCallOutcomes(req: Request, res: Response, next: Nex
       details: { orderedIds },
     });
 
-    sendSuccess(res, store.callOutcomeOptions, 'Call outcomes reordered.');
+    sendSuccess(res, reordered.map(mapOutcomeWithFlags), 'Call outcomes reordered.');
   } catch (error) {
     next(error);
   }
@@ -532,32 +538,25 @@ export async function createLeadSource(req: Request, res: Response, next: NextFu
     }
     const cleanName = name.trim();
 
-    const store = dbStore.store;
-    if (!store.leadSourceOptions) store.leadSourceOptions = [];
-
-    const isDuplicate = store.leadSourceOptions.some(
-      (s) => s.name.toLowerCase() === cleanName.toLowerCase()
-    );
-    if (isDuplicate) {
+    const existing = await prisma.leadSourceOption.findFirst({
+      where: { name: cleanName },
+    });
+    if (existing) {
       throw new BadRequestError(`Lead source "${cleanName}" already exists.`);
     }
 
-    const maxOrder = store.leadSourceOptions.reduce((max, s) => Math.max(max, s.order ?? 0), -1);
-    const now = new Date().toISOString();
-    const newSource: LeadSourceOption = {
-      id: `src_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      name: cleanName,
-      color: color || 'blue',
-      isDefault: false,
-      isActive: true,
-      order: maxOrder + 1,
-      createdAt: now,
-      updatedAt: now,
-    };
+    const maxOrderAggregate = await prisma.leadSourceOption.aggregate({ _max: { order: true } });
+    const maxOrder = maxOrderAggregate._max.order ?? -1;
 
-    store.leadSourceOptions.push(newSource);
-    dbStore.persist();
-    dbStore.syncLeadSourceToDatabase(newSource).catch(console.error);
+    const newSource = await prisma.leadSourceOption.create({
+      data: {
+        name: cleanName,
+        color: color || 'blue',
+        isDefault: false,
+        isActive: true,
+        order: maxOrder + 1,
+      },
+    });
 
     await auditLogRepository.create({
       userId: req.user!.id,
@@ -581,8 +580,7 @@ export async function updateLeadSource(req: Request, res: Response, next: NextFu
     const { id } = req.params;
     const { name, color, isActive } = req.body;
 
-    const store = dbStore.store;
-    const source = store.leadSourceOptions?.find((s) => s.id === id);
+    const source = await prisma.leadSourceOption.findUnique({ where: { id } });
     if (!source) {
       throw new NotFoundError('Lead source not found.');
     }
@@ -590,71 +588,60 @@ export async function updateLeadSource(req: Request, res: Response, next: NextFu
     const oldName = source.name;
     let nameChanged = false;
     let updatedLeadsCount = 0;
+    const updateData: any = {};
 
     if (name !== undefined) {
-      if (typeof name !== 'string' || !name.trim()) {
+      if (!name || typeof name !== 'string' || !name.trim()) {
         throw new BadRequestError('Lead source name cannot be empty.');
       }
       const cleanName = name.trim();
-      const isDuplicate = store.leadSourceOptions?.some(
-        (s) => s.id !== id && s.name.toLowerCase() === cleanName.toLowerCase()
-      );
-      if (isDuplicate) {
+      const duplicate = await prisma.leadSourceOption.findFirst({
+        where: { name: cleanName, id: { not: id } },
+      });
+      if (duplicate) {
         throw new BadRequestError(`Lead source "${cleanName}" already exists.`);
       }
 
       if (cleanName.toLowerCase() !== source.name.toLowerCase()) {
         nameChanged = true;
-        source.name = cleanName;
+        updateData.name = cleanName;
 
-        // Cascade rename to existing leads in memory and sync to DB
-        if (Array.isArray(store.leads)) {
-          for (const lead of store.leads) {
-            if (lead.leadSource?.toLowerCase() === oldName.toLowerCase()) {
-              lead.leadSource = cleanName;
-              lead.updatedAt = new Date().toISOString();
-              updatedLeadsCount++;
-              dbStore.syncLeadToDatabase(lead).catch(console.error);
-            }
-          }
-        }
-      } else {
-        source.name = cleanName;
+        const updateRes = await prisma.lead.updateMany({
+          where: { leadSource: oldName },
+          data: { leadSource: cleanName },
+        });
+        updatedLeadsCount = updateRes.count;
       }
     }
 
-    if (color !== undefined) {
-      source.color = color;
-    }
+    if (color !== undefined) updateData.color = color;
+    if (isActive !== undefined) updateData.isActive = Boolean(isActive);
 
-    if (isActive !== undefined) {
-      source.isActive = Boolean(isActive);
-    }
-
-    source.updatedAt = new Date().toISOString();
-    dbStore.persist();
-    dbStore.syncLeadSourceToDatabase(source).catch(console.error);
+    const updated = await prisma.leadSourceOption.update({
+      where: { id },
+      data: updateData,
+    });
 
     await auditLogRepository.create({
       userId: req.user!.id,
       action: 'UPDATE_LEAD_SOURCE',
       entity: 'LEAD_SOURCE',
-      entityId: source.id,
+      entityId: updated.id,
       details: {
         oldName: nameChanged ? oldName : undefined,
-        newName: nameChanged ? source.name : undefined,
+        newName: nameChanged ? updated.name : undefined,
         updatedLeadsCount: nameChanged ? updatedLeadsCount : undefined,
-        color: source.color,
-        isActive: source.isActive,
+        color: updated.color,
+        isActive: updated.isActive,
       },
     });
 
     sendSuccess(
       res,
-      source,
+      updated,
       nameChanged && updatedLeadsCount > 0
-        ? `Lead source renamed to "${source.name}". Updated ${updatedLeadsCount} existing leads.`
-        : `Lead source "${source.name}" updated.`
+        ? `Lead source renamed to "${updated.name}". Updated ${updatedLeadsCount} existing leads.`
+        : `Lead source "${updated.name}" updated.`
     );
   } catch (error) {
     next(error);
@@ -663,21 +650,18 @@ export async function updateLeadSource(req: Request, res: Response, next: NextFu
 
 /**
  * Delete Lead Source (Admin only)
- * NEVER hard-delete if used by leads.
  */
 export async function deleteLeadSource(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const store = dbStore.store;
-    const index = store.leadSourceOptions?.findIndex((s) => s.id === id);
-    if (index === undefined || index === -1) {
+    const source = await prisma.leadSourceOption.findUnique({ where: { id } });
+    if (!source) {
       throw new NotFoundError('Lead source not found.');
     }
 
-    const source = store.leadSourceOptions[index];
-    const usedCount = (store.leads || []).filter(
-      (l) => l.leadSource?.toLowerCase() === source.name.toLowerCase()
-    ).length;
+    const usedCount = await prisma.lead.count({
+      where: { leadSource: source.name, isDeleted: false },
+    });
 
     if (usedCount > 0) {
       throw new BadRequestError(
@@ -685,13 +669,7 @@ export async function deleteLeadSource(req: Request, res: Response, next: NextFu
       );
     }
 
-    store.leadSourceOptions.splice(index, 1);
-    dbStore.persist();
-
-    // Remove from database
-    import('../../config/prisma').then(({ prisma }) => {
-      prisma.leadSourceOption.delete({ where: { id } }).catch(() => {});
-    });
+    await prisma.leadSourceOption.delete({ where: { id } });
 
     await auditLogRepository.create({
       userId: req.user!.id,
@@ -717,17 +695,16 @@ export async function reorderLeadSources(req: Request, res: Response, next: Next
       throw new BadRequestError('orderedIds must be an array of string IDs.');
     }
 
-    const store = dbStore.store;
-    orderedIds.forEach((id: string, index: number) => {
-      const source = store.leadSourceOptions?.find((s) => s.id === id);
-      if (source) {
-        source.order = index;
-        source.updatedAt = new Date().toISOString();
-        dbStore.syncLeadSourceToDatabase(source).catch(console.error);
-      }
-    });
+    await Promise.all(
+      orderedIds.map((id: string, index: number) =>
+        prisma.leadSourceOption.update({
+          where: { id },
+          data: { order: index },
+        }).catch(() => {})
+      )
+    );
 
-    dbStore.persist();
+    const reordered = await prisma.leadSourceOption.findMany({ orderBy: { order: 'asc' } });
 
     await auditLogRepository.create({
       userId: req.user!.id,
@@ -736,7 +713,7 @@ export async function reorderLeadSources(req: Request, res: Response, next: Next
       details: { orderedIds },
     });
 
-    sendSuccess(res, store.leadSourceOptions, 'Lead sources reordered.');
+    sendSuccess(res, reordered, 'Lead sources reordered.');
   } catch (error) {
     next(error);
   }

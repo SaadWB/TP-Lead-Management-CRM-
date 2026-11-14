@@ -1,5 +1,6 @@
 import { CallLog, CallOutcome } from '@crm/shared';
-import { dbStore } from './dbStore';
+import { prisma } from '../config/prisma';
+import { resolveUserAlias } from './userRepository';
 
 export class CallLogRepository {
   async create(data: {
@@ -13,34 +14,70 @@ export class CallLogRepository {
     nextAction?: string | null;
     durationSeconds?: number | null;
   }): Promise<CallLog> {
-    const caller = dbStore.store.users.find((u) => u.id === data.userId);
-    const newLog: CallLog = {
-      id: `call_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      leadId: data.leadId,
-      userId: data.userId,
-      user: caller ? { id: caller.id, name: caller.name, email: caller.email } : null,
-      outcome: data.outcome,
-      notes: data.notes,
-      contactDate: data.contactDate || new Date().toISOString(),
-      followUpNeeded: data.followUpNeeded,
-      nextFollowUpDate: data.nextFollowUpDate || null,
-      nextAction: data.nextAction || null,
-      durationSeconds: data.durationSeconds || null,
-      createdAt: new Date().toISOString(),
+    const effectiveUserId = resolveUserAlias(data.userId) || data.userId;
+    const log = await prisma.callLog.create({
+      data: {
+        leadId: data.leadId,
+        userId: effectiveUserId,
+        outcome: data.outcome,
+        notes: data.notes,
+        contactDate: data.contactDate ? new Date(data.contactDate) : new Date(),
+        followUpNeeded: Boolean(data.followUpNeeded),
+        nextFollowUpDate: data.nextFollowUpDate ? new Date(data.nextFollowUpDate) : null,
+        nextAction: data.nextAction || null,
+        durationSeconds: data.durationSeconds ?? null,
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return {
+      id: log.id,
+      leadId: log.leadId,
+      userId: log.userId,
+      user: log.user ? { id: log.user.id, name: log.user.name, email: log.user.email } : null,
+      outcome: log.outcome as CallOutcome,
+      notes: log.notes,
+      contactDate: log.contactDate.toISOString(),
+      followUpNeeded: log.followUpNeeded,
+      nextFollowUpDate: log.nextFollowUpDate ? log.nextFollowUpDate.toISOString() : null,
+      nextAction: log.nextAction,
+      durationSeconds: log.durationSeconds,
+      createdAt: log.createdAt.toISOString(),
     };
-    dbStore.store.callLogs.push(newLog);
-    dbStore.persist();
-    return newLog;
   }
 
   async findByLeadId(leadId: string): Promise<CallLog[]> {
-    return dbStore.store.callLogs
-      .filter((c) => c.leadId === leadId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const logs = await prisma.callLog.findMany({
+      where: { leadId },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { contactDate: 'desc' },
+    });
+
+    return logs.map((log) => ({
+      id: log.id,
+      leadId: log.leadId,
+      userId: log.userId,
+      user: log.user ? { id: log.user.id, name: log.user.name, email: log.user.email } : null,
+      outcome: log.outcome as CallOutcome,
+      notes: log.notes,
+      contactDate: log.contactDate.toISOString(),
+      followUpNeeded: log.followUpNeeded,
+      nextFollowUpDate: log.nextFollowUpDate ? log.nextFollowUpDate.toISOString() : null,
+      nextAction: log.nextAction,
+      durationSeconds: log.durationSeconds,
+      createdAt: log.createdAt.toISOString(),
+    }));
   }
 
   async countByUser(userId: string): Promise<number> {
-    return dbStore.store.callLogs.filter((c) => c.userId === userId).length;
+    const effectiveUserId = resolveUserAlias(userId) || userId;
+    return prisma.callLog.count({
+      where: { userId: effectiveUserId },
+    });
   }
 }
 

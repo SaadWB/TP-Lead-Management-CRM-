@@ -7,7 +7,7 @@ import { leadRepository } from '../../repositories/leadRepository';
 import { BadRequestError, NotFoundError, UnauthorizedError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
 import { revokeAllUserRefreshTokens } from '../../utils/tokens';
-import { dbStore } from '../../repositories/dbStore';
+import { auditLogRepository } from '../../repositories/auditLogRepository';
 
 export async function listUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -56,14 +56,12 @@ export async function createUser(req: Request, res: Response, next: NextFunction
     });
 
     if (req.user?.id) {
-      await dbStore.syncAuditLogToDatabase({
-        id: `audit_usr_create_${Date.now()}`,
+      await auditLogRepository.create({
         userId: req.user.id,
         action: 'USER_CREATED',
         entity: 'User',
         entityId: createdUser.id,
         details: { name: createdUser.name, email: createdUser.email, role: createdUser.role },
-        createdAt: new Date().toISOString(),
       });
     }
 
@@ -104,14 +102,12 @@ export async function updateUser(req: Request, res: Response, next: NextFunction
     }
 
     if (req.user?.id) {
-      await dbStore.syncAuditLogToDatabase({
-        id: `audit_usr_update_${Date.now()}`,
+      await auditLogRepository.create({
         userId: req.user.id,
         action: 'USER_UPDATED',
         entity: 'User',
         entityId: userId,
         details: { fields: Object.keys(data) },
-        createdAt: new Date().toISOString(),
       });
     }
 
@@ -155,14 +151,12 @@ export async function toggleUserStatus(req: Request, res: Response, next: NextFu
     const updated = await userRepository.update(userId, { isActive: newStatus });
 
     if (req.user?.id) {
-      await dbStore.syncAuditLogToDatabase({
-        id: `audit_usr_toggle_${Date.now()}`,
+      await auditLogRepository.create({
         userId: req.user.id,
         action: newStatus ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
         entity: 'User',
         entityId: userId,
         details: { email: existing.email, newStatus },
-        createdAt: new Date().toISOString(),
       });
     }
 
@@ -194,14 +188,12 @@ export async function adminResetPassword(req: Request, res: Response, next: Next
     await revokeAllUserRefreshTokens(userId);
 
     if (req.user?.id) {
-      await dbStore.syncAuditLogToDatabase({
-        id: `audit_pwd_reset_${Date.now()}`,
+      await auditLogRepository.create({
         userId: req.user.id,
         action: 'ADMIN_RESET_PASSWORD',
         entity: 'User',
         entityId: userId,
         details: { targetEmail: existing.email },
-        createdAt: new Date().toISOString(),
       });
     }
 
@@ -229,14 +221,12 @@ export async function forceLogout(req: Request, res: Response, next: NextFunctio
     });
 
     if (req.user?.id) {
-      await dbStore.syncAuditLogToDatabase({
-        id: `audit_force_logout_${Date.now()}`,
+      await auditLogRepository.create({
         userId: req.user.id,
         action: 'ADMIN_FORCE_LOGOUT',
         entity: 'User',
         entityId: userId,
         details: { targetEmail: existing.email },
-        createdAt: new Date().toISOString(),
       });
     }
 

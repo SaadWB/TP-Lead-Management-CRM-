@@ -1,9 +1,115 @@
-import { Lead, PipelineStage, Priority, CallOutcome, normalizeCallOutcome } from '@crm/shared';
-import { dbStore } from './dbStore';
+import { Lead, Priority, CallOutcome } from '@crm/shared';
 import { prisma } from '../config/prisma';
-import { areUserIdsEquivalent, resolveUserAlias } from './userRepository';
+import { resolveUserAlias, areUserIdsEquivalent } from './userRepository';
+
+const leadIncludeFull = {
+  assignedTelecaller: { select: { id: true, name: true, email: true } },
+  assignedSalesman: { select: { id: true, name: true, email: true } },
+  activities: {
+    include: { user: { select: { id: true, name: true, email: true, role: true } } },
+    orderBy: { createdAt: 'desc' as const },
+  },
+  callLogs: {
+    include: { user: { select: { id: true, name: true, email: true } } },
+    orderBy: { contactDate: 'desc' as const },
+  },
+  followUpTasks: {
+    include: { assignedUser: { select: { id: true, name: true, email: true } } },
+    orderBy: { dueDate: 'asc' as const },
+  },
+  assignmentHistories: {
+    include: {
+      assignedBy: { select: { id: true, name: true, email: true } },
+      previousUser: { select: { id: true, name: true, email: true } },
+      newUser: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: { createdAt: 'desc' as const },
+  },
+};
+
+const leadIncludeList = {
+  assignedTelecaller: { select: { id: true, name: true, email: true } },
+  assignedSalesman: { select: { id: true, name: true, email: true } },
+  activities: {
+    take: 5,
+    include: { user: { select: { id: true, name: true, email: true, role: true } } },
+    orderBy: { createdAt: 'desc' as const },
+  },
+  callLogs: {
+    take: 5,
+    include: { user: { select: { id: true, name: true, email: true } } },
+    orderBy: { contactDate: 'desc' as const },
+  },
+  followUpTasks: {
+    where: { status: 'PENDING' as const },
+    include: { assignedUser: { select: { id: true, name: true, email: true } } },
+    orderBy: { dueDate: 'asc' as const },
+  },
+};
 
 function mapPrismaLeadToShared(l: any): Lead {
+  const todayMidnight = new Date().setHours(0, 0, 0, 0);
+
+  const activities = (l.activities || []).map((a: any) => ({
+    id: a.id,
+    leadId: a.leadId,
+    userId: a.userId,
+    user: a.user ? { id: a.user.id, name: a.user.name, email: a.user.email, role: a.user.role } : null,
+    type: a.type,
+    description: a.description,
+    metadata: a.metadata || null,
+    createdAt: new Date(a.createdAt).toISOString(),
+  }));
+
+  const callLogs = (l.callLogs || []).map((c: any) => ({
+    id: c.id,
+    leadId: c.leadId,
+    userId: c.userId,
+    user: c.user ? { id: c.user.id, name: c.user.name, email: c.user.email } : null,
+    outcome: c.outcome,
+    notes: c.notes,
+    contactDate: new Date(c.contactDate).toISOString(),
+    followUpNeeded: c.followUpNeeded,
+    nextFollowUpDate: c.nextFollowUpDate ? new Date(c.nextFollowUpDate).toISOString() : null,
+    nextAction: c.nextAction,
+    durationSeconds: c.durationSeconds,
+    createdAt: new Date(c.createdAt).toISOString(),
+  }));
+
+  const followUpTasks = (l.followUpTasks || []).map((t: any) => {
+    const dueDate = new Date(t.dueDate);
+    const isOverdue = t.status === 'PENDING' && dueDate.getTime() < todayMidnight;
+    return {
+      id: t.id,
+      leadId: t.leadId,
+      assignedUserId: t.assignedUserId,
+      assignedUser: t.assignedUser ? { id: t.assignedUser.id, name: t.assignedUser.name, email: t.assignedUser.email } : undefined,
+      taskType: t.taskType,
+      dueDate: dueDate.toISOString().split('T')[0],
+      dueTime: t.dueTime,
+      notes: t.notes,
+      status: t.status,
+      isOverdue,
+      completedAt: t.completedAt ? new Date(t.completedAt).toISOString() : undefined,
+      createdAt: new Date(t.createdAt).toISOString(),
+      updatedAt: new Date(t.updatedAt).toISOString(),
+    };
+  });
+
+  const assignmentHistories = (l.assignmentHistories || []).map((h: any) => ({
+    id: h.id,
+    leadId: h.leadId,
+    assignedById: h.assignedById,
+    assignedBy: h.assignedBy ? { id: h.assignedBy.id, name: h.assignedBy.name, email: h.assignedBy.email } : undefined,
+    previousUserId: h.previousUserId,
+    previousUser: h.previousUser ? { id: h.previousUser.id, name: h.previousUser.name, email: h.previousUser.email } : null,
+    newUserId: h.newUserId,
+    newUser: h.newUser ? { id: h.newUser.id, name: h.newUser.name, email: h.newUser.email } : undefined,
+    roleType: h.roleType,
+    handoverSummary: h.handoverSummary,
+    createdAt: new Date(h.createdAt).toISOString(),
+  }));
+
   return {
     id: l.id,
     companyName: l.companyName,
@@ -30,7 +136,9 @@ function mapPrismaLeadToShared(l: any): Lead {
     leadSource: l.leadSource || undefined,
     leadSourceOther: l.leadSourceOther || undefined,
     assignedTelecallerId: l.assignedTelecallerId || undefined,
+    assignedTelecaller: l.assignedTelecaller ? { id: l.assignedTelecaller.id, name: l.assignedTelecaller.name, email: l.assignedTelecaller.email } : null,
     assignedSalesmanId: l.assignedSalesmanId || undefined,
+    assignedSalesman: l.assignedSalesman ? { id: l.assignedSalesman.id, name: l.assignedSalesman.name, email: l.assignedSalesman.email } : null,
     createdById: l.createdById || undefined,
     convertedAt: l.convertedAt ? new Date(l.convertedAt).toISOString() : undefined,
     dealValue: l.dealValue || undefined,
@@ -43,6 +151,10 @@ function mapPrismaLeadToShared(l: any): Lead {
     createdAt: new Date(l.createdAt).toISOString(),
     updatedAt: new Date(l.updatedAt).toISOString(),
     lastActivityAt: l.lastActivityAt ? new Date(l.lastActivityAt).toISOString() : undefined,
+    activities,
+    callLogs,
+    followUpTasks,
+    assignmentHistories,
   };
 }
 
@@ -65,467 +177,391 @@ export interface LeadFilterOptions {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
+  isDeleted?: boolean;
 }
 
 export class LeadRepository {
-  private enrichLead(lead: Lead, store = dbStore.store, userMap?: Map<string, any>): Lead {
-    const users = userMap || new Map(store.users.map((u) => [u.id, u]));
-    const findUser = (id?: string | null) => {
-      if (!id) return null;
-      return users.get(id) || (resolveUserAlias(id) ? users.get(resolveUserAlias(id)!) : null) || null;
-    };
-    const telecaller = findUser(lead.assignedTelecallerId);
-    const salesman = findUser(lead.assignedSalesmanId);
-
-    const activities = store.activities
-      .filter((a) => a.leadId === lead.id)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .map((a) => {
-        const author = a.userId ? users.get(a.userId) : null;
-        return {
-          ...a,
-          user: author ? { id: author.id, name: author.name, email: author.email, role: author.role } : null,
-        };
-      });
-
-    const callLogs = store.callLogs
-      .filter((c) => c.leadId === lead.id)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .map((c) => {
-        const caller = c.userId ? users.get(c.userId) : null;
-        return {
-          ...c,
-          user: caller ? { id: caller.id, name: caller.name, email: caller.email } : null,
-        };
-      });
-
-    const todayMidnight = new Date().setHours(0, 0, 0, 0);
-    const followUpTasks = store.followUpTasks
-      .filter((t) => t.leadId === lead.id)
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      .map((t) => {
-        const assignee = t.assignedUserId ? users.get(t.assignedUserId) : null;
-        const isOverdue = t.status === 'PENDING' && new Date(t.dueDate).getTime() < todayMidnight;
-        return {
-          ...t,
-          assignedUser: assignee ? { id: assignee.id, name: assignee.name, email: assignee.email } : undefined,
-          isOverdue,
-        };
-      });
-
-    const assignmentHistories = store.assignmentHistories
-      .filter((h) => h.leadId === lead.id)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .map((h) => {
-        const assignedBy = h.assignedById ? users.get(h.assignedById) : null;
-        const previousUser = h.previousUserId ? users.get(h.previousUserId) : null;
-        const newUser = h.newUserId ? users.get(h.newUserId) : null;
-        return {
-          ...h,
-          assignedBy: assignedBy ? { id: assignedBy.id, name: assignedBy.name, email: assignedBy.email } : undefined,
-          previousUser: previousUser ? { id: previousUser.id, name: previousUser.name, email: previousUser.email } : null,
-          newUser: newUser ? { id: newUser.id, name: newUser.name, email: newUser.email } : undefined,
-        };
-      });
-
-    return {
-      ...lead,
-      assignedTelecaller: telecaller ? { id: telecaller.id, name: telecaller.name, email: telecaller.email } : null,
-      assignedSalesman: salesman ? { id: salesman.id, name: salesman.name, email: salesman.email } : null,
-      activities,
-      callLogs,
-      followUpTasks,
-      assignmentHistories,
-    };
-  }
-
-  private enrichLeadsBatch(leads: Lead[]): Lead[] {
-    if (leads.length === 0) return [];
-    const store = dbStore.store;
-    const userMap = new Map(store.users.map((u) => [u.id, u]));
-    const findUser = (id?: string | null) => {
-      if (!id) return null;
-      return userMap.get(id) || (resolveUserAlias(id) ? userMap.get(resolveUserAlias(id)!) : null) || null;
-    };
-
-    return leads.map((lead) => {
-      const telecaller = findUser(lead.assignedTelecallerId);
-      const salesman = findUser(lead.assignedSalesmanId);
-
-      return {
-        ...lead,
-        assignedTelecaller: telecaller ? { id: telecaller.id, name: telecaller.name, email: telecaller.email } : null,
-        assignedSalesman: salesman ? { id: salesman.id, name: salesman.name, email: salesman.email } : null,
-      };
-    });
-  }
-
   async findById(id: string): Promise<Lead | null> {
-    dbStore.processAutomaticRules();
-    let lead = dbStore.store.leads.find((l) => l.id === id);
-    if (!lead) {
-      try {
-        const dbLead = await prisma.lead.findUnique({ where: { id } });
-        if (dbLead) {
-          lead = mapPrismaLeadToShared(dbLead);
-          const idx = dbStore.store.leads.findIndex((l) => l.id === lead!.id);
-          if (idx !== -1) {
-            dbStore.store.leads[idx] = lead;
-          } else {
-            dbStore.store.leads.push(lead);
-          }
-          dbStore.persist();
-        }
-      } catch (err) {
-        console.warn('[leadRepository] findById DB query failed:', (err as Error).message);
-      }
-    }
+    const lead = await prisma.lead.findUnique({
+      where: { id },
+      include: leadIncludeFull,
+    });
     if (!lead) return null;
-    return this.enrichLead(lead);
+    return mapPrismaLeadToShared(lead);
   }
 
   async findMany(options: LeadFilterOptions = {}): Promise<{ leads: Lead[]; total: number }> {
-    await dbStore.ensureSynced();
-    dbStore.processAutomaticRules();
-    // Exclude archived/deleted leads by default
-    let filtered = dbStore.store.leads.filter((l) => !l.archivedAt && !l.isDeleted);
+    const where: any = {
+      isDeleted: options.isDeleted !== undefined ? options.isDeleted : false,
+      archivedAt: null,
+    };
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
 
     // Operational KPI Filter Mapping
     if (options.kpi) {
       const k = options.kpi.toLowerCase();
-      const todayStr = new Date().toISOString().split('T')[0];
       if (k === 'new') {
-        filtered = filtered.filter((l) => l.pipelineStage === 'New Lead' || l.pipelineStage === 'NEW');
+        where.pipelineStage = { in: ['New Lead', 'NEW'] };
       } else if (k === 'unassigned') {
-        filtered = filtered.filter((l) => !l.assignedTelecallerId && !l.assignedSalesmanId);
+        where.assignedTelecallerId = null;
+        where.assignedSalesmanId = null;
       } else if (k === 'assigned_telecaller') {
-        filtered = filtered.filter((l) => !!l.assignedTelecallerId);
+        where.assignedTelecallerId = { not: null };
       } else if (k === 'in_progress') {
-        filtered = filtered.filter((l) =>
-          ['Attempting Contact', 'Connected', 'Follow-up', 'Demo'].includes(l.pipelineStage)
-        );
+        where.pipelineStage = { in: ['Attempting Contact', 'Connected', 'Follow-up', 'Demo'] };
       } else if (k === 'interested') {
-        filtered = filtered.filter((l) =>
-          ['Connected', 'Demo'].includes(l.pipelineStage) ||
-          ['Connected – Discussed', 'Demo Interested', 'Demo Scheduled', 'Demo Completed', 'Details Requested'].includes(l.lastCallOutcome || '')
-        );
+        where.OR = [
+          { pipelineStage: { in: ['Connected', 'Demo'] } },
+          { lastCallOutcome: { in: ['Connected – Discussed', 'Demo Interested', 'Demo Scheduled', 'Demo Completed', 'Details Requested'] } },
+        ];
       } else if (k === 'assigned_salesman') {
-        filtered = filtered.filter(
-          (l) => l.pipelineStage === 'Assign to Salesman' || l.pipelineStage === 'ASSIGNED_TO_SALESMAN' || !!l.assignedSalesmanId
-        );
+        where.OR = [
+          { pipelineStage: { in: ['Assign to Salesman', 'ASSIGNED_TO_SALESMAN'] } },
+          { assignedSalesmanId: { not: null } },
+        ];
       } else if (k === 'demos_scheduled') {
-        filtered = filtered.filter(
-          (l) =>
-            l.pipelineStage === 'Demo' ||
-            l.lastCallOutcome === 'Demo Scheduled' ||
-            l.salesStage === 'DEMO_SCHEDULED'
-        );
+        where.OR = [
+          { pipelineStage: 'Demo' },
+          { lastCallOutcome: 'Demo Scheduled' },
+          { salesStage: 'DEMO_SCHEDULED' },
+        ];
       } else if (k === 'followups_today') {
-        filtered = filtered.filter((l) => {
-          const directMatch = !!(l.nextFollowUpDate && l.nextFollowUpDate.split('T')[0] === todayStr);
-          const taskMatch = dbStore.store.followUpTasks.some(
-            (t) => t.leadId === l.id && t.status === 'PENDING' && t.dueDate.split('T')[0] === todayStr
-          );
-          return directMatch || taskMatch;
-        });
+        where.nextFollowUpDate = { gte: todayStart, lte: todayEnd };
       } else if (k === 'overdue') {
-        filtered = filtered.filter((l) => {
-          const directMatch = !!(l.nextFollowUpDate && l.nextFollowUpDate.split('T')[0] < todayStr);
-          const taskMatch = dbStore.store.followUpTasks.some(
-            (t) => t.leadId === l.id && t.status === 'PENDING' && t.dueDate.split('T')[0] < todayStr
-          );
-          return directMatch || taskMatch;
-        });
+        where.nextFollowUpDate = { lt: todayStart };
       } else if (k === 'converted') {
-        filtered = filtered.filter(
-          (l) => (l.pipelineStage === 'Closed' && l.lastCallOutcome !== 'Not Interested' && l.lastCallOutcome !== 'Wrong Number') || l.salesStage === 'CONVERTED'
-        );
+        where.OR = [
+          { AND: [{ pipelineStage: 'Closed' }, { lastCallOutcome: { notIn: ['Not Interested', 'Wrong Number'] } }] },
+          { salesStage: 'CONVERTED' },
+        ];
       } else if (k === 'lost') {
-        filtered = filtered.filter(
-          (l) =>
-            (l.pipelineStage === 'Closed' && (l.lastCallOutcome === 'Not Interested' || l.lastCallOutcome === 'Wrong Number')) ||
-            l.salesStage === 'LOST' ||
-            !!l.lostReason
-        );
+        where.OR = [
+          { AND: [{ pipelineStage: 'Closed' }, { lastCallOutcome: { in: ['Not Interested', 'Wrong Number'] } }] },
+          { salesStage: 'LOST' },
+          { lostReason: { not: null } },
+        ];
       }
     }
 
     if (options.pipelineStage) {
-      const target = options.pipelineStage;
-      filtered = filtered.filter((l) => {
-        if (l.pipelineStage === target) return true;
-        const norm = normalizeCallOutcome(l.pipelineStage);
-        return norm === target;
-      });
+      where.pipelineStage = options.pipelineStage;
     }
     if (options.lastCallOutcome) {
-      filtered = filtered.filter((l) => l.lastCallOutcome === options.lastCallOutcome);
+      where.lastCallOutcome = options.lastCallOutcome;
     }
     if (options.salesStage) {
-      filtered = filtered.filter((l) => l.salesStage === options.salesStage || l.pipelineStage === options.salesStage);
+      where.OR = [
+        { salesStage: options.salesStage },
+        { pipelineStage: options.salesStage },
+      ];
     }
     if (options.priority) {
-      filtered = filtered.filter((l) => l.priority === options.priority);
+      where.priority = options.priority;
     }
-
     if (options.leadSource) {
-      const srcQuery = options.leadSource.toLowerCase();
-      filtered = filtered.filter(
-        (l) => l.leadSource && (l.leadSource.toLowerCase() === srcQuery || l.leadSource.toLowerCase().includes(srcQuery))
-      );
+      where.leadSource = { contains: options.leadSource };
     }
     if (options.assignedTelecallerId) {
-      filtered = filtered.filter((l) => areUserIdsEquivalent(l.assignedTelecallerId, options.assignedTelecallerId));
+      const effId = resolveUserAlias(options.assignedTelecallerId) || options.assignedTelecallerId;
+      where.assignedTelecallerId = effId;
     }
     if (options.assignedSalesmanId) {
-      filtered = filtered.filter((l) => areUserIdsEquivalent(l.assignedSalesmanId, options.assignedSalesmanId));
+      const effId = resolveUserAlias(options.assignedSalesmanId) || options.assignedSalesmanId;
+      where.assignedSalesmanId = effId;
     }
     if (options.isUnassigned) {
-      filtered = filtered.filter((l) => !l.assignedTelecallerId && !l.assignedSalesmanId);
+      where.assignedTelecallerId = null;
+      where.assignedSalesmanId = null;
     }
+
     if (options.search) {
-      const q = options.search.toLowerCase().trim();
-      filtered = filtered.filter(
-        (l) =>
-          l.companyName.toLowerCase().includes(q) ||
-          (l.contactPerson && l.contactPerson.toLowerCase().includes(q)) ||
-          l.phone.toLowerCase().includes(q) ||
-          (l.email && l.email.toLowerCase().includes(q)) ||
-          l.id.toLowerCase().includes(q) ||
-          (l.serviceProduct && l.serviceProduct.toLowerCase().includes(q))
-      );
+      const q = options.search.trim();
+      const searchConditions = [
+        { companyName: { contains: q } },
+        { contactPerson: { contains: q } },
+        { phone: { contains: q } },
+        { email: { contains: q } },
+        { id: { contains: q } },
+        { serviceProduct: { contains: q } },
+      ];
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: searchConditions }];
+        delete where.OR;
+      } else {
+        where.OR = searchConditions;
+      }
     }
 
     if (options.followUpStatus) {
-      const todayStr = new Date().toISOString().split('T')[0];
-      filtered = filtered.filter((l) => {
-        if (!l.nextFollowUpDate) return false;
-        const taskDate = l.nextFollowUpDate.split('T')[0];
-        if (options.followUpStatus === 'TODAY') return taskDate === todayStr;
-        if (options.followUpStatus === 'OVERDUE') return taskDate < todayStr;
-        if (options.followUpStatus === 'UPCOMING') return taskDate > todayStr;
-        return true;
-      });
+      if (options.followUpStatus === 'TODAY') {
+        where.nextFollowUpDate = { gte: todayStart, lte: todayEnd };
+      } else if (options.followUpStatus === 'OVERDUE') {
+        where.nextFollowUpDate = { lt: todayStart };
+      } else if (options.followUpStatus === 'UPCOMING') {
+        where.nextFollowUpDate = { gt: todayEnd };
+      }
     }
 
     // Date range filtering
     if (options.dateField) {
       const field = options.dateField;
-      const fromTimestamp = options.fromDate ? new Date(options.fromDate).setHours(0, 0, 0, 0) : null;
-      const toTimestamp = options.toDate ? new Date(options.toDate).setHours(23, 59, 59, 999) : null;
+      const from = options.fromDate ? new Date(options.fromDate) : null;
+      if (from) from.setHours(0, 0, 0, 0);
+      const to = options.toDate ? new Date(options.toDate) : null;
+      if (to) to.setHours(23, 59, 59, 999);
 
-      filtered = filtered.filter((l) => {
-        let val: string | null | undefined;
-        if (field === 'createdAt') val = l.createdAt;
-        else if (field === 'updatedAt') val = l.lastActivityAt || l.updatedAt;
-        else if (field === 'nextFollowUpDate') val = l.nextFollowUpDate;
-
-        if (!val) return false;
-        const leadTime = new Date(val).getTime();
-        if (isNaN(leadTime)) return false;
-
-        if (fromTimestamp !== null && leadTime < fromTimestamp) return false;
-        if (toTimestamp !== null && leadTime > toTimestamp) return false;
-        return true;
-      });
+      if (from || to) {
+        const range: any = {};
+        if (from) range.gte = from;
+        if (to) range.lte = to;
+        where[field] = range;
+      }
     }
 
-    // Sorting (custom or default most recent)
+    // Sorting
     const sortField = options.sortBy || 'updatedAt';
-    const isAsc = options.sortOrder === 'asc';
+    const sortDirection = options.sortOrder === 'asc' ? ('asc' as const) : ('desc' as const);
+    let orderBy: any = { updatedAt: sortDirection };
 
-    filtered.sort((a, b) => {
-      let valA: any;
-      let valB: any;
+    if (sortField === 'createdAt') orderBy = { createdAt: sortDirection };
+    else if (sortField === 'companyName') orderBy = { companyName: sortDirection };
+    else if (sortField === 'priority') orderBy = { priority: sortDirection };
+    else if (sortField === 'nextFollowUpDate') orderBy = { nextFollowUpDate: sortDirection };
+    else orderBy = { updatedAt: sortDirection };
 
-      if (sortField === 'createdAt') {
-        valA = new Date(a.createdAt).getTime();
-        valB = new Date(b.createdAt).getTime();
-      } else if (sortField === 'updatedAt') {
-        valA = new Date(a.lastActivityAt || a.updatedAt).getTime();
-        valB = new Date(b.lastActivityAt || b.updatedAt).getTime();
-      } else if (sortField === 'nextFollowUpDate') {
-        valA = a.nextFollowUpDate ? new Date(a.nextFollowUpDate).getTime() : 0;
-        valB = b.nextFollowUpDate ? new Date(b.nextFollowUpDate).getTime() : 0;
-      } else if (sortField === 'companyName') {
-        valA = a.companyName.toLowerCase();
-        valB = b.companyName.toLowerCase();
-        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-      } else {
-        valA = new Date(a.lastActivityAt || a.updatedAt).getTime();
-        valB = new Date(b.lastActivityAt || b.updatedAt).getTime();
-      }
-
-      return isAsc ? valA - valB : valB - valA;
-    });
-
-    const total = filtered.length;
+    const total = await prisma.lead.count({ where });
     const page = options.page || 1;
     const limit = options.limit !== undefined ? options.limit : 50;
-    const startIndex = (page - 1) * (limit > 0 ? limit : 50);
-    const paginated = limit <= 0 ? filtered : filtered.slice(startIndex, startIndex + limit);
+    const skip = limit > 0 ? (page - 1) * limit : 0;
+    const take = limit > 0 ? limit : undefined;
+
+    const leads = await prisma.lead.findMany({
+      where,
+      orderBy,
+      skip,
+      take,
+      include: leadIncludeList,
+    });
 
     return {
-      leads: this.enrichLeadsBatch(paginated),
+      leads: leads.map(mapPrismaLeadToShared),
       total,
     };
   }
 
   async findDuplicates(phone: string, email?: string | null, companyName?: string): Promise<Lead[]> {
-    const cleanPhone = (p: string) => p.replace(/\D/g, '');
-    const targetPhoneDigits = cleanPhone(phone);
-    const targetEmail = email?.trim().toLowerCase();
-    const targetCompany = companyName?.trim().toLowerCase();
+    const cleanDigits = phone.replace(/\D/g, '');
+    const conditions: any[] = [];
 
-    return dbStore.store.leads
-      .filter((l) => {
-        // Phone match (last 8 digits)
-        const leadDigits = cleanPhone(l.phone);
-        if (targetPhoneDigits && leadDigits && (leadDigits.endsWith(targetPhoneDigits) || targetPhoneDigits.endsWith(leadDigits))) {
-          return true;
-        }
-        // Email match
-        if (targetEmail && l.email && l.email.trim().toLowerCase() === targetEmail) {
-          return true;
-        }
-        // Exact company name match
-        if (targetCompany && l.companyName.trim().toLowerCase() === targetCompany) {
-          return true;
-        }
-        return false;
-      })
-      .map((l) => this.enrichLead(l));
+    if (cleanDigits.length >= 6) {
+      conditions.push({ phone: { contains: cleanDigits.slice(-8) } });
+    }
+    if (email && email.trim()) {
+      conditions.push({ email: email.trim().toLowerCase() });
+    }
+    if (companyName && companyName.trim()) {
+      conditions.push({ companyName: companyName.trim() });
+    }
+
+    if (conditions.length === 0) return [];
+
+    const leads = await prisma.lead.findMany({
+      where: {
+        isDeleted: false,
+        OR: conditions,
+      },
+      include: leadIncludeList,
+    });
+
+    return leads.map(mapPrismaLeadToShared);
   }
 
   async create(leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>): Promise<Lead> {
-    const newLead: Lead = {
-      ...leadData,
-      id: `lead_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastActivityAt: new Date().toISOString(),
-      callAttempts: leadData.callAttempts || 0,
-      isDeleted: false,
-    };
-    dbStore.store.leads.push(newLead);
-    dbStore.persist();
-    try {
-      await dbStore.syncLeadToDatabase(newLead);
-    } catch (err) {
-      console.warn('[leadRepository] create DB sync error:', (err as Error).message);
-    }
-    return this.enrichLead(newLead);
+    const assignedTelecallerId = leadData.assignedTelecallerId
+      ? (resolveUserAlias(leadData.assignedTelecallerId) || leadData.assignedTelecallerId)
+      : null;
+    const assignedSalesmanId = leadData.assignedSalesmanId
+      ? (resolveUserAlias(leadData.assignedSalesmanId) || leadData.assignedSalesmanId)
+      : null;
+    const createdById = leadData.createdById
+      ? (resolveUserAlias(leadData.createdById) || leadData.createdById)
+      : null;
+
+    const created = await prisma.lead.create({
+      data: {
+        companyName: leadData.companyName,
+        serviceProduct: leadData.serviceProduct,
+        contactPerson: leadData.contactPerson || null,
+        phone: leadData.phone,
+        email: leadData.email ? leadData.email.toLowerCase().trim() : null,
+        alternatePhone: leadData.alternatePhone || null,
+        website: leadData.website || null,
+        city: leadData.city || null,
+        state: leadData.state || null,
+        priority: (leadData.priority as any) || 'MEDIUM',
+        pipelineStage: leadData.pipelineStage || 'New Lead',
+        salesStage: leadData.salesStage || null,
+        callAttempts: leadData.callAttempts || 0,
+        isRetry: leadData.isRetry || false,
+        retryCount: leadData.retryCount || 0,
+        lastCallOutcome: leadData.lastCallOutcome || null,
+        lastContactDate: leadData.lastContactDate ? new Date(leadData.lastContactDate) : null,
+        lastStatusUpdatedAt: leadData.lastStatusUpdatedAt ? new Date(leadData.lastStatusUpdatedAt) : null,
+        nextFollowUpDate: leadData.nextFollowUpDate ? new Date(leadData.nextFollowUpDate) : null,
+        nextAction: leadData.nextAction || null,
+        notes: leadData.notes || null,
+        leadSource: leadData.leadSource || null,
+        leadSourceOther: leadData.leadSourceOther || null,
+        assignedTelecallerId,
+        assignedSalesmanId,
+        createdById,
+        isDeleted: false,
+      },
+      include: leadIncludeFull,
+    });
+
+    return mapPrismaLeadToShared(created);
   }
 
   async update(id: string, updateData: Partial<Lead>): Promise<Lead | null> {
-    let index = dbStore.store.leads.findIndex((l) => l.id === id);
-    if (index === -1) {
-      try {
-        const dbLead = await prisma.lead.findUnique({ where: { id } });
-        if (dbLead) {
-          const mapped = mapPrismaLeadToShared(dbLead);
-          dbStore.store.leads.push(mapped);
-          index = dbStore.store.leads.length - 1;
-        }
-      } catch (err) {
-        console.warn('[leadRepository] update DB lookup error:', (err as Error).message);
-      }
+    const data: any = {};
+    if (updateData.companyName !== undefined) data.companyName = updateData.companyName;
+    if (updateData.serviceProduct !== undefined) data.serviceProduct = updateData.serviceProduct;
+    if (updateData.contactPerson !== undefined) data.contactPerson = updateData.contactPerson;
+    if (updateData.phone !== undefined) data.phone = updateData.phone;
+    if (updateData.email !== undefined) data.email = updateData.email ? updateData.email.toLowerCase().trim() : null;
+    if (updateData.alternatePhone !== undefined) data.alternatePhone = updateData.alternatePhone;
+    if (updateData.website !== undefined) data.website = updateData.website;
+    if (updateData.city !== undefined) data.city = updateData.city;
+    if (updateData.state !== undefined) data.state = updateData.state;
+    if (updateData.priority !== undefined) data.priority = updateData.priority;
+    if (updateData.pipelineStage !== undefined) data.pipelineStage = updateData.pipelineStage;
+    if (updateData.salesStage !== undefined) data.salesStage = updateData.salesStage;
+    if (updateData.callAttempts !== undefined) data.callAttempts = updateData.callAttempts;
+    if (updateData.isRetry !== undefined) data.isRetry = updateData.isRetry;
+    if (updateData.retryCount !== undefined) data.retryCount = updateData.retryCount;
+    if (updateData.lastCallOutcome !== undefined) data.lastCallOutcome = updateData.lastCallOutcome;
+    if (updateData.lastContactDate !== undefined) {
+      data.lastContactDate = updateData.lastContactDate ? new Date(updateData.lastContactDate) : null;
     }
-    if (index === -1) return null;
+    if (updateData.lastStatusUpdatedAt !== undefined) {
+      data.lastStatusUpdatedAt = updateData.lastStatusUpdatedAt ? new Date(updateData.lastStatusUpdatedAt) : null;
+    }
+    if (updateData.nextFollowUpDate !== undefined) {
+      data.nextFollowUpDate = updateData.nextFollowUpDate ? new Date(updateData.nextFollowUpDate) : null;
+    }
+    if (updateData.nextAction !== undefined) data.nextAction = updateData.nextAction;
+    if (updateData.notes !== undefined) data.notes = updateData.notes;
+    if (updateData.leadSource !== undefined) data.leadSource = updateData.leadSource;
+    if (updateData.leadSourceOther !== undefined) data.leadSourceOther = updateData.leadSourceOther;
+    if (updateData.assignedTelecallerId !== undefined) {
+      data.assignedTelecallerId = updateData.assignedTelecallerId
+        ? (resolveUserAlias(updateData.assignedTelecallerId) || updateData.assignedTelecallerId)
+        : null;
+    }
+    if (updateData.assignedSalesmanId !== undefined) {
+      data.assignedSalesmanId = updateData.assignedSalesmanId
+        ? (resolveUserAlias(updateData.assignedSalesmanId) || updateData.assignedSalesmanId)
+        : null;
+    }
+    if (updateData.convertedAt !== undefined) {
+      data.convertedAt = updateData.convertedAt ? new Date(updateData.convertedAt) : null;
+    }
+    if (updateData.dealValue !== undefined) data.dealValue = updateData.dealValue;
+    if (updateData.lostReason !== undefined) data.lostReason = updateData.lostReason;
+    if (updateData.lostNotes !== undefined) data.lostNotes = updateData.lostNotes;
+    if (updateData.archivedAt !== undefined) {
+      data.archivedAt = updateData.archivedAt ? new Date(updateData.archivedAt) : null;
+    }
+    if (updateData.isDeleted !== undefined) data.isDeleted = updateData.isDeleted;
+    if (updateData.deletedAt !== undefined) {
+      data.deletedAt = updateData.deletedAt ? new Date(updateData.deletedAt) : null;
+    }
+    if (updateData.deletedById !== undefined) data.deletedById = updateData.deletedById;
+    if (updateData.lastActivityAt !== undefined) {
+      data.lastActivityAt = updateData.lastActivityAt ? new Date(updateData.lastActivityAt) : new Date();
+    }
 
-    dbStore.store.leads[index] = {
-      ...dbStore.store.leads[index],
-      ...updateData,
-      updatedAt: new Date().toISOString(),
-      lastActivityAt: updateData.lastActivityAt || new Date().toISOString(),
-    };
-    dbStore.persist();
-    dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch((err) => {
-      console.warn('[leadRepository] update DB sync error:', (err as Error).message);
-    });
-    return this.enrichLead(dbStore.store.leads[index]);
+    try {
+      const updated = await prisma.lead.update({
+        where: { id },
+        data,
+        include: leadIncludeFull,
+      });
+      return mapPrismaLeadToShared(updated);
+    } catch {
+      return null;
+    }
   }
 
   async bulkCreate(leadsData: Array<Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Lead[]> {
-    const created: Lead[] = [];
-    const now = new Date().toISOString();
-    for (const data of leadsData) {
-      const item: Lead = {
-        ...data,
-        id: `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        createdAt: now,
-        updatedAt: now,
-        lastActivityAt: now,
-        callAttempts: data.callAttempts || 0,
-        isDeleted: false,
-      };
-      dbStore.store.leads.push(item);
-      created.push(item);
-      dbStore.syncLeadToDatabase(item).catch(console.error);
+    const results: Lead[] = [];
+    for (const item of leadsData) {
+      const created = await this.create(item);
+      results.push(created);
     }
-    dbStore.persist();
-    return created.map((l) => this.enrichLead(l));
+    return results;
   }
 
-  async delete(id: string): Promise<boolean> {
-    const index = dbStore.store.leads.findIndex((l) => l.id === id);
-    if (index === -1) return false;
-    const now = new Date().toISOString();
-    dbStore.store.leads[index].archivedAt = now;
-    dbStore.store.leads[index].isDeleted = true;
-    dbStore.store.leads[index].deletedAt = now;
-    dbStore.store.leads[index].updatedAt = now;
-    dbStore.persist();
-    dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
-    return true;
+  async delete(id: string, deletedById?: string): Promise<boolean> {
+    try {
+      const now = new Date();
+      await prisma.lead.update({
+        where: { id },
+        data: {
+          isDeleted: true,
+          deletedAt: now,
+          archivedAt: now,
+          deletedById: deletedById || null,
+        },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async restore(id: string): Promise<boolean> {
-    const index = dbStore.store.leads.findIndex((l) => l.id === id);
-    if (index === -1) return false;
-    const now = new Date().toISOString();
-    dbStore.store.leads[index].archivedAt = null;
-    dbStore.store.leads[index].isDeleted = false;
-    dbStore.store.leads[index].deletedAt = null;
-    dbStore.store.leads[index].deletedById = null;
-    dbStore.store.leads[index].updatedAt = now;
-    dbStore.persist();
-    dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
-    return true;
+    try {
+      await prisma.lead.update({
+        where: { id },
+        data: {
+          isDeleted: false,
+          deletedAt: null,
+          archivedAt: null,
+          deletedById: null,
+        },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  async bulkDelete(ids: string[]): Promise<number> {
-    let count = 0;
-    const now = new Date().toISOString();
-    for (const id of ids) {
-      const index = dbStore.store.leads.findIndex((l) => l.id === id);
-      if (index !== -1 && !dbStore.store.leads[index].archivedAt) {
-        dbStore.store.leads[index].archivedAt = now;
-        dbStore.store.leads[index].isDeleted = true;
-        dbStore.store.leads[index].deletedAt = now;
-        dbStore.store.leads[index].updatedAt = now;
-        dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
-        count++;
-      }
-    }
-    if (count > 0) dbStore.persist();
-    return count;
+  async bulkDelete(ids: string[], deletedById?: string): Promise<number> {
+    const now = new Date();
+    const res = await prisma.lead.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        isDeleted: true,
+        deletedAt: now,
+        archivedAt: now,
+        deletedById: deletedById || null,
+      },
+    });
+    return res.count;
   }
 
   async bulkUpdatePriority(ids: string[], priority: Priority): Promise<number> {
-    let count = 0;
-    const now = new Date().toISOString();
-    for (const id of ids) {
-      const index = dbStore.store.leads.findIndex((l) => l.id === id);
-      if (index !== -1 && !dbStore.store.leads[index].archivedAt) {
-        dbStore.store.leads[index].priority = priority;
-        dbStore.store.leads[index].updatedAt = now;
-        dbStore.syncLeadToDatabase(dbStore.store.leads[index]).catch(console.error);
-        count++;
-      }
-    }
-    if (count > 0) dbStore.persist();
-    return count;
+    const res = await prisma.lead.updateMany({
+      where: { id: { in: ids } },
+      data: { priority: priority as any },
+    });
+    return res.count;
   }
 }
 

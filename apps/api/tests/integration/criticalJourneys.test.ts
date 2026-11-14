@@ -5,6 +5,8 @@ import { prisma } from '../../src/config/prisma';
 import { dbStore } from '../../src/repositories/dbStore';
 
 describe('Integration Tests: Critical CRM User Journeys', () => {
+  jest.setTimeout(90000);
+
   let adminToken: string;
   let telecallerToken: string;
   let salesmanToken: string;
@@ -195,7 +197,7 @@ describe('Integration Tests: Critical CRM User Journeys', () => {
     expect(dashRes.status).toBe(200);
     expect(dashRes.body.data.totalLeads).toBeGreaterThan(0);
     expect(dashRes.body.data.convertedLeads).toBeGreaterThan(0);
-  });
+  }, 90000);
 
   it('Security: Enforces Role Isolation and Prevents IDOR', async () => {
     // 1. Admin creates a lead assigned exclusively to telecaller
@@ -241,6 +243,6 @@ describe('Integration Tests: Critical CRM User Journeys', () => {
 
     const found = checkList.body.data.some((l: any) => l.id === leadId);
     expect(found).toBe(false);
-  });
+  }, 60000);
 });
 

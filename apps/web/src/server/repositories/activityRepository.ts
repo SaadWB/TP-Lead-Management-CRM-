@@ -1,54 +1,81 @@
 import { LeadActivity, ActivityType } from '@crm/shared';
-import { dbStore } from './dbStore';
+import { prisma } from '../config/prisma';
+import { resolveUserAlias } from './userRepository';
 
 export class ActivityRepository {
   async create(data: {
     leadId: string;
     userId?: string | null;
-    type: ActivityType;
+    type: ActivityType | string;
     description: string;
     metadata?: Record<string, unknown> | null;
   }): Promise<LeadActivity> {
-    const user = data.userId ? dbStore.store.users.find((u) => u.id === data.userId) : null;
-    const newActivity: LeadActivity = {
-      id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      leadId: data.leadId,
-      userId: data.userId || null,
-      user: user ? { id: user.id, name: user.name, email: user.email, role: user.role } : null,
-      type: data.type,
-      description: data.description,
-      metadata: data.metadata || null,
-      createdAt: new Date().toISOString(),
+    const effectiveUserId = data.userId ? (resolveUserAlias(data.userId) || data.userId) : null;
+    const act = await prisma.leadActivity.create({
+      data: {
+        leadId: data.leadId,
+        userId: effectiveUserId,
+        type: data.type,
+        description: data.description,
+        metadata: data.metadata ? (data.metadata as any) : undefined,
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
+
+    return {
+      id: act.id,
+      leadId: act.leadId,
+      userId: act.userId,
+      user: act.user ? { id: act.user.id, name: act.user.name, email: act.user.email, role: act.user.role as any } : null,
+      type: act.type as ActivityType,
+      description: act.description,
+      metadata: (act.metadata as Record<string, unknown>) || null,
+      createdAt: act.createdAt.toISOString(),
     };
-    dbStore.store.activities.push(newActivity);
-    dbStore.persist();
-    return newActivity;
   }
 
   async findRecent(limit = 20): Promise<LeadActivity[]> {
-    return [...dbStore.store.activities]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, limit)
-      .map((a) => {
-        const user = a.userId ? dbStore.store.users.find((u) => u.id === a.userId) : null;
-        return {
-          ...a,
-          user: user ? { id: user.id, name: user.name, email: user.email, role: user.role } : null,
-        };
-      });
+    const activities = await prisma.leadActivity.findMany({
+      take: limit,
+      include: {
+        user: { select: { id: true, name: true, email: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return activities.map((act) => ({
+      id: act.id,
+      leadId: act.leadId,
+      userId: act.userId,
+      user: act.user ? { id: act.user.id, name: act.user.name, email: act.user.email, role: act.user.role as any } : null,
+      type: act.type as ActivityType,
+      description: act.description,
+      metadata: (act.metadata as Record<string, unknown>) || null,
+      createdAt: act.createdAt.toISOString(),
+    }));
   }
 
   async findByLeadId(leadId: string): Promise<LeadActivity[]> {
-    return dbStore.store.activities
-      .filter((a) => a.leadId === leadId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .map((a) => {
-        const user = a.userId ? dbStore.store.users.find((u) => u.id === a.userId) : null;
-        return {
-          ...a,
-          user: user ? { id: user.id, name: user.name, email: user.email, role: user.role } : null,
-        };
-      });
+    const activities = await prisma.leadActivity.findMany({
+      where: { leadId },
+      include: {
+        user: { select: { id: true, name: true, email: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return activities.map((act) => ({
+      id: act.id,
+      leadId: act.leadId,
+      userId: act.userId,
+      user: act.user ? { id: act.user.id, name: act.user.name, email: act.user.email, role: act.user.role as any } : null,
+      type: act.type as ActivityType,
+      description: act.description,
+      metadata: (act.metadata as Record<string, unknown>) || null,
+      createdAt: act.createdAt.toISOString(),
+    }));
   }
 }
 

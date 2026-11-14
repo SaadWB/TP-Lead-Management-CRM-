@@ -4,9 +4,10 @@ import { leadRepository } from '../../repositories/leadRepository';
 import { callLogRepository } from '../../repositories/callLogRepository';
 import { activityRepository } from '../../repositories/activityRepository';
 import { followUpTaskRepository } from '../../repositories/followUpTaskRepository';
+import { assignmentHistoryRepository } from '../../repositories/assignmentHistoryRepository';
 import { userRepository } from '../../repositories/userRepository';
 import { notificationService } from '../../services/notificationService';
-import { dbStore } from '../../repositories/dbStore';
+import { prisma } from '../../config/prisma';
 import { NotFoundError, ForbiddenError, BadRequestError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
 
@@ -30,14 +31,19 @@ export async function logCall(req: Request, res: Response, next: NextFunction): 
     const data = logCallSchema.parse(req.body);
     const outcome = normalizeCallOutcome(data.outcome);
 
-    const matchedOutcome = dbStore.store.callOutcomeOptions?.find(
-      (o) => o.name.toLowerCase() === outcome.toLowerCase() || o.name.toLowerCase() === (data.outcome || '').toLowerCase()
-    );
+    const matchedOutcome = await prisma.callOutcomeOption.findFirst({
+      where: {
+        OR: [
+          { name: outcome },
+          { name: data.outcome || '' },
+        ],
+      },
+    });
 
     // Validate follow-up date and time
     let followUpDate: string | undefined = undefined;
     const requiresDateTime =
-      matchedOutcome?.flags?.requiresDateTime ||
+      matchedOutcome?.requiresDateTime ||
       outcome === 'Callback Requested' ||
       outcome === 'Demo Requested' ||
       outcome === 'Call Back Later' ||
@@ -64,7 +70,6 @@ export async function logCall(req: Request, res: Response, next: NextFunction): 
         followUpDate = data.nextFollowUpDate;
       }
     }
-
 
     // 1. Create CallLog entry
     const callLog = await callLogRepository.create({
@@ -110,16 +115,14 @@ export async function logCall(req: Request, res: Response, next: NextFunction): 
       updateLeadData.assignedSalesmanId = data.assignedSalesmanId;
       updateLeadData.salesStage = 'ASSIGNED';
 
-      // Record assignment history
-      dbStore.store.assignmentHistories.push({
-        id: `asg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      // Record assignment history in database
+      await assignmentHistoryRepository.create({
         leadId: lead.id,
         assignedById: req.user!.id,
         previousUserId: lead.assignedSalesmanId || lead.assignedTelecallerId,
         newUserId: data.assignedSalesmanId,
         roleType: 'SALESMAN',
         handoverSummary: data.notes || 'Handed over from call logging',
-        createdAt: new Date().toISOString(),
       });
 
       // Notify Salesman
