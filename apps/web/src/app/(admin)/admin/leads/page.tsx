@@ -1130,9 +1130,9 @@ function AdminLeadsContent() {
                           <td
                             style={{ width: 160, minWidth: 160, maxWidth: 160 }}
                             className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-slate-700 font-mono text-[11px]"
-                            title={lead.nextFollowUpDate ? `Next Follow-up: ${formatDate(lead.nextFollowUpDate)}` : 'No follow-up scheduled'}
+                            title={lead.nextFollowUpDate && formatDate(lead.nextFollowUpDate) !== '—' ? `Next Follow-up: ${formatDate(lead.nextFollowUpDate)}` : 'No follow-up scheduled'}
                           >
-                            {lead.nextFollowUpDate ? (
+                            {lead.nextFollowUpDate && formatDate(lead.nextFollowUpDate) !== '—' ? (
                               <span className="inline-block max-w-full truncate px-2 py-0.5 rounded text-[11px] font-medium bg-slate-50 border border-slate-200">
                                 {formatDate(lead.nextFollowUpDate)}
                               </span>

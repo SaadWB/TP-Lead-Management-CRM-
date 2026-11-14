@@ -90,9 +90,24 @@ export function getDefaultLeadSourceOptions(): LeadSourceOption[] {
 }
 
 
-const DATA_DIR = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME
-  ? path.join('/tmp', '.data')
-  : path.resolve(__dirname, '../../../../.data');
+function getDataDir(): string {
+  if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join('/tmp', '.data');
+  }
+  let curr = __dirname;
+  for (let i = 0; i < 6; i++) {
+    if (fs.existsSync(path.join(curr, 'package.json')) && (fs.existsSync(path.join(curr, 'prisma')) || fs.existsSync(path.join(curr, 'apps')))) {
+      return path.join(curr, '.data');
+    }
+    const parent = path.dirname(curr);
+    if (parent === curr) break;
+    curr = parent;
+  }
+  return path.resolve(process.cwd(), '.data');
+}
+
+const DATA_DIR = getDataDir();
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
 
 function generateInitialSeed(): DataStore {
@@ -213,6 +228,15 @@ class StoreManager {
               migrated = true;
             }
 
+            if (lead.nextFollowUpDate === '-' || lead.nextFollowUpDate === '—' || lead.nextFollowUpDate === 'N/A' || lead.nextFollowUpDate === 'null' || lead.nextFollowUpDate === '') {
+              lead.nextFollowUpDate = undefined;
+              migrated = true;
+            }
+            if (lead.lastContactDate === '-' || lead.lastContactDate === '—' || lead.lastContactDate === 'N/A' || lead.lastContactDate === 'null' || lead.lastContactDate === '') {
+              lead.lastContactDate = undefined;
+              migrated = true;
+            }
+
             if (lead.lastCallOutcome && lead.lastCallOutcome.toLowerCase().includes('special inquiry')) {
               lead.lastCallOutcome = 'New Lead';
               migrated = true;
@@ -327,7 +351,11 @@ class StoreManager {
         return store;
       }
     } catch (err) {
-      console.warn('[StoreManager] Could not read local file store, resetting to initial seed.');
+      console.warn('[StoreManager] Could not read local file store:', (err as Error).message);
+      // NEVER overwrite with empty seed if in-memory data already has records!
+      if (this.data && Array.isArray(this.data.leads) && this.data.leads.length > 0) {
+        return this.data;
+      }
     }
     const seed = generateInitialSeed();
     this.saveData(seed);
@@ -370,12 +398,13 @@ class StoreManager {
       }
 
       // Do not automatically reset leads that have active scheduled follow-ups or are assigned
-      if (lead.nextFollowUpDate && new Date(lead.nextFollowUpDate).getTime() >= new Date(todayStr).getTime()) {
+      if (lead.nextFollowUpDate && !isNaN(new Date(lead.nextFollowUpDate).getTime()) && new Date(lead.nextFollowUpDate).getTime() >= new Date(todayStr).getTime()) {
         continue;
       }
 
       if (returnDays !== null && lead.lastContactDate && lead.pipelineStage !== 'New Lead' && lead.pipelineStage !== 'Closed') {
         const callDate = new Date(lead.lastContactDate);
+        if (isNaN(callDate.getTime())) continue; // Guard against malformed historical dates
         const callDateStr = callDate.toISOString().split('T')[0];
         const diffMs = new Date(todayStr).getTime() - new Date(callDateStr).getTime();
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -418,7 +447,15 @@ class StoreManager {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+      const tmpFile = `${DATA_FILE}.tmp.${process.pid}.${Date.now()}`;
+      fs.writeFileSync(tmpFile, JSON.stringify(data, null, 2), 'utf-8');
+      try {
+        fs.renameSync(tmpFile, DATA_FILE);
+      } catch {
+        // Fallback for Windows if rename fails due to open handle
+        fs.copyFileSync(tmpFile, DATA_FILE);
+        try { fs.unlinkSync(tmpFile); } catch {}
+      }
       this.lastMtime = fs.statSync(DATA_FILE).mtimeMs;
       this.lastCheckTime = Date.now();
     } catch (err) {
@@ -602,6 +639,7 @@ class StoreManager {
 
   public async syncLeadToDatabase(lead: Lead): Promise<void> {
     try {
+      const isValidDate = (d?: string | null) => d && !isNaN(new Date(d).getTime());
       await prisma.lead.upsert({
         where: { id: lead.id },
         update: {
@@ -621,9 +659,9 @@ class StoreManager {
           isRetry: lead.isRetry || false,
           retryCount: lead.retryCount || 0,
           lastCallOutcome: lead.lastCallOutcome || null,
-          lastContactDate: lead.lastContactDate ? new Date(lead.lastContactDate) : null,
-          lastStatusUpdatedAt: lead.lastStatusUpdatedAt ? new Date(lead.lastStatusUpdatedAt) : null,
-          nextFollowUpDate: lead.nextFollowUpDate ? new Date(lead.nextFollowUpDate) : null,
+          lastContactDate: isValidDate(lead.lastContactDate) ? new Date(lead.lastContactDate!) : null,
+          lastStatusUpdatedAt: isValidDate(lead.lastStatusUpdatedAt) ? new Date(lead.lastStatusUpdatedAt!) : null,
+          nextFollowUpDate: isValidDate(lead.nextFollowUpDate) ? new Date(lead.nextFollowUpDate!) : null,
           nextAction: lead.nextAction || null,
           notes: lead.notes || null,
           leadSource: lead.leadSource || null,
@@ -631,13 +669,13 @@ class StoreManager {
           assignedTelecallerId: lead.assignedTelecallerId || null,
           assignedSalesmanId: lead.assignedSalesmanId || null,
           createdById: lead.createdById || null,
-          convertedAt: lead.convertedAt ? new Date(lead.convertedAt) : null,
+          convertedAt: isValidDate(lead.convertedAt) ? new Date(lead.convertedAt!) : null,
           dealValue: lead.dealValue || null,
           lostReason: lead.lostReason || null,
           lostNotes: lead.lostNotes || null,
-          archivedAt: lead.archivedAt ? new Date(lead.archivedAt) : null,
+          archivedAt: isValidDate(lead.archivedAt) ? new Date(lead.archivedAt!) : null,
           isDeleted: lead.isDeleted || false,
-          deletedAt: lead.deletedAt ? new Date(lead.deletedAt) : null,
+          deletedAt: isValidDate(lead.deletedAt) ? new Date(lead.deletedAt!) : null,
           deletedById: lead.deletedById || null,
         },
         create: {
@@ -658,9 +696,9 @@ class StoreManager {
           isRetry: lead.isRetry || false,
           retryCount: lead.retryCount || 0,
           lastCallOutcome: lead.lastCallOutcome || null,
-          lastContactDate: lead.lastContactDate ? new Date(lead.lastContactDate) : null,
-          lastStatusUpdatedAt: lead.lastStatusUpdatedAt ? new Date(lead.lastStatusUpdatedAt) : null,
-          nextFollowUpDate: lead.nextFollowUpDate ? new Date(lead.nextFollowUpDate) : null,
+          lastContactDate: isValidDate(lead.lastContactDate) ? new Date(lead.lastContactDate!) : null,
+          lastStatusUpdatedAt: isValidDate(lead.lastStatusUpdatedAt) ? new Date(lead.lastStatusUpdatedAt!) : null,
+          nextFollowUpDate: isValidDate(lead.nextFollowUpDate) ? new Date(lead.nextFollowUpDate!) : null,
           nextAction: lead.nextAction || null,
           notes: lead.notes || null,
           leadSource: lead.leadSource || null,
@@ -668,13 +706,13 @@ class StoreManager {
           assignedTelecallerId: lead.assignedTelecallerId || null,
           assignedSalesmanId: lead.assignedSalesmanId || null,
           createdById: lead.createdById || null,
-          convertedAt: lead.convertedAt ? new Date(lead.convertedAt) : null,
+          convertedAt: isValidDate(lead.convertedAt) ? new Date(lead.convertedAt!) : null,
           dealValue: lead.dealValue || null,
           lostReason: lead.lostReason || null,
           lostNotes: lead.lostNotes || null,
-          archivedAt: lead.archivedAt ? new Date(lead.archivedAt) : null,
+          archivedAt: isValidDate(lead.archivedAt) ? new Date(lead.archivedAt!) : null,
           isDeleted: lead.isDeleted || false,
-          deletedAt: lead.deletedAt ? new Date(lead.deletedAt) : null,
+          deletedAt: isValidDate(lead.deletedAt) ? new Date(lead.deletedAt!) : null,
           deletedById: lead.deletedById || null,
         },
       });

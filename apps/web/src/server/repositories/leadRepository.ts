@@ -356,7 +356,13 @@ export class LeadRepository {
         valB = new Date(b.lastActivityAt || b.updatedAt).getTime();
       }
 
-      return isAsc ? valA - valB : valB - valA;
+      if (valA !== valB) {
+        return isAsc ? valA - valB : valB - valA;
+      }
+      // Deterministic tie-breaker: Preserve exact import row sequence
+      const timeA = new Date(a.createdAt).getTime();
+      const timeB = new Date(b.createdAt).getTime();
+      return isAsc ? timeA - timeB : timeB - timeA;
     });
 
     const total = filtered.length;
