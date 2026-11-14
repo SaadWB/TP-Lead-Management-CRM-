@@ -160,14 +160,14 @@ export class UserRepository {
       if (l.assignedTelecallerId) {
         telecallerCounts.set(l.assignedTelecallerId, (telecallerCounts.get(l.assignedTelecallerId) || 0) + 1);
         // Also map to alias ID
-        const aliasId = ALIAS_MAP[l.assignedTelecallerId];
+        const aliasId = USER_ALIAS_MAP[l.assignedTelecallerId];
         if (aliasId) {
           telecallerCounts.set(aliasId, (telecallerCounts.get(aliasId) || 0) + 1);
         }
       }
       if (l.assignedSalesmanId) {
         salesmanCounts.set(l.assignedSalesmanId, (salesmanCounts.get(l.assignedSalesmanId) || 0) + 1);
-        const aliasId = ALIAS_MAP[l.assignedSalesmanId];
+        const aliasId = USER_ALIAS_MAP[l.assignedSalesmanId];
         if (aliasId) {
           salesmanCounts.set(aliasId, (salesmanCounts.get(aliasId) || 0) + 1);
         }
