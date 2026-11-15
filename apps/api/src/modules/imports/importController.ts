@@ -13,7 +13,8 @@ import { leadRepository } from '../../repositories/leadRepository';
 import { userRepository } from '../../repositories/userRepository';
 import { activityRepository } from '../../repositories/activityRepository';
 import { auditLogRepository } from '../../repositories/auditLogRepository';
-import { dbStore } from '../../repositories/dbStore';
+import { assignmentHistoryRepository } from '../../repositories/assignmentHistoryRepository';
+import { prisma } from '../../config/prisma';
 import { BadRequestError, ForbiddenError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
 import { sanitizeForFormulaInjection } from '../../utils/security';
@@ -138,9 +139,12 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
       throw new BadRequestError('Cannot validate more than 500 rows per batch.');
     }
 
-    const existingLeads = dbStore.store.leads;
+    const existingLeads = await prisma.lead.findMany({
+      where: { isDeleted: false },
+      select: { id: true, phone: true, email: true, companyName: true },
+    });
     const cleanPhone = (p: string) => (p || '').toString().replace(/\D/g, '');
-    const activeSources = (dbStore.store.leadSourceOptions || []).filter((s) => s.isActive);
+    const activeSources = await prisma.leadSourceOption.findMany({ where: { isActive: true } });
 
     const validatedRows: any[] = [];
     const duplicates: any[] = [];
@@ -370,12 +374,10 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
       const rowTimestamp = new Date(baseTimeMs - importedCount * 10).toISOString();
 
       if (record.action === 'UPDATE' && record.matchedExistingId) {
-        // Update existing lead without overwriting history
-        const existingIndex = dbStore.store.leads.findIndex((l) => l.id === record.matchedExistingId);
-        if (existingIndex !== -1) {
-          const existing = dbStore.store.leads[existingIndex];
-          dbStore.store.leads[existingIndex] = {
-            ...existing,
+        // Update existing lead directly in database
+        const existing = await leadRepository.findById(record.matchedExistingId);
+        if (existing) {
+          await leadRepository.update(existing.id, {
             serviceProduct: record.serviceProduct || existing.serviceProduct,
             contactPerson: record.contactPerson || existing.contactPerson,
             notes: record.notes ? `${existing.notes || ''}\n[Import Update]: ${record.notes}` : existing.notes,
@@ -385,17 +387,14 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
             updatedAt: rowTimestamp,
           };
 
-          dbStore.store.activities.push({
-            id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          await activityRepository.create({
             leadId: existing.id,
             userId: req.user!.id,
-            user: { id: req.user!.id, name: req.user!.name, email: req.user!.email, role: req.user!.role },
             type: 'LEAD_IMPORTED',
             description: `Lead updated from bulk import file "${fileName}" by ${req.user!.name}`,
             createdAt: rowTimestamp,
           });
 
-          dbStore.syncLeadToDatabase(dbStore.store.leads[existingIndex]).catch(() => {});
           updatedCount++;
           continue;
         }
@@ -414,9 +413,7 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         assignedId = record.assignedTelecallerId;
       }
 
-      const leadId = `lead_${Date.now()}_${Math.random().toString(36).substring(2, 6)}_${importedCount}`;
-      const newLead = {
-        id: leadId,
+      const newLead = await leadRepository.create({
         companyName: record.companyName,
         serviceProduct: record.serviceProduct || 'General Procurement',
         contactPerson: record.contactPerson || '',
@@ -450,8 +447,7 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
       newlyCreatedLeads.push(newLead);
 
       if (assignedId) {
-        dbStore.store.assignmentHistories.push({
-          id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        await assignmentHistoryRepository.create({
           leadId: newLead.id,
           assignedById: req.user!.id,
           previousUserId: null,
@@ -462,11 +458,9 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         });
       }
 
-      dbStore.store.activities.push({
-        id: `act_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      await activityRepository.create({
         leadId: newLead.id,
         userId: req.user!.id,
-        user: { id: req.user!.id, name: req.user!.name, email: req.user!.email, role: req.user!.role },
         type: 'LEAD_IMPORTED',
         description: `Lead imported from file "${fileName}" by ${req.user!.name}`,
         createdAt: rowTimestamp,

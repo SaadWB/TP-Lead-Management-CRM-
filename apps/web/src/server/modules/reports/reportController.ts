@@ -1,25 +1,38 @@
 import { Request, Response, NextFunction } from 'express';
 import {
   USER_ROLES,
-  TELECALLER_KANBAN_COLUMNS,
   DashboardMetrics,
   normalizeCallOutcome,
 } from '@crm/shared';
-import { dbStore } from '../../repositories/dbStore';
 import { activityRepository } from '../../repositories/activityRepository';
+import { auditLogRepository } from '../../repositories/auditLogRepository';
 import { sendSuccess } from '../../utils/response';
-
 import { sanitizeForFormulaInjection } from '../../utils/security';
 import { prisma } from '../../config/prisma';
 
 export async function getDashboardMetrics(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const user = req.user!;
-    // Ensure accurate active leads pool (exclude archived and soft-deleted leads)
-    const leads = dbStore.store.leads.filter((l) => !l.archivedAt && !l.isDeleted);
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [allLeads, followUpTasks, allUsers, callLogs] = await Promise.all([
+      prisma.lead.findMany({
+        where: { isDeleted: false, archivedAt: null },
+      }),
+      prisma.followUpTask.findMany({}),
+      prisma.user.findMany({}),
+      prisma.callLog.findMany({}),
+    ]);
+
+    const leads = allLeads.map((l) => ({
+      ...l,
+      nextFollowUpDate: l.nextFollowUpDate ? l.nextFollowUpDate.toISOString() : null,
+      lastActivityAt: l.lastActivityAt ? l.lastActivityAt.toISOString() : null,
+      createdAt: l.createdAt.toISOString(),
+      updatedAt: l.updatedAt.toISOString(),
+    }));
 
     // Filter leads if Telecaller or Salesman is requesting their personal dashboard
     let visibleLeads = leads;
@@ -50,23 +63,22 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
     ).length;
 
     // Follow-up calculations strictly aligned with lead rows
-    const store = dbStore.store;
     const todayTaskLeadIds = new Set(
-      store.followUpTasks
+      followUpTasks
         .filter(
           (t) =>
             t.status === 'PENDING' &&
-            t.dueDate.split('T')[0] === todayStr &&
+            new Date(t.dueDate).toISOString().split('T')[0] === todayStr &&
             (user.role === USER_ROLES.SUPER_ADMIN || t.assignedUserId === user.id)
         )
         .map((t) => t.leadId)
     );
     const overdueTaskLeadIds = new Set(
-      store.followUpTasks
+      followUpTasks
         .filter(
           (t) =>
             t.status === 'PENDING' &&
-            t.dueDate.split('T')[0] < todayStr &&
+            new Date(t.dueDate).toISOString().split('T')[0] < todayStr &&
             (user.role === USER_ROLES.SUPER_ADMIN || t.assignedUserId === user.id)
         )
         .map((t) => t.leadId)
@@ -99,11 +111,11 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
       stageCounts[l.pipelineStage] = (stageCounts[l.pipelineStage] || 0) + 1;
     });
 
-    const stageDistribution = TELECALLER_KANBAN_COLUMNS.map((col) => ({
-      stage: col.id,
-      label: col.title,
-      color: col.color,
-      count: stageCounts[col.id] || 0,
+    const stageDistribution = Object.entries(stageCounts).map(([stage, count]) => ({
+      stage,
+      count,
+      label: stage,
+      color: 'blue',
     }));
 
     // Priority distribution
@@ -111,25 +123,30 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
     visibleLeads.forEach((l) => {
       priorityCounts[l.priority] = (priorityCounts[l.priority] || 0) + 1;
     });
+
     const priorityDistribution = Object.entries(priorityCounts).map(([priority, count]) => ({
       priority,
       count,
+      percentage: totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0,
     }));
 
     // Source distribution
     const sourceCounts: Record<string, number> = {};
     visibleLeads.forEach((l) => {
-      const src = l.leadSource || 'Other';
+      const src = l.leadSource || 'Unspecified';
       sourceCounts[src] = (sourceCounts[src] || 0) + 1;
     });
+
     const sourceDistribution = Object.entries(sourceCounts).map(([source, count]) => ({
       source,
       count,
+      percentage: totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0,
     }));
 
     // Inactive leads count (>7 days without activity)
+    const sevenDaysIso = sevenDaysAgo.toISOString();
     const inactiveLeadsCount = visibleLeads.filter(
-      (l) => l.lastActivityAt && l.lastActivityAt < sevenDaysAgo && !['CONVERTED', 'LOST', 'NOT_INTERESTED'].includes(l.pipelineStage)
+      (l) => l.lastActivityAt && l.lastActivityAt < sevenDaysIso && !['CONVERTED', 'LOST', 'NOT_INTERESTED'].includes(l.pipelineStage)
     ).length;
 
     // Performance tables for Super Admin
@@ -137,10 +154,10 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
     let salesmanPerformance;
 
     if (user.role === USER_ROLES.SUPER_ADMIN) {
-      const telecallers = dbStore.store.users.filter((u) => u.role === USER_ROLES.TELECALLER);
+      const telecallers = allUsers.filter((u) => u.role === USER_ROLES.TELECALLER);
       telecallerPerformance = telecallers.map((t) => {
         const assigned = leads.filter((l) => l.assignedTelecallerId === t.id);
-        const calls = dbStore.store.callLogs.filter((c) => c.userId === t.id);
+        const calls = callLogs.filter((c) => c.userId === t.id);
         const connected = calls.filter((c) =>
           !['No Answer', 'Busy', 'Call Cut', 'Wrong Number', 'No Answer / Ringing', 'Busy / Declined', 'Invalid / Wrong Number', 'NO_ANSWER', 'BUSY', 'INVALID_NUMBER'].includes(c.outcome as string)
         ).length;
@@ -155,10 +172,10 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
         };
       });
 
-      const salesmen = dbStore.store.users.filter((u) => u.role === USER_ROLES.SALESMAN);
+      const salesmen = allUsers.filter((u) => u.role === USER_ROLES.SALESMAN);
       salesmanPerformance = salesmen.map((s) => {
         const assigned = leads.filter((l) => l.assignedSalesmanId === s.id);
-        const demos = dbStore.store.followUpTasks.filter((t) => t.assignedUserId === s.id && t.taskType === 'DEMO');
+        const demos = followUpTasks.filter((t) => t.assignedUserId === s.id && t.taskType === 'DEMO');
         const converted = assigned.filter((l) => l.salesStage === 'CONVERTED' || l.pipelineStage === 'Closed' || l.pipelineStage === 'CONVERTED');
         const lost = assigned.filter((l) => l.salesStage === 'LOST' || l.pipelineStage === 'LOST');
         const revenue = converted.reduce((sum, l) => sum + (l.dealValue || 0), 0);
@@ -209,8 +226,11 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
 
 export async function exportLeadsCsv(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const rawLeads = dbStore.store.leads.filter((l) => !l.archivedAt && !l.isDeleted);
-    const userMap = new Map(dbStore.store.users.map((u) => [u.id, u.name]));
+    const [rawLeads, users] = await Promise.all([
+      prisma.lead.findMany({ where: { isDeleted: false, archivedAt: null } }),
+      prisma.user.findMany({}),
+    ]);
+    const userMap = new Map(users.map((u) => [u.id, u.name]));
 
     const rows = rawLeads.map((l) => ({
       'Lead ID': sanitizeForFormulaInjection(l.id),
@@ -223,24 +243,21 @@ export async function exportLeadsCsv(req: Request, res: Response, next: NextFunc
       'Pipeline Stage': sanitizeForFormulaInjection(l.pipelineStage),
       'Call Attempts': l.callAttempts,
       'Last Outcome': sanitizeForFormulaInjection(l.lastCallOutcome || ''),
-      'Next Follow-Up': sanitizeForFormulaInjection(l.nextFollowUpDate || ''),
+      'Next Follow-Up': sanitizeForFormulaInjection(l.nextFollowUpDate ? l.nextFollowUpDate.toISOString() : ''),
       'Next Action': sanitizeForFormulaInjection(l.nextAction || ''),
       'Lead Source': sanitizeForFormulaInjection(l.leadSource || ''),
       'Lead Source Detail': sanitizeForFormulaInjection(l.leadSourceOther || ''),
       'Assigned Telecaller': sanitizeForFormulaInjection((l.assignedTelecallerId ? userMap.get(l.assignedTelecallerId) : null) || ''),
       'Assigned Salesman': sanitizeForFormulaInjection((l.assignedSalesmanId ? userMap.get(l.assignedSalesmanId) : null) || ''),
-      'Created Date': l.createdAt,
+      'Created Date': l.createdAt.toISOString(),
     }));
 
     if (req.user?.id) {
-      await dbStore.syncAuditLogToDatabase({
-        id: `audit_export_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      await auditLogRepository.create({
         userId: req.user.id,
         action: 'EXPORT_LEADS_CSV',
         entity: 'Lead',
-        entityId: null,
         details: { count: rows.length },
-        createdAt: new Date().toISOString(),
       });
     }
 
@@ -292,46 +309,23 @@ export async function getAuditLogs(req: Request, res: Response, next: NextFuncti
     const action = req.query.action as string | undefined;
     const entity = req.query.entity as string | undefined;
 
-    try {
-      const where: any = {};
-      if (action) where.action = action;
-      if (entity) where.entity = entity;
+    const where: any = {};
+    if (action) where.action = action;
+    if (entity) where.entity = entity;
 
-      const [total, logs] = await Promise.all([
-        prisma.auditLog.count({ where }),
-        prisma.auditLog.findMany({
-          where,
-          include: { user: { select: { id: true, name: true, email: true, role: true } } },
-          orderBy: { createdAt: 'desc' },
-          skip,
-          take: limit,
-        }),
-      ]);
-
-      if (logs.length > 0) {
-        sendSuccess(res, {
-          logs,
-          pagination: {
-            page,
-            limit,
-            total,
-            totalPages: Math.ceil(total / limit),
-          },
-        });
-        return;
-      }
-    } catch {
-      // Fallback to store
-    }
-
-    let logs = dbStore.store.auditLogs || [];
-    if (action) logs = logs.filter((l) => l.action === action);
-    if (entity) logs = logs.filter((l) => l.entity === entity);
-    const total = logs.length;
-    const paginated = logs.slice(skip, skip + limit);
+    const [total, logs] = await Promise.all([
+      prisma.auditLog.count({ where }),
+      prisma.auditLog.findMany({
+        where,
+        include: { user: { select: { id: true, name: true, email: true, role: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+    ]);
 
     sendSuccess(res, {
-      logs: paginated,
+      logs,
       pagination: {
         page,
         limit,
@@ -397,70 +391,85 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
       end.setHours(23, 59, 59, 999);
     }
 
-    const startIso = start.toISOString();
-    const endIso = end.toISOString();
-    const store = dbStore.store;
-
-    // Filter relevant callLogs
-    const callLogsInRange = store.callLogs.filter((c) => {
-      if (targetTelecallerId && c.userId !== targetTelecallerId) return false;
-      const t = c.contactDate || c.createdAt;
-      return t >= startIso && t <= endIso;
-    });
-
-    // Filter relevant activities (STAGE_CHANGED, CALL_LOGGED)
-    const activitiesInRange = store.activities.filter((a) => {
-      if (targetTelecallerId && a.userId !== targetTelecallerId) return false;
-      if (a.createdAt < startIso || a.createdAt > endIso) return false;
-      return a.type === 'STAGE_CHANGED' || a.type === 'CALL_LOGGED';
-    });
+    const [callLogsInRange, activitiesInRange, leadsUpdatedInRange, tasksInRange, leadsWithFollowUpInRange, telecallersList] =
+      await Promise.all([
+        prisma.callLog.findMany({
+          where: {
+            userId: targetTelecallerId || undefined,
+            contactDate: { gte: start, lte: end },
+          },
+        }),
+        prisma.leadActivity.findMany({
+          where: {
+            userId: targetTelecallerId || undefined,
+            createdAt: { gte: start, lte: end },
+            type: { in: ['STAGE_CHANGED', 'CALL_LOGGED'] },
+          },
+        }),
+        prisma.lead.findMany({
+          where: {
+            assignedTelecallerId: targetTelecallerId || undefined,
+            updatedAt: { gte: start, lte: end },
+            lastCallOutcome: { not: null },
+            isDeleted: false,
+          },
+        }),
+        prisma.followUpTask.findMany({
+          where: {
+            assignedUserId: targetTelecallerId || undefined,
+            dueDate: { gte: start, lte: end },
+          },
+        }),
+        prisma.lead.findMany({
+          where: {
+            assignedTelecallerId: targetTelecallerId || undefined,
+            nextFollowUpDate: { gte: start, lte: end },
+            isDeleted: false,
+          },
+        }),
+        prisma.user.findMany({
+          where: { role: 'TELECALLER' as any },
+          select: { id: true, name: true, email: true },
+        }),
+      ]);
 
     // Map touched leads and their latest outcome in range
-    // Key: leadId -> latest outcome in this range
     const leadLatestOutcomeMap = new Map<string, { outcome: string; timestamp: string }>();
 
-    // Feed call logs
     for (const log of callLogsInRange) {
       const normOutcome = normalizeCallOutcome(log.outcome);
       const prev = leadLatestOutcomeMap.get(log.leadId);
-      const logTime = log.contactDate || log.createdAt;
+      const logTime = log.contactDate.toISOString();
       if (!prev || logTime > prev.timestamp) {
         leadLatestOutcomeMap.set(log.leadId, { outcome: normOutcome, timestamp: logTime });
       }
     }
 
-    // Feed activities
     for (const act of activitiesInRange) {
       const meta = act.metadata as any;
       let outcome = meta?.newOutcome || meta?.outcome;
       if (!outcome && act.description) {
-        // Fallback parse outcome from description
         const match = act.description.match(/Outcome:\s*"([^"]+)"/i) || act.description.match(/Outcome:\s*([^,\.]+)/i);
         if (match) outcome = match[1];
       }
       if (outcome) {
         const norm = normalizeCallOutcome(outcome);
         const prev = leadLatestOutcomeMap.get(act.leadId);
-        if (!prev || act.createdAt > prev.timestamp) {
-          leadLatestOutcomeMap.set(act.leadId, { outcome: norm, timestamp: act.createdAt });
+        const actTime = act.createdAt.toISOString();
+        if (!prev || actTime > prev.timestamp) {
+          leadLatestOutcomeMap.set(act.leadId, { outcome: norm, timestamp: actTime });
         }
       }
     }
 
-    // Also include leads updated within the date range if they have an outcome
-    const leadsUpdatedInRange = store.leads.filter((l) => {
-      if (targetTelecallerId && l.assignedTelecallerId !== targetTelecallerId) return false;
-      const updateTime = l.lastStatusUpdatedAt || l.lastContactDate || l.lastActivityAt;
-      if (!updateTime) return false;
-      return updateTime >= startIso && updateTime <= endIso && !!l.lastCallOutcome;
-    });
-
     for (const lead of leadsUpdatedInRange) {
-      const norm = normalizeCallOutcome(lead.lastCallOutcome);
-      const updateTime = lead.lastStatusUpdatedAt || lead.lastContactDate || lead.lastActivityAt!;
-      const prev = leadLatestOutcomeMap.get(lead.id);
-      if (!prev || updateTime > prev.timestamp) {
-        leadLatestOutcomeMap.set(lead.id, { outcome: norm, timestamp: updateTime });
+      if (lead.lastCallOutcome) {
+        const norm = normalizeCallOutcome(lead.lastCallOutcome);
+        const updateTime = (lead.lastStatusUpdatedAt || lead.lastContactDate || lead.lastActivityAt || lead.updatedAt).toISOString();
+        const prev = leadLatestOutcomeMap.get(lead.id);
+        if (!prev || updateTime > prev.timestamp) {
+          leadLatestOutcomeMap.set(lead.id, { outcome: norm, timestamp: updateTime });
+        }
       }
     }
 
@@ -509,23 +518,6 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
       callLogsInRange.length + activitiesInRange.filter((a) => a.type === 'CALL_LOGGED').length
     );
 
-    // Follow-ups calculation
-    const startDayStr = startIso.split('T')[0];
-    const endDayStr = endIso.split('T')[0];
-
-    const tasksInRange = store.followUpTasks.filter((t) => {
-      if (targetTelecallerId && t.assignedUserId !== targetTelecallerId) return false;
-      const day = t.dueDate.split('T')[0];
-      return day >= startDayStr && day <= endDayStr;
-    });
-
-    const leadsWithFollowUpInRange = store.leads.filter((l) => {
-      if (targetTelecallerId && l.assignedTelecallerId !== targetTelecallerId) return false;
-      if (!l.nextFollowUpDate) return false;
-      const day = l.nextFollowUpDate.split('T')[0];
-      return day >= startDayStr && day <= endDayStr;
-    });
-
     const followUpLeadIdsDue = new Set([
       ...tasksInRange.map((t) => t.leadId),
       ...leadsWithFollowUpInRange.map((l) => l.id),
@@ -533,7 +525,6 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
 
     const followUpsDueCount = followUpLeadIdsDue.size;
 
-    // Follow-ups done: tasks completed or leads with follow-up due that had a call/stage update in range
     const followUpsDoneCount = Array.from(followUpLeadIdsDue).filter((leadId) => {
       const taskDone = tasksInRange.some((t) => t.leadId === leadId && t.status === 'COMPLETED');
       const touched = leadLatestOutcomeMap.has(leadId);
@@ -542,7 +533,6 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
 
     const followUpsPendingCount = Math.max(0, followUpsDueCount - followUpsDoneCount);
 
-    // Outcome Breakdown list
     const breakdownList = Object.entries(outcomeDistribution)
       .map(([outcome, count]) => ({
         outcome,
@@ -551,7 +541,6 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
       }))
       .sort((a, b) => b.count - a.count);
 
-    // Daily Trend Chart
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const isMultiDay = diffDays > 1;
@@ -564,10 +553,9 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
         const dayStr = iter.toISOString().split('T')[0];
         const dayLabel = iter.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-        const callsOnDay = callLogsInRange.filter((c) => (c.contactDate || c.createdAt).startsWith(dayStr)).length;
-        const actsOnDay = activitiesInRange.filter((a) => a.createdAt.startsWith(dayStr)).length;
+        const callsOnDay = callLogsInRange.filter((c) => (c.contactDate || c.createdAt).toISOString().startsWith(dayStr)).length;
+        const actsOnDay = activitiesInRange.filter((a) => a.createdAt.toISOString().startsWith(dayStr)).length;
 
-        // Connected on day
         let connectedOnDay = 0;
         leadLatestOutcomeMap.forEach(({ outcome, timestamp }) => {
           if (timestamp.startsWith(dayStr) && connectedOutcomes.has(outcome)) {
@@ -586,7 +574,6 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
       }
     }
 
-    // Conversion line: Calls -> Connected -> Interested -> Demo
     const totalDemos = demoScheduledCount + demoCompletedCount;
     const funnel = {
       calls: { count: totalCallsMade, rate: 100 },
@@ -604,15 +591,10 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
       },
     };
 
-    // Telecaller options list (for Admin filter)
-    const telecallersList = store.users
-      .filter((u) => u.role === USER_ROLES.TELECALLER)
-      .map((u) => ({ id: u.id, name: u.name, email: u.email }));
-
     sendSuccess(res, {
       range,
-      startDate: startIso,
-      endDate: endIso,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
       isMultiDay,
       targetTelecallerId: targetTelecallerId || 'ALL',
       cards: {
@@ -638,4 +620,3 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
     next(error);
   }
 }
-

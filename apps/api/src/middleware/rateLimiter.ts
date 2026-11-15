@@ -20,11 +20,11 @@ class InMemoryRateLimiter {
     // Periodic cleanup of stale IP records every 5 minutes
     const cleanup = setInterval(() => {
       const now = Date.now();
-      for (const [key, record] of this.hits.entries()) {
+      this.hits.forEach((record, key) => {
         if (now > record.resetTime) {
           this.hits.delete(key);
         }
-      }
+      });
     }, 5 * 60 * 1000);
     if (cleanup.unref) cleanup.unref();
   }

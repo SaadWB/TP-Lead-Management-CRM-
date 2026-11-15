@@ -38,7 +38,8 @@ describe('Integration Tests: API Endpoints & Auth Flow', () => {
     telecallerId = telecaller.id;
 
     // Ensure Test Lead exists assigned to this telecaller
-    let testLead = dbStore.store.leads.find((l) => l.assignedTelecallerId === telecallerId && !l.isDeleted);
+    const existingResult = await leadRepository.findMany({ assignedTelecallerId: telecallerId });
+    let testLead = existingResult.leads[0];
     if (!testLead) {
       testLead = await leadRepository.create({
         companyName: 'Integration Test Corp',

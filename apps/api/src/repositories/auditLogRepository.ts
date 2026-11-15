@@ -1,5 +1,6 @@
 import { AuditLogItem } from '@crm/shared';
-import { dbStore } from './dbStore';
+import { prisma } from '../config/prisma';
+import { resolveUserAlias } from './userRepository';
 
 export class AuditLogRepository {
   public async create(data: {
@@ -8,37 +9,65 @@ export class AuditLogRepository {
     entity: string;
     entityId?: string | null;
     details?: Record<string, any> | null;
+    ipAddress?: string | null;
+    userAgent?: string | null;
+    status?: string;
   }): Promise<AuditLogItem> {
-    const store = dbStore.store;
-    if (!Array.isArray(store.auditLogs)) {
-      store.auditLogs = [];
-    }
+    const effectiveUserId = data.userId ? (resolveUserAlias(data.userId) || data.userId) : null;
+    const log = await prisma.auditLog.create({
+      data: {
+        userId: effectiveUserId,
+        action: data.action,
+        entity: data.entity,
+        entityId: data.entityId || null,
+        details: data.details ? (data.details as any) : undefined,
+        ipAddress: data.ipAddress || null,
+        userAgent: data.userAgent || null,
+        status: data.status || 'SUCCESS',
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true, role: true } },
+      },
+    });
 
-    const user = data.userId ? store.users.find((u) => u.id === data.userId) : null;
-    const item: AuditLogItem = {
-      id: `audit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      userId: data.userId || null,
-      user: user ? { id: user.id, name: user.name, email: user.email, role: user.role } : null,
-      action: data.action,
-      entity: data.entity,
-      entityId: data.entityId || null,
-      details: data.details || null,
-      createdAt: new Date().toISOString(),
+    return {
+      id: log.id,
+      userId: log.userId,
+      user: log.user ? { id: log.user.id, name: log.user.name, email: log.user.email, role: log.user.role as any } : null,
+      action: log.action,
+      entity: log.entity,
+      entityId: log.entityId,
+      details: (log.details as Record<string, any>) || null,
+      createdAt: log.createdAt.toISOString(),
     };
-
-    store.auditLogs.unshift(item);
-    dbStore.persist();
-    return item;
   }
 
   public async list(options: { entity?: string; limit?: number } = {}): Promise<AuditLogItem[]> {
-    const store = dbStore.store;
-    let logs = store.auditLogs || [];
+    const where: any = {};
     if (options.entity) {
-      logs = logs.filter((l) => l.entity === options.entity);
+      where.entity = options.entity;
     }
     const limit = options.limit || 100;
-    return logs.slice(0, limit);
+
+    const logs = await prisma.auditLog.findMany({
+      where,
+      take: limit,
+      include: {
+        user: { select: { id: true, name: true, email: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return logs.map((log) => ({
+      id: log.id,
+      userId: log.userId,
+      user: log.user ? { id: log.user.id, name: log.user.name, email: log.user.email, role: log.user.role as any } : null,
+      action: log.action,
+      entity: log.entity,
+      entityId: log.entityId,
+      details: (log.details as Record<string, any>) || null,
+      createdAt: log.createdAt.toISOString(),
+    }));
   }
 }
 

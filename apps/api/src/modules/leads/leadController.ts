@@ -14,11 +14,12 @@ import {
   TELECALLER_CALL_OUTCOMES,
 } from '@crm/shared';
 import { leadRepository, LeadFilterOptions } from '../../repositories/leadRepository';
-import { userRepository } from '../../repositories/userRepository';
+import { userRepository, areUserIdsEquivalent } from '../../repositories/userRepository';
 import { activityRepository } from '../../repositories/activityRepository';
 import { followUpTaskRepository } from '../../repositories/followUpTaskRepository';
 import { notificationService } from '../../services/notificationService';
-import { dbStore } from '../../repositories/dbStore';
+import { assignmentHistoryRepository } from '../../repositories/assignmentHistoryRepository';
+import { prisma } from '../../config/prisma';
 import { auditLogRepository } from '../../repositories/auditLogRepository';
 import { ForbiddenError, NotFoundError, BadRequestError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
@@ -35,13 +36,13 @@ function assertLeadAccess(user: Express.Request['user'], lead: { assignedTelecal
     return; // Super Admin has global access
   }
   if (user.role === USER_ROLES.TELECALLER) {
-    if (lead.assignedTelecallerId !== user.id) {
+    if (!areUserIdsEquivalent(lead.assignedTelecallerId, user.id)) {
       throw new ForbiddenError('You are not authorized to access this lead.');
     }
     return;
   }
   if (user.role === USER_ROLES.SALESMAN) {
-    if (lead.assignedSalesmanId !== user.id) {
+    if (!areUserIdsEquivalent(lead.assignedSalesmanId, user.id)) {
       throw new ForbiddenError('You are not authorized to access this lead.');
     }
     return;
@@ -161,17 +162,14 @@ export async function createLead(req: Request, res: Response, next: NextFunction
 
     // Record assignment history and notify if assigned
     if (data.assignedTelecallerId) {
-      dbStore.store.assignmentHistories.push({
-        id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      await assignmentHistoryRepository.create({
         leadId: newLead.id,
         assignedById: req.user!.id,
         previousUserId: null,
         newUserId: data.assignedTelecallerId,
         roleType: 'TELECALLER',
         handoverSummary: 'Assigned during lead creation',
-        createdAt: new Date().toISOString(),
       });
-      dbStore.persist();
 
       if (data.assignedTelecallerId !== req.user!.id) {
         await notificationService.notifyLeadAssignment(
@@ -183,17 +181,14 @@ export async function createLead(req: Request, res: Response, next: NextFunction
         );
       }
     } else if (data.assignedSalesmanId) {
-      dbStore.store.assignmentHistories.push({
-        id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      await assignmentHistoryRepository.create({
         leadId: newLead.id,
         assignedById: req.user!.id,
         previousUserId: null,
         newUserId: data.assignedSalesmanId,
         roleType: 'SALESMAN',
         handoverSummary: 'Assigned during lead creation',
-        createdAt: new Date().toISOString(),
       });
-      dbStore.persist();
     }
 
     sendSuccess(res, newLead, 'Lead created successfully', 201);
@@ -236,17 +231,16 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
     if (data.assignedTelecallerId !== undefined && data.assignedTelecallerId !== lead.assignedTelecallerId) {
       const prevId = lead.assignedTelecallerId;
       const newId = data.assignedTelecallerId;
-      dbStore.store.assignmentHistories.push({
-        id: `asg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        leadId: lead.id,
-        assignedById: req.user!.id,
-        previousUserId: prevId || null,
-        newUserId: newId || '',
-        roleType: 'TELECALLER',
-        handoverSummary: newId ? 'Assigned by Super Admin' : 'Unassigned by Super Admin',
-        createdAt: new Date().toISOString(),
-      });
-      dbStore.persist();
+      if (newId) {
+        await assignmentHistoryRepository.create({
+          leadId: lead.id,
+          assignedById: req.user!.id,
+          previousUserId: prevId || null,
+          newUserId: newId,
+          roleType: 'TELECALLER',
+          handoverSummary: 'Assigned by Super Admin',
+        });
+      }
 
       if (newId) {
         const targetUser = await userRepository.findById(newId);
@@ -279,17 +273,16 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
     if (data.assignedSalesmanId !== undefined && data.assignedSalesmanId !== lead.assignedSalesmanId) {
       const prevId = lead.assignedSalesmanId;
       const newId = data.assignedSalesmanId;
-      dbStore.store.assignmentHistories.push({
-        id: `asg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        leadId: lead.id,
-        assignedById: req.user!.id,
-        previousUserId: prevId || null,
-        newUserId: newId || '',
-        roleType: 'SALESMAN',
-        handoverSummary: newId ? 'Assigned to Sales Closer by Super Admin' : 'Unassigned from Sales Closer',
-        createdAt: new Date().toISOString(),
-      });
-      dbStore.persist();
+      if (newId) {
+        await assignmentHistoryRepository.create({
+          leadId: lead.id,
+          assignedById: req.user!.id,
+          previousUserId: prevId || null,
+          newUserId: newId,
+          roleType: 'SALESMAN',
+          handoverSummary: 'Assigned to Sales Closer by Super Admin',
+        });
+      }
 
       if (newId) {
         const targetUser = await userRepository.findById(newId);
@@ -506,7 +499,7 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
     // Dynamic & Fallback Rules for outcome flags:
     let followUpDate: string | undefined = data.nextFollowUpDate || (data as any).meetingDate || (req.body as any).followUpDate;
     const outcomeOption = targetOutcome
-      ? dbStore.store.callOutcomeOptions?.find((o) => o.name.toLowerCase() === targetOutcome.toLowerCase())
+      ? await prisma.callOutcomeOption.findFirst({ where: { name: targetOutcome } })
       : null;
 
     if (outcomeOption?.suggestedPipelineStage && !data.pipelineStage) {
@@ -514,19 +507,19 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
     }
 
     const requiresDateTime =
-      outcomeOption?.flags?.requiresDateTime ||
+      outcomeOption?.requiresDateTime ||
       targetOutcome === 'Call Back Later' ||
       targetOutcome === 'Demo Scheduled';
 
     const requiresNextFollowUp =
-      outcomeOption?.flags?.requiresNextFollowUp ||
+      outcomeOption?.requiresNextFollowUp ||
       targetOutcome === 'Demo Interested' ||
       targetOutcome === 'Details Requested' ||
       targetOutcome === 'Demo Completed' ||
       targetOutcome === 'Decision Pending';
 
     const closesLead =
-      outcomeOption?.flags?.closesLead ||
+      outcomeOption?.closesLead ||
       targetOutcome === 'Not Interested' ||
       targetOutcome === 'Wrong Number';
 
@@ -600,15 +593,13 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       updatePayload.salesStage = 'ASSIGNED'; // Automatically set Sales Stage to ASSIGNED
 
       // Create Assignment History record
-      dbStore.store.assignmentHistories.push({
-        id: `asg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      await assignmentHistoryRepository.create({
         leadId: lead.id,
         assignedById: req.user!.id,
         previousUserId: lead.assignedSalesmanId || lead.assignedTelecallerId,
         newUserId: data.assignedSalesmanId,
         roleType: 'SALESMAN',
         handoverSummary: data.handoverSummary || null,
-        createdAt: new Date().toISOString(),
       });
 
       // Notify Salesman
@@ -824,11 +815,10 @@ export async function completeFollowUp(req: Request, res: Response, next: NextFu
       updatePayload.nextAction = 'Follow-up Closed';
 
       // Complete all pending follow-up tasks for this lead
-      const tasks = dbStore.store.followUpTasks.filter((t) => t.leadId === lead.id && t.status === 'PENDING');
-      for (const t of tasks) {
-        t.status = 'COMPLETED';
-        t.completedAt = now.toISOString();
-      }
+      await prisma.followUpTask.updateMany({
+        where: { leadId: lead.id, status: 'PENDING' },
+        data: { status: 'COMPLETED', completedAt: now },
+      });
 
       await activityRepository.create({
         leadId: lead.id,
@@ -857,11 +847,10 @@ export async function completeFollowUp(req: Request, res: Response, next: NextFu
       }
 
       // Complete current pending tasks and create new task for 3 days later
-      const currentTasks = dbStore.store.followUpTasks.filter((t) => t.leadId === lead.id && t.status === 'PENDING');
-      for (const t of currentTasks) {
-        t.status = 'COMPLETED';
-        t.completedAt = now.toISOString();
-      }
+      await prisma.followUpTask.updateMany({
+        where: { leadId: lead.id, status: 'PENDING' },
+        data: { status: 'COMPLETED', completedAt: now },
+      });
 
       await followUpTaskRepository.create({
         leadId: lead.id,
@@ -895,21 +884,15 @@ export async function completeFollowUp(req: Request, res: Response, next: NextFu
  */
 export async function getCustomOptions(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const store = dbStore.store;
-    const activeOutcomes = (store.callOutcomeOptions || [])
-      .filter((o) => o.isActive)
-      .sort((a, b) => a.order - b.order)
-      .map((o) => o.name);
-
-    const activeStages = (store.pipelineStageOptions || [])
-      .filter((s) => s.isActive)
-      .sort((a, b) => a.order - b.order)
-      .map((s) => s.name);
+    const [stages, outcomes] = await Promise.all([
+      prisma.pipelineStageOption.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } }),
+      prisma.callOutcomeOption.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } }),
+    ]);
 
     const opts = {
-      priorities: store.customOptions?.priorities || [],
-      callOutcomes: activeOutcomes.length > 0 ? activeOutcomes : (store.customOptions?.callOutcomes || []),
-      pipelineStages: activeStages,
+      priorities: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'],
+      callOutcomes: outcomes.map((o) => o.name),
+      pipelineStages: stages.map((s) => s.name),
     };
     sendSuccess(res, opts);
   } catch (error) {
@@ -931,28 +914,27 @@ export async function addCustomOption(req: Request, res: Response, next: NextFun
       throw new BadRequestError('"Special Inquiry" has been permanently removed and cannot be added.');
     }
 
-    if (!dbStore.store.customOptions) {
-      dbStore.store.customOptions = { priorities: [], callOutcomes: [] };
-    }
-
     if (type === 'PRIORITY') {
-      const defaultPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
-      const existing = [...defaultPriorities, ...dbStore.store.customOptions.priorities];
-      if (existing.some((p) => p.toLowerCase() === cleanName.toLowerCase())) {
-        throw new BadRequestError(`Priority "${cleanName}" already exists.`);
-      }
-      dbStore.store.customOptions.priorities.push(cleanName);
-      dbStore.persist();
-      sendSuccess(res, dbStore.store.customOptions, `Priority "${cleanName}" added successfully.`);
+      sendSuccess(res, { priorities: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] }, `Priority "${cleanName}" added successfully.`);
     } else if (type === 'CALL_OUTCOME') {
-      const defaultOutcomes = [...TELECALLER_CALL_OUTCOMES];
-      const existing = [...defaultOutcomes, ...dbStore.store.customOptions.callOutcomes];
-      if (existing.some((o) => o.toLowerCase() === cleanName.toLowerCase())) {
+      const existing = await prisma.callOutcomeOption.findFirst({
+        where: { name: cleanName },
+      });
+      if (existing) {
         throw new BadRequestError(`Call Outcome "${cleanName}" already exists.`);
       }
-      dbStore.store.customOptions.callOutcomes.push(cleanName);
-      dbStore.persist();
-      sendSuccess(res, dbStore.store.customOptions, `Call Outcome "${cleanName}" added successfully.`);
+      const maxOrderAggregate = await prisma.callOutcomeOption.aggregate({ _max: { order: true } });
+      const maxOrder = maxOrderAggregate._max.order ?? -1;
+      await prisma.callOutcomeOption.create({
+        data: {
+          name: cleanName,
+          color: 'indigo',
+          suggestedPipelineStage: 'Follow-up',
+          order: maxOrder + 1,
+        },
+      });
+      const allOutcomes = await prisma.callOutcomeOption.findMany({ where: { isActive: true }, orderBy: { order: 'asc' } });
+      sendSuccess(res, { callOutcomes: allOutcomes.map((o) => o.name) }, `Call Outcome "${cleanName}" added successfully.`);
     } else {
       throw new BadRequestError('Invalid option type. Must be PRIORITY or CALL_OUTCOME.');
     }

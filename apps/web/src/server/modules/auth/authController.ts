@@ -12,7 +12,7 @@ import {
   revokeAllUserRefreshTokens,
   revokeSingleRefreshToken,
 } from '../../utils/tokens';
-import { dbStore } from '../../repositories/dbStore';
+import { auditLogRepository } from '../../repositories/auditLogRepository';
 
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -40,14 +40,12 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       let lockoutUntil: string | null = null;
       if (attempts >= 5) {
         lockoutUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
-        await dbStore.syncAuditLogToDatabase({
-          id: `audit_lock_${Date.now()}`,
+        await auditLogRepository.create({
           userId: userWithPass.id,
           action: 'ACCOUNT_LOCKOUT',
           entity: 'User',
           entityId: userWithPass.id,
           details: { email: userWithPass.email, reason: '5 consecutive failed logins' },
-          createdAt: new Date().toISOString(),
         });
       }
 
@@ -101,14 +99,12 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    dbStore.syncAuditLogToDatabase({
-      id: `audit_login_${Date.now()}`,
+    auditLogRepository.create({
       userId: userWithPass.id,
       action: 'USER_LOGIN',
       entity: 'User',
       entityId: userWithPass.id,
       details: { email: userWithPass.email, role: userWithPass.role },
-      createdAt: nowIso,
     }).catch(console.error);
 
     sendSuccess(
@@ -249,14 +245,12 @@ export async function changePassword(req: Request, res: Response, next: NextFunc
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    await dbStore.syncAuditLogToDatabase({
-      id: `audit_pwd_${Date.now()}`,
+    await auditLogRepository.create({
       userId: req.user.id,
       action: 'PASSWORD_CHANGED',
       entity: 'User',
       entityId: req.user.id,
       details: { email: req.user.email },
-      createdAt: new Date().toISOString(),
     });
 
     const updated = await userRepository.findById(req.user.id);
@@ -299,14 +293,12 @@ export async function logout(req: Request, res: Response): Promise<void> {
   }
 
   if (req.user?.id) {
-    await dbStore.syncAuditLogToDatabase({
-      id: `audit_logout_${Date.now()}`,
+    await auditLogRepository.create({
       userId: req.user.id,
       action: 'USER_LOGOUT',
       entity: 'User',
       entityId: req.user.id,
       details: { email: req.user.email },
-      createdAt: new Date().toISOString(),
     });
   }
 

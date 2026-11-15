@@ -1,48 +1,9 @@
-import fs from 'fs';
-import path from 'path';
-import bcrypt from 'bcryptjs';
+import { prisma } from '../config/prisma';
 import {
-  User,
-  Lead,
-  LeadActivity,
-  LeadAssignmentHistory,
-  CallLog,
-  FollowUpTask,
-  NotificationItem,
-  UserRole,
-  Priority,
-  PipelineStage,
-  CallOutcome,
-  TaskType,
-  TaskStatus,
-  ActivityType,
-  normalizeCallOutcome,
   PipelineStageOption,
   CallOutcomeOption,
   LeadSourceOption,
-  AuditLogItem,
 } from '@crm/shared';
-import { prisma } from '../config/prisma';
-
-export interface CustomOptions {
-  priorities: string[];
-  callOutcomes: string[];
-}
-
-export interface DataStore {
-  users: (User & { passwordHash: string })[];
-  leads: Lead[];
-  activities: LeadActivity[];
-  assignmentHistories: LeadAssignmentHistory[];
-  callLogs: CallLog[];
-  followUpTasks: FollowUpTask[];
-  notifications: NotificationItem[];
-  customOptions: CustomOptions;
-  pipelineStageOptions: PipelineStageOption[];
-  callOutcomeOptions: CallOutcomeOption[];
-  leadSourceOptions: LeadSourceOption[];
-  auditLogs: AuditLogItem[];
-}
 
 export function getDefaultPipelineStageOptions(): PipelineStageOption[] {
   const now = new Date().toISOString();
@@ -119,13 +80,10 @@ function generateInitialSeed(): DataStore {
     callLogs: [],
     followUpTasks: [],
     notifications: [],
-    customOptions: {
-      priorities: [],
-      callOutcomes: [],
-    },
-    pipelineStageOptions: getDefaultPipelineStageOptions(),
-    callOutcomeOptions: getDefaultCallOutcomeOptions(),
-    leadSourceOptions: getDefaultLeadSourceOptions(),
+    customOptions: { priorities: [], callOutcomes: [] },
+    pipelineStageOptions: [],
+    callOutcomeOptions: [],
+    leadSourceOptions: [],
     auditLogs: [],
   };
 }
@@ -742,28 +700,13 @@ class StoreManager {
     }
   }
 
-  public async syncLeadSourceToDatabase(src: LeadSourceOption): Promise<void> {
-    try {
-      await prisma.leadSourceOption.upsert({
-        where: { name: src.name },
-        update: {
-          color: src.color || null,
-          isActive: src.isActive,
-          order: src.order,
-        },
-        create: {
-          id: src.id,
-          name: src.name,
-          color: src.color || null,
-          isDefault: src.isDefault,
-          isActive: src.isActive,
-          order: src.order,
-        },
-      });
-    } catch (err) {
-      console.error('[dbStore] Failed to sync lead source to remote MySQL:', (err as Error).message);
-    }
-  }
+  public async ensureSynced(): Promise<void> {}
+  public persist(): void {}
+  public processAutomaticRules(): boolean { return false; }
+  public async syncLeadToDatabase(): Promise<void> {}
+  public async syncUserToDatabase(): Promise<void> {}
+  public async syncAuditLogToDatabase(): Promise<void> {}
+  public async syncLeadSourceToDatabase(): Promise<void> {}
 }
 
-export const dbStore = new StoreManager();
+export const dbStore = new DirectDatabaseManager();

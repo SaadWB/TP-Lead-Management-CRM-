@@ -1,5 +1,6 @@
 import { NotificationItem } from '@crm/shared';
-import { dbStore } from './dbStore';
+import { prisma } from '../config/prisma';
+import { resolveUserAlias } from './userRepository';
 
 export class NotificationRepository {
   async create(data: {
@@ -9,45 +10,69 @@ export class NotificationRepository {
     type: string;
     link?: string | null;
   }): Promise<NotificationItem> {
-    const item: NotificationItem = {
-      id: `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      userId: data.userId,
-      title: data.title,
-      message: data.message,
-      type: data.type,
-      link: data.link || null,
-      isRead: false,
-      createdAt: new Date().toISOString(),
+    const effectiveUserId = resolveUserAlias(data.userId) || data.userId;
+    const notif = await prisma.notification.create({
+      data: {
+        userId: effectiveUserId,
+        title: data.title,
+        message: data.message,
+        type: data.type,
+        link: data.link || null,
+        isRead: false,
+      },
+    });
+
+    return {
+      id: notif.id,
+      userId: notif.userId,
+      title: notif.title,
+      message: notif.message,
+      type: notif.type,
+      link: notif.link,
+      isRead: notif.isRead,
+      createdAt: notif.createdAt.toISOString(),
     };
-    dbStore.store.notifications.push(item);
-    dbStore.persist();
-    return item;
   }
 
   async findByUserId(userId: string): Promise<NotificationItem[]> {
-    return dbStore.store.notifications
-      .filter((n) => n.userId === userId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const effectiveUserId = resolveUserAlias(userId) || userId;
+    const notifications = await prisma.notification.findMany({
+      where: { userId: effectiveUserId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return notifications.map((n) => ({
+      id: n.id,
+      userId: n.userId,
+      title: n.title,
+      message: n.message,
+      type: n.type,
+      link: n.link,
+      isRead: n.isRead,
+      createdAt: n.createdAt.toISOString(),
+    }));
   }
 
   async markAsRead(id: string, userId: string): Promise<boolean> {
-    const notif = dbStore.store.notifications.find((n) => n.id === id && n.userId === userId);
-    if (!notif) return false;
-    notif.isRead = true;
-    dbStore.persist();
-    return true;
+    const effectiveUserId = resolveUserAlias(userId) || userId;
+    try {
+      await prisma.notification.updateMany({
+        where: { id, userId: effectiveUserId },
+        data: { isRead: true },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async markAllAsRead(userId: string): Promise<number> {
-    let count = 0;
-    dbStore.store.notifications.forEach((n) => {
-      if (n.userId === userId && !n.isRead) {
-        n.isRead = true;
-        count++;
-      }
+    const effectiveUserId = resolveUserAlias(userId) || userId;
+    const res = await prisma.notification.updateMany({
+      where: { userId: effectiveUserId, isRead: false },
+      data: { isRead: true },
     });
-    if (count > 0) dbStore.persist();
-    return count;
+    return res.count;
   }
 }
 

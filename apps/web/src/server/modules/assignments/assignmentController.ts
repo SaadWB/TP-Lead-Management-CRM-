@@ -3,8 +3,9 @@ import { assignLeadSchema, bulkAssignLeadsSchema, USER_ROLES } from '@crm/shared
 import { leadRepository } from '../../repositories/leadRepository';
 import { userRepository } from '../../repositories/userRepository';
 import { activityRepository } from '../../repositories/activityRepository';
+import { followUpTaskRepository } from '../../repositories/followUpTaskRepository';
+import { assignmentHistoryRepository } from '../../repositories/assignmentHistoryRepository';
 import { notificationService } from '../../services/notificationService';
-import { dbStore } from '../../repositories/dbStore';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
 
@@ -47,19 +48,15 @@ export async function assignSingleLead(req: Request, res: Response, next: NextFu
 
     const updatedLead = await leadRepository.update(lead.id, updateData);
 
-    // Record assignment history
-    const historyItem = {
-      id: `asg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    // Record assignment history in database
+    await assignmentHistoryRepository.create({
       leadId: lead.id,
       assignedById: req.user!.id,
       previousUserId: previousUserId || null,
       newUserId: targetUser.id,
       roleType: data.roleType,
       handoverSummary: data.handoverSummary || null,
-      createdAt: new Date().toISOString(),
-    };
-    dbStore.store.assignmentHistories.push(historyItem);
-    dbStore.persist();
+    });
 
     // Activity log
     await activityRepository.create({
@@ -73,17 +70,13 @@ export async function assignSingleLead(req: Request, res: Response, next: NextFu
 
     // Schedule demo task if selected
     if (data.scheduleDemo && data.demoDate) {
-      dbStore.store.followUpTasks.push({
-        id: `task_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      await followUpTaskRepository.create({
         leadId: lead.id,
         assignedUserId: targetUser.id,
         taskType: 'DEMO',
         dueDate: data.demoDate.split('T')[0],
         dueTime: data.demoDate.includes('T') ? data.demoDate.split('T')[1].substring(0, 5) : '14:00',
         notes: `Demo scheduled during handover by ${req.user!.name}: ${data.handoverSummary || 'Initial demo'}`,
-        status: 'PENDING',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       });
     }
 
@@ -124,15 +117,13 @@ export async function bulkAssignLeads(req: Request, res: Response, next: NextFun
           : { assignedSalesmanId: targetUser.id, pipelineStage: 'Demo', salesStage: 'ASSIGNED' }),
       });
 
-      dbStore.store.assignmentHistories.push({
-        id: `asg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      await assignmentHistoryRepository.create({
         leadId: lead.id,
         assignedById: req.user!.id,
         previousUserId: previousUserId || null,
         newUserId: targetUser.id,
         roleType: data.roleType,
         handoverSummary: 'Bulk assignment by Admin',
-        createdAt: new Date().toISOString(),
       });
 
       await activityRepository.create({
@@ -145,16 +136,16 @@ export async function bulkAssignLeads(req: Request, res: Response, next: NextFun
       count++;
     }
 
-    dbStore.persist();
-
     // Send single consolidated notification for bulk assignment
-    await notificationService.notifyLeadAssignment(
-      targetUser.id,
-      data.leadIds[0],
-      `${count} Assigned Leads`,
-      'Batch Assignment',
-      req.user!.name
-    );
+    if (count > 0) {
+      await notificationService.notifyLeadAssignment(
+        targetUser.id,
+        data.leadIds[0],
+        `${count} Assigned Leads`,
+        'Batch Assignment',
+        req.user!.name
+      );
+    }
 
     sendSuccess(res, { assignedCount: count }, `Successfully assigned ${count} leads to ${targetUser.name}`);
   } catch (error) {

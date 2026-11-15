@@ -1,26 +1,12 @@
 import { app } from './app';
 import { config } from './config';
-import { dbStore } from './repositories/dbStore';
-import { runRound7Migration } from './scripts/migrateRound7';
-
-try {
-  runRound7Migration();
-} catch (err) {
-  console.error('[Server Startup] Round 7 migration error:', err);
-}
-
-// Ensure database data is synchronized to memory store at boot
-dbStore.syncFromDatabase().catch((err) => {
-  console.warn('[Server Startup] Initial database sync warning:', err.message);
-});
+import { processAutomaticRules } from './services/automationService';
 
 // Periodic runner for automatic follow-up and return-to-fresh rules (runs every 60s)
 const autoRuleInterval = setInterval(() => {
-  try {
-    dbStore.processAutomaticRules();
-  } catch (err) {
+  processAutomaticRules().catch((err) => {
     console.error('Error running automatic rules:', err);
-  }
+  });
 }, 60000);
 if (autoRuleInterval.unref) {
   autoRuleInterval.unref();
