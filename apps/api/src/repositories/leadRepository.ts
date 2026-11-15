@@ -327,14 +327,11 @@ export class LeadRepository {
     const sortDirection = options.sortOrder === 'asc' ? ('asc' as const) : ('desc' as const);
     let orderBy: any = { updatedAt: sortDirection };
 
-      if (valA !== valB) {
-        return isAsc ? valA - valB : valB - valA;
-      }
-      // Deterministic tie-breaker: Preserve exact import row sequence
-      const timeA = new Date(a.createdAt).getTime();
-      const timeB = new Date(b.createdAt).getTime();
-      return isAsc ? timeA - timeB : timeB - timeA;
-    });
+    if (sortField === 'createdAt') orderBy = { createdAt: sortDirection };
+    else if (sortField === 'companyName') orderBy = { companyName: sortDirection };
+    else if (sortField === 'priority') orderBy = { priority: sortDirection };
+    else if (sortField === 'nextFollowUpDate') orderBy = { nextFollowUpDate: sortDirection };
+    else orderBy = { updatedAt: sortDirection };
 
     const total = await prisma.lead.count({ where });
     const page = options.page || 1;

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { api } from '@/lib/apiClient';
 import { invalidateCache } from '@/lib/apiCache';
-import { formatDate } from '@/lib/utils';
 import { User, IMPORT_TEMPLATE_COLUMNS } from '@crm/shared';
 import { Button } from '../ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
@@ -83,7 +82,7 @@ export function ImportWizard() {
         'Pipeline Stage': 'NEW',
         'Call Attempts': 0,
         'Last Call Outcome': '',
-        'Last Contact Date': '2026-10-15',
+        'Last Contact Date': '',
         'Next Follow-Up Date': '2026-10-20',
         'Next Action': 'Initial discovery call',
         'Notes/Objection': 'Interested in tender auto-tracking',
@@ -99,7 +98,7 @@ export function ImportWizard() {
         'Pipeline Stage': 'NEW',
         'Call Attempts': 0,
         'Last Call Outcome': '',
-        'Last Contact Date': '2026-10-18',
+        'Last Contact Date': '',
         'Next Follow-Up Date': '2026-10-22',
         'Next Action': 'Schedule tender presentation',
         'Notes/Objection': 'Needs multi-user team hierarchy',
@@ -136,9 +135,9 @@ export function ImportWizard() {
         const reader = new FileReader();
         reader.onload = (event) => {
           const buffer = event.target?.result;
-          const wb = XLSX.read(buffer, { type: 'binary', cellDates: true, dateNF: 'yyyy-mm-dd' });
+          const wb = XLSX.read(buffer, { type: 'binary' });
           const sheet = wb.Sheets[res.data.selectedSheet || wb.SheetNames[0]];
-          const allData = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false, dateNF: 'yyyy-mm-dd' });
+          const allData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
           setRawRows(allData);
         };
         reader.readAsBinaryString(selectedFile);
@@ -367,15 +366,9 @@ export function ImportWizard() {
 
             {/* Column Mapping Grid */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                  Map Fields (CRM Standard Target &larr; Uploaded File Column)
-                </h4>
-                <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                  Date Auto-Detection Active
-                </span>
-              </div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                Map Fields (CRM Standard Target &larr; Uploaded File Column)
+              </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {[
                   { key: 'companyName', label: 'Company Name', required: true },
@@ -388,16 +381,13 @@ export function ImportWizard() {
                   { key: 'pipelineStage', label: 'Pipeline Stage' },
                   { key: 'notes', label: 'Notes / Objections' },
                   { key: 'nextAction', label: 'Next Action' },
-                  { key: 'nextFollowUpDate', label: 'Next Follow-Up Date / Lead Date', isDate: true },
-                  { key: 'lastContactDate', label: 'Last Contact Date / Call Date', isDate: true },
+                  { key: 'nextFollowUpDate', label: 'Next Follow-Up Date' },
                   { key: 'callAttempts', label: 'Previous Call Attempts' },
                   { key: 'lastCallOutcome', label: 'Last Call Outcome' },
                 ].map((field) => (
                   <div
                     key={field.key}
-                    className={`flex items-center justify-between p-2.5 rounded-lg border ${
-                      (field as any).isDate ? 'bg-sky-50/40 border-sky-200' : 'bg-slate-50 border-slate-200'
-                    }`}
+                    className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-200"
                   >
                     <div className="min-w-0 pr-2">
                       <span className="text-xs font-bold text-slate-800 block truncate">
@@ -421,9 +411,6 @@ export function ImportWizard() {
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-slate-500 italic">
-                * Date recognition supports DD/MM/YYYY, YYYY-MM-DD, Excel date serials, and textual dates. Hyphens (&quot;-&quot;) and blank cells are safely handled without data loss.
-              </p>
             </div>
 
             {/* Preview First 5 Rows */}
@@ -568,11 +555,6 @@ export function ImportWizard() {
                             <p className="text-slate-600">Contact: {dup.uploadedRecord.contactPerson}</p>
                             <p className="text-slate-600">Phone: {dup.uploadedRecord.phone}</p>
                             <p className="text-slate-600">Email: {dup.uploadedRecord.email || '—'}</p>
-                            {dup.uploadedRecord.nextFollowUpDate && (
-                              <p className="text-slate-600 font-mono text-[11px]">
-                                Date: {formatDate(dup.uploadedRecord.nextFollowUpDate)}
-                              </p>
-                            )}
                           </div>
 
                           {/* Existing DB Record */}
@@ -586,11 +568,6 @@ export function ImportWizard() {
                                 <p className="text-slate-600">Contact: {dup.existingRecord.contactPerson}</p>
                                 <p className="text-slate-600">Phone: {dup.existingRecord.phone}</p>
                                 <p className="text-slate-600">Stage: {dup.existingRecord.pipelineStage}</p>
-                                {dup.existingRecord.nextFollowUpDate && (
-                                  <p className="text-slate-600 font-mono text-[11px]">
-                                    Follow-up: {formatDate(dup.existingRecord.nextFollowUpDate)}
-                                  </p>
-                                )}
                               </>
                             ) : (
                               <p className="text-slate-500 italic">Duplicate within uploaded batch file</p>

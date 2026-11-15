@@ -18,8 +18,6 @@ import { prisma } from '../../config/prisma';
 import { BadRequestError, ForbiddenError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
 import { sanitizeForFormulaInjection } from '../../utils/security';
-import { parseFlexibleDate } from '../../utils/dateUtils';
-import { prisma } from '../../config/prisma';
 
 // Configure Multer for in-memory processing
 export const upload = multer({
@@ -47,7 +45,7 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       throw new BadRequestError('Please provide a spreadsheet or CSV file');
     }
 
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true, dateNF: 'yyyy-mm-dd' });
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
     const sheetNames = workbook.SheetNames;
     if (sheetNames.length === 0) {
       throw new BadRequestError('The uploaded file does not contain any readable sheets');
@@ -59,7 +57,7 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       throw new BadRequestError(`Sheet "${selectedSheet}" not found in workbook`);
     }
 
-    const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '', raw: false, dateNF: 'yyyy-mm-dd' });
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
     if (rawRows.length === 0) {
       throw new BadRequestError('The uploaded sheet contains no data rows');
     }
@@ -77,7 +75,7 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       const clean = h.toLowerCase().replace(/[^a-z0-9]/g, '');
       if (clean.includes('company')) normalizedHeaders['companyName'] = h;
       else if (clean.includes('service') || clean.includes('product')) normalizedHeaders['serviceProduct'] = h;
-      else if ((clean.includes('contact') && !clean.includes('date')) || clean.includes('person') || clean.includes('name')) normalizedHeaders['contactPerson'] = h;
+      else if (clean.includes('contact') || clean.includes('person') || clean.includes('name')) normalizedHeaders['contactPerson'] = h;
       else if (clean.includes('phone') && !clean.includes('alt')) normalizedHeaders['phone'] = h;
       else if (clean.includes('altphone')) normalizedHeaders['alternatePhone'] = h;
       else if (clean.includes('email') || clean.includes('mail')) normalizedHeaders['email'] = h;
@@ -86,29 +84,9 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       else if (clean.includes('stage') || clean.includes('pipeline')) normalizedHeaders['pipelineStage'] = h;
       else if (clean.includes('callattempt') || clean.includes('attempts')) normalizedHeaders['callAttempts'] = h;
       else if (clean.includes('outcome')) normalizedHeaders['lastCallOutcome'] = h;
-      else if (
-        clean.includes('lastcontact') ||
-        clean.includes('contactdate') ||
-        clean.includes('calldate') ||
-        clean.includes('callingdate') ||
-        clean.includes('lastcall')
-      ) {
-        normalizedHeaders['lastContactDate'] = h;
-      } else if (
-        clean.includes('nextfollow') ||
-        clean.includes('followup') ||
-        clean.includes('followupdate') ||
-        clean.includes('nextactiondate') ||
-        clean.includes('duedate') ||
-        clean.includes('scheduledate') ||
-        clean.includes('callback') ||
-        clean === 'date' ||
-        clean === 'leaddate'
-      ) {
-        normalizedHeaders['nextFollowUpDate'] = h;
-      } else if (clean.includes('date') && !normalizedHeaders['nextFollowUpDate']) {
-        normalizedHeaders['nextFollowUpDate'] = h;
-      } else if (clean.includes('nextaction') || clean.includes('action')) normalizedHeaders['nextAction'] = h;
+      else if (clean.includes('lastcontact')) normalizedHeaders['lastContactDate'] = h;
+      else if (clean.includes('nextfollow') || clean.includes('followup')) normalizedHeaders['nextFollowUpDate'] = h;
+      else if (clean.includes('nextaction') || clean.includes('action')) normalizedHeaders['nextAction'] = h;
       else if (clean.includes('note') || clean.includes('objection')) normalizedHeaders['notes'] = h;
       else if (clean.includes('website') || clean.includes('web')) normalizedHeaders['website'] = h;
       // Note: city and state from old templates are ignored silently
@@ -170,8 +148,7 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
       const pipelineStage = (getField('pipelineStage').toUpperCase() || 'NEW') as PipelineStage;
       const notes = getField('notes');
       const nextAction = getField('nextAction');
-      const nextFollowUpDate = parseFlexibleDate(getField('nextFollowUpDate'));
-      const lastContactDate = parseFlexibleDate(getField('lastContactDate'));
+      const nextFollowUpDate = getField('nextFollowUpDate');
       const callAttempts = parseInt(getField('callAttempts') || '0', 10) || 0;
       const lastCallOutcome = getField('lastCallOutcome') || null;
       const website = getField('website') || null;
@@ -260,7 +237,6 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
           pipelineStage: normalizeCallOutcome(pipelineStage) || 'New Lead',
           callAttempts,
           lastCallOutcome,
-          lastContactDate: lastContactDate || null,
           nextFollowUpDate: nextFollowUpDate || null,
           nextAction: nextAction || null,
           notes: notes || null,
@@ -297,8 +273,6 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
             phone,
             email,
             serviceProduct,
-            nextFollowUpDate,
-            lastContactDate,
           },
           existingRecord: duplicateMatch
             ? {
@@ -308,7 +282,6 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
                 phone: duplicateMatch.phone,
                 email: duplicateMatch.email,
                 pipelineStage: duplicateMatch.pipelineStage,
-                nextFollowUpDate: duplicateMatch.nextFollowUpDate,
               }
             : null,
           matchingReason,
@@ -356,22 +329,14 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
     telecallerPool.forEach((id) => (telecallerCounts[id] = 0));
 
     let roundRobinIdx = 0;
-    const baseTimeMs = Date.now();
+    const nowIso = new Date().toISOString();
     const newlyCreatedLeads: any[] = [];
 
-    for (let idx = 0; idx < records.length; idx++) {
-      const record = records[idx];
+    for (const record of records) {
       if (record.action === 'SKIP') {
         skippedCount++;
         continue;
       }
-
-      // Preserve exact uploaded Excel sheet order:
-      // Row 1 (importedCount 0) gets baseTimeMs
-      // Row 2 gets baseTimeMs - 10ms
-      // Row 3 gets baseTimeMs - 20ms
-      // With default descending sort (createdAt/updatedAt DESC), Row 1 appears first, Row 2 second, etc.
-      const rowTimestamp = new Date(baseTimeMs - importedCount * 10).toISOString();
 
       if (record.action === 'UPDATE' && record.matchedExistingId) {
         // Update existing lead directly in database
@@ -383,16 +348,14 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
             notes: record.notes ? `${existing.notes || ''}\n[Import Update]: ${record.notes}` : existing.notes,
             leadSource: record.leadSource || existing.leadSource,
             leadSourceOther: record.leadSourceOther || existing.leadSourceOther,
-            lastActivityAt: rowTimestamp,
-            updatedAt: rowTimestamp,
-          };
+            lastActivityAt: nowIso,
+          });
 
           await activityRepository.create({
             leadId: existing.id,
             userId: req.user!.id,
             type: 'LEAD_IMPORTED',
             description: `Lead updated from bulk import file "${fileName}" by ${req.user!.name}`,
-            createdAt: rowTimestamp,
           });
 
           updatedCount++;
@@ -429,8 +392,8 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         isRetry: false,
         retryCount: 0,
         lastCallOutcome: record.lastCallOutcome || null,
-        lastContactDate: parseFlexibleDate(record.lastContactDate),
-        nextFollowUpDate: parseFlexibleDate(record.nextFollowUpDate),
+        lastContactDate: record.lastContactDate || null,
+        nextFollowUpDate: record.nextFollowUpDate || null,
         nextAction: record.nextAction || null,
         notes: record.notes || null,
         leadSource: record.leadSource || null,
@@ -438,13 +401,7 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         assignedTelecallerId: assignedId,
         createdById: req.user!.id,
         isDeleted: false,
-        createdAt: rowTimestamp,
-        updatedAt: rowTimestamp,
-        lastActivityAt: rowTimestamp,
-      };
-
-      dbStore.store.leads.push(newLead);
-      newlyCreatedLeads.push(newLead);
+      });
 
       if (assignedId) {
         await assignmentHistoryRepository.create({
@@ -454,7 +411,6 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
           newUserId: assignedId,
           roleType: 'TELECALLER',
           handoverSummary: 'Bulk file import allocation',
-          createdAt: rowTimestamp,
         });
       }
 
@@ -463,56 +419,9 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         userId: req.user!.id,
         type: 'LEAD_IMPORTED',
         description: `Lead imported from file "${fileName}" by ${req.user!.name}`,
-        createdAt: rowTimestamp,
       });
 
       importedCount++;
-    }
-
-    // Single atomic persist to local JSON store
-    dbStore.persist();
-
-    // Direct fast bulk persistence to remote MySQL database
-    try {
-      if (newlyCreatedLeads.length > 0) {
-        const prismaBatch = newlyCreatedLeads.map((l) => ({
-          id: l.id,
-          companyName: l.companyName,
-          serviceProduct: l.serviceProduct,
-          contactPerson: l.contactPerson || null,
-          phone: l.phone,
-          email: l.email || null,
-          alternatePhone: l.alternatePhone || null,
-          website: l.website || null,
-          city: l.city || null,
-          state: l.state || null,
-          priority: l.priority as any,
-          pipelineStage: l.pipelineStage,
-          callAttempts: l.callAttempts || 0,
-          isRetry: l.isRetry || false,
-          retryCount: l.retryCount || 0,
-          lastCallOutcome: l.lastCallOutcome || null,
-          lastContactDate: l.lastContactDate ? new Date(l.lastContactDate) : null,
-          nextFollowUpDate: l.nextFollowUpDate ? new Date(l.nextFollowUpDate) : null,
-          nextAction: l.nextAction || null,
-          notes: l.notes || null,
-          leadSource: l.leadSource || null,
-          leadSourceOther: l.leadSourceOther || null,
-          assignedTelecallerId: l.assignedTelecallerId || null,
-          createdById: l.createdById || null,
-          createdAt: new Date(l.createdAt),
-          updatedAt: new Date(l.updatedAt),
-          lastActivityAt: new Date(l.lastActivityAt),
-          isDeleted: false,
-        }));
-
-        await prisma.lead.createMany({
-          data: prismaBatch,
-          skipDuplicates: true,
-        });
-      }
-    } catch (err: any) {
-      console.warn('[commitImport] Remote database bulk sync warning:', err.message);
     }
 
     await auditLogRepository.create({
