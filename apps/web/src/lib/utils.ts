@@ -1,5 +1,8 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { parseFlexibleDate, formatForDatetimeLocal } from './dateUtils';
+
+export { parseFlexibleDate, formatForDatetimeLocal };
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -7,31 +10,38 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatDate(dateString?: string | null): string {
   if (!dateString) return '—';
+  const clean = parseFlexibleDate(dateString);
+  if (!clean) return '—';
   try {
-    const d = new Date(dateString);
+    const d = new Date(clean.length === 10 ? `${clean}T00:00:00` : clean);
+    if (isNaN(d.getTime())) return '—';
     return d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
     });
   } catch {
-    return String(dateString);
+    return '—';
   }
 }
 
 export function formatDateTime(dateString?: string | null): string {
   if (!dateString) return '—';
+  const clean = parseFlexibleDate(dateString);
+  if (!clean) return '—';
   try {
-    const d = new Date(dateString);
+    const isIsoTime = typeof dateString === 'string' && (dateString.includes('T') || dateString.includes(':'));
+    const d = new Date(isIsoTime ? dateString : (clean.length === 10 ? `${clean}T00:00:00` : clean));
+    if (isNaN(d.getTime())) return '—';
     return d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      hour: isIsoTime ? '2-digit' : undefined,
+      minute: isIsoTime ? '2-digit' : undefined,
     });
   } catch {
-    return String(dateString);
+    return '—';
   }
 }
 

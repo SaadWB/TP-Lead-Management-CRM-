@@ -36,7 +36,7 @@ import {
   Search,
   MessageSquare,
 } from 'lucide-react';
-import { formatDate, formatDateTime, getPriorityColor, getOutcomeColor, getStageColor } from '@/lib/utils';
+import { formatDate, formatDateTime, formatForDatetimeLocal, getPriorityColor, getOutcomeColor, getStageColor } from '@/lib/utils';
 import { WhatsAppButton, WhatsAppIcon } from '@/components/leads/WhatsAppButton';
 import { openWhatsAppChat } from '@/lib/whatsapp';
 import { Modal } from '@/components/ui/Modal';
@@ -394,7 +394,12 @@ export default function TelecallerMyLeadsPage() {
         valB = new Date(b.lastActivityAt || b.updatedAt).getTime();
       }
 
-      return sortOrder === 'asc' ? valA - valB : valB - valA;
+      if (valA !== valB) {
+        return sortOrder === 'asc' ? valA - valB : valB - valA;
+      }
+      const timeA = new Date(a.createdAt).getTime();
+      const timeB = new Date(b.createdAt).getTime();
+      return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
     });
     return list;
   }, [filteredLeads, sortBy, sortOrder]);
@@ -1241,7 +1246,7 @@ export default function TelecallerMyLeadsPage() {
                         </label>
                         <input
                           type="datetime-local"
-                          defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
+                          defaultValue={formatForDatetimeLocal(lead.nextFollowUpDate)}
                           onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
                           className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 font-medium"
                         />
@@ -1569,9 +1574,9 @@ export default function TelecallerMyLeadsPage() {
                         <td className="p-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex flex-col gap-1">
                             <input
-                              key={`followup_${lead.id}_${lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}`}
+                              key={`followup_${lead.id}_${formatForDatetimeLocal(lead.nextFollowUpDate)}`}
                               type="datetime-local"
-                              defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
+                              defaultValue={formatForDatetimeLocal(lead.nextFollowUpDate)}
                               onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
                               className="w-full text-xs bg-slate-50/80 hover:bg-white focus:bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-sky-500"
                             />
@@ -1580,7 +1585,7 @@ export default function TelecallerMyLeadsPage() {
                                 <Clock className="h-3 w-3" /> Missing Follow-up
                               </span>
                             ) : (
-                              lead.nextFollowUpDate && (
+                              lead.nextFollowUpDate && formatDate(lead.nextFollowUpDate) !== '—' && (
                                 <span className="text-[10px] text-slate-400">
                                   Due: {formatDate(lead.nextFollowUpDate)}
                                 </span>

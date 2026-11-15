@@ -31,7 +31,7 @@ import {
   Sparkles,
   Search,
 } from 'lucide-react';
-import { formatDate, formatDateTime, getPriorityColor } from '@/lib/utils';
+import { formatDate, formatDateTime, formatForDatetimeLocal, getPriorityColor } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { WhatsAppButton, WhatsAppIcon } from '@/components/leads/WhatsAppButton';
 import { openWhatsAppChat } from '@/lib/whatsapp';
@@ -339,7 +339,7 @@ export default function TelecallerTodayPage() {
         suggestedPipeline,
         type: 'DATE_TIME',
       });
-      setPromptInputDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
+      setPromptInputDate(formatForDatetimeLocal(lead.nextFollowUpDate));
       setPromptInputNextAction(lead.nextAction || (newOutcome === 'Demo Scheduled' ? 'Conduct software demo' : 'Call back prospect'));
       return;
     }
@@ -889,7 +889,7 @@ export default function TelecallerTodayPage() {
                       </label>
                       <input
                         type="datetime-local"
-                        defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
+                        defaultValue={formatForDatetimeLocal(lead.nextFollowUpDate)}
                         onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
                         className={`w-full text-xs border rounded-lg px-2.5 py-2 font-semibold ${
                           isOverdue ? 'border-rose-300 bg-rose-50 text-rose-800 font-bold' : 'border-slate-200 bg-slate-50'
@@ -1128,7 +1128,7 @@ export default function TelecallerTodayPage() {
                           <div className="flex flex-col gap-1">
                             <input
                               type="datetime-local"
-                              defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
+                              defaultValue={formatForDatetimeLocal(lead.nextFollowUpDate)}
                               onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
                               className={`w-full text-xs border rounded-lg px-2 py-1 font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500 ${
                                 isOverdue
