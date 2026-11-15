@@ -18,6 +18,7 @@ import { prisma } from '../../config/prisma';
 import { BadRequestError, ForbiddenError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
 import { sanitizeForFormulaInjection } from '../../utils/security';
+import { parseFlexibleDate } from '../../utils/dateUtils';
 
 // Configure Multer for in-memory processing
 export const upload = multer({
@@ -45,7 +46,7 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       throw new BadRequestError('Please provide a spreadsheet or CSV file');
     }
 
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true, dateNF: 'yyyy-mm-dd' });
     const sheetNames = workbook.SheetNames;
     if (sheetNames.length === 0) {
       throw new BadRequestError('The uploaded file does not contain any readable sheets');
@@ -57,7 +58,7 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       throw new BadRequestError(`Sheet "${selectedSheet}" not found in workbook`);
     }
 
-    const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '' });
+    const rawRows = XLSX.utils.sheet_to_json<Record<string, any>>(worksheet, { defval: '', raw: false, dateNF: 'yyyy-mm-dd' });
     if (rawRows.length === 0) {
       throw new BadRequestError('The uploaded sheet contains no data rows');
     }
@@ -75,7 +76,7 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       const clean = h.toLowerCase().replace(/[^a-z0-9]/g, '');
       if (clean.includes('company')) normalizedHeaders['companyName'] = h;
       else if (clean.includes('service') || clean.includes('product')) normalizedHeaders['serviceProduct'] = h;
-      else if (clean.includes('contact') || clean.includes('person') || clean.includes('name')) normalizedHeaders['contactPerson'] = h;
+      else if ((clean.includes('contact') && !clean.includes('date')) || clean.includes('person') || clean.includes('name')) normalizedHeaders['contactPerson'] = h;
       else if (clean.includes('phone') && !clean.includes('alt')) normalizedHeaders['phone'] = h;
       else if (clean.includes('altphone')) normalizedHeaders['alternatePhone'] = h;
       else if (clean.includes('email') || clean.includes('mail')) normalizedHeaders['email'] = h;
@@ -84,9 +85,29 @@ export async function parseUploadedFile(req: Request, res: Response, next: NextF
       else if (clean.includes('stage') || clean.includes('pipeline')) normalizedHeaders['pipelineStage'] = h;
       else if (clean.includes('callattempt') || clean.includes('attempts')) normalizedHeaders['callAttempts'] = h;
       else if (clean.includes('outcome')) normalizedHeaders['lastCallOutcome'] = h;
-      else if (clean.includes('lastcontact')) normalizedHeaders['lastContactDate'] = h;
-      else if (clean.includes('nextfollow') || clean.includes('followup')) normalizedHeaders['nextFollowUpDate'] = h;
-      else if (clean.includes('nextaction') || clean.includes('action')) normalizedHeaders['nextAction'] = h;
+      else if (
+        clean.includes('lastcontact') ||
+        clean.includes('contactdate') ||
+        clean.includes('calldate') ||
+        clean.includes('callingdate') ||
+        clean.includes('lastcall')
+      ) {
+        normalizedHeaders['lastContactDate'] = h;
+      } else if (
+        clean.includes('nextfollow') ||
+        clean.includes('followup') ||
+        clean.includes('followupdate') ||
+        clean.includes('nextactiondate') ||
+        clean.includes('duedate') ||
+        clean.includes('scheduledate') ||
+        clean.includes('callback') ||
+        clean === 'date' ||
+        clean === 'leaddate'
+      ) {
+        normalizedHeaders['nextFollowUpDate'] = h;
+      } else if (clean.includes('date') && !normalizedHeaders['nextFollowUpDate']) {
+        normalizedHeaders['nextFollowUpDate'] = h;
+      } else if (clean.includes('nextaction') || clean.includes('action')) normalizedHeaders['nextAction'] = h;
       else if (clean.includes('note') || clean.includes('objection')) normalizedHeaders['notes'] = h;
       else if (clean.includes('website') || clean.includes('web')) normalizedHeaders['website'] = h;
       // Note: city and state from old templates are ignored silently
@@ -148,7 +169,8 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
       const pipelineStage = (getField('pipelineStage').toUpperCase() || 'NEW') as PipelineStage;
       const notes = getField('notes');
       const nextAction = getField('nextAction');
-      const nextFollowUpDate = getField('nextFollowUpDate');
+      const nextFollowUpDate = parseFlexibleDate(getField('nextFollowUpDate'));
+      const lastContactDate = parseFlexibleDate(getField('lastContactDate'));
       const callAttempts = parseInt(getField('callAttempts') || '0', 10) || 0;
       const lastCallOutcome = getField('lastCallOutcome') || null;
       const website = getField('website') || null;
@@ -237,6 +259,7 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
           pipelineStage: normalizeCallOutcome(pipelineStage) || 'New Lead',
           callAttempts,
           lastCallOutcome,
+          lastContactDate: lastContactDate || null,
           nextFollowUpDate: nextFollowUpDate || null,
           nextAction: nextAction || null,
           notes: notes || null,
@@ -376,6 +399,13 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         assignedId = record.assignedTelecallerId;
       }
 
+      const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+      const rawPriority = String(record.priority || '').toUpperCase().trim();
+      const priority = validPriorities.includes(rawPriority) ? (rawPriority as any) : 'MEDIUM';
+
+      const lastContactDate = parseFlexibleDate(record.lastContactDate);
+      const nextFollowUpDate = parseFlexibleDate(record.nextFollowUpDate);
+
       const newLead = await leadRepository.create({
         companyName: record.companyName,
         serviceProduct: record.serviceProduct || 'General Procurement',
@@ -386,14 +416,14 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
         website: record.website || null,
         city: null,
         state: null,
-        priority: (record.priority as Priority) || 'MEDIUM',
+        priority,
         pipelineStage: (normalizeCallOutcome(record.pipelineStage) as PipelineStage) || 'New Lead',
         callAttempts: record.callAttempts || 0,
         isRetry: false,
         retryCount: 0,
         lastCallOutcome: record.lastCallOutcome || null,
-        lastContactDate: record.lastContactDate || null,
-        nextFollowUpDate: record.nextFollowUpDate || null,
+        lastContactDate,
+        nextFollowUpDate,
         nextAction: record.nextAction || null,
         notes: record.notes || null,
         leadSource: record.leadSource || null,
@@ -404,38 +434,50 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
       });
 
       if (assignedId) {
-        await assignmentHistoryRepository.create({
-          leadId: newLead.id,
-          assignedById: req.user!.id,
-          previousUserId: null,
-          newUserId: assignedId,
-          roleType: 'TELECALLER',
-          handoverSummary: 'Bulk file import allocation',
-        });
+        try {
+          await assignmentHistoryRepository.create({
+            leadId: newLead.id,
+            assignedById: req.user!.id,
+            previousUserId: null,
+            newUserId: assignedId,
+            roleType: 'TELECALLER',
+            handoverSummary: 'Bulk file import allocation',
+          });
+        } catch (err: any) {
+          console.warn('[commitImport] Assignment history record warning:', err.message);
+        }
       }
 
-      await activityRepository.create({
-        leadId: newLead.id,
-        userId: req.user!.id,
-        type: 'LEAD_IMPORTED',
-        description: `Lead imported from file "${fileName}" by ${req.user!.name}`,
-      });
+      try {
+        await activityRepository.create({
+          leadId: newLead.id,
+          userId: req.user!.id,
+          type: 'LEAD_IMPORTED',
+          description: `Lead imported from file "${fileName}" by ${req.user!.name}`,
+        });
+      } catch (err: any) {
+        console.warn('[commitImport] Activity log warning:', err.message);
+      }
 
       importedCount++;
     }
 
-    await auditLogRepository.create({
-      userId: req.user!.id,
-      action: 'BULK_IMPORT',
-      entity: 'IMPORT_JOB',
-      details: {
-        fileName,
-        importedCount,
-        updatedCount,
-        skippedCount,
-        distributionMethod,
-      },
-    });
+    try {
+      await auditLogRepository.create({
+        userId: req.user!.id,
+        action: 'BULK_IMPORT',
+        entity: 'IMPORT_JOB',
+        details: {
+          fileName,
+          importedCount,
+          updatedCount,
+          skippedCount,
+          distributionMethod,
+        },
+      });
+    } catch (err: any) {
+      console.warn('[commitImport] Audit log warning:', err.message);
+    }
 
     const allUsers = await userRepository.findAll();
     const userMap = new Map(allUsers.map((u) => [u.id, u.name]));

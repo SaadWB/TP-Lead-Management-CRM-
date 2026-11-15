@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { api } from '@/lib/apiClient';
 import { invalidateCache } from '@/lib/apiCache';
+import { parseFlexibleDate } from '@/lib/dateUtils';
 import { User, IMPORT_TEMPLATE_COLUMNS } from '@crm/shared';
 import { Button } from '../ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
@@ -135,9 +136,9 @@ export function ImportWizard() {
         const reader = new FileReader();
         reader.onload = (event) => {
           const buffer = event.target?.result;
-          const wb = XLSX.read(buffer, { type: 'binary' });
+          const wb = XLSX.read(buffer, { type: 'binary', cellDates: true, dateNF: 'yyyy-mm-dd' });
           const sheet = wb.Sheets[res.data.selectedSheet || wb.SheetNames[0]];
-          const allData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+          const allData = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false, dateNF: 'yyyy-mm-dd' });
           setRawRows(allData);
         };
         reader.readAsBinaryString(selectedFile);
@@ -199,6 +200,8 @@ export function ImportWizard() {
 
         return {
           ...row.mapped,
+          lastContactDate: parseFlexibleDate(row.mapped?.lastContactDate),
+          nextFollowUpDate: parseFlexibleDate(row.mapped?.nextFollowUpDate),
           action,
           matchedExistingId: row.duplicateMatch?.id,
         };
@@ -604,41 +607,71 @@ export function ImportWizard() {
             <div>
               <CardTitle>Step 4: Distribute Leads to Telecallers</CardTitle>
               <p className="text-xs text-slate-500 mt-1">
-                Select active telecallers to distribute valid import records into their queues.
+                Select active telecallers to distribute valid import records into their operational queues.
               </p>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Allocation Stats Header */}
+            {validationResult && (
+              <div className="bg-sky-50/60 border border-sky-200/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-sky-600" />
+                  <span className="text-slate-700">
+                    Total Records to Process:{' '}
+                    <strong className="text-slate-900 font-bold">{validationResult.validRows || validationResult.totalRows} leads</strong>
+                  </span>
+                </div>
+                {selectedTelecallerIds.length > 0 && (
+                  <Badge variant="blue" size="sm">
+                    {distributionMethod === 'EVEN'
+                      ? `~${Math.ceil((validationResult.validRows || validationResult.totalRows) / selectedTelecallerIds.length)} leads / telecaller`
+                      : 'All leads to primary selected queue'}
+                  </Badge>
+                )}
+              </div>
+            )}
+
             <div className="space-y-3">
               <span className="text-xs font-bold text-slate-700 block">Distribution Methodology:</span>
-              <div className="grid grid-cols-2 gap-3 max-w-md">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
                 <button
                   type="button"
                   onClick={() => setDistributionMethod('EVEN')}
-                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                  className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
                     distributionMethod === 'EVEN'
-                      ? 'border-sky-600 bg-sky-50/50 ring-2 ring-sky-500/20'
+                      ? 'border-sky-600 bg-sky-50/70 ring-2 ring-sky-500/20 shadow-sm'
                       : 'border-slate-200 bg-white hover:bg-slate-50'
                   }`}
                 >
-                  <span className="text-xs font-bold text-slate-900 block">Balanced Round-Robin</span>
-                  <span className="text-[11px] text-slate-500 block mt-0.5">
-                    Equally distribute leads across all selected telecallers.
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${distributionMethod === 'EVEN' ? 'border-sky-600' : 'border-slate-300'}`}>
+                      {distributionMethod === 'EVEN' && <span className="w-1.5 h-1.5 rounded-full bg-sky-600" />}
+                    </span>
+                    <span className="text-xs font-bold text-slate-900">Balanced Round-Robin</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 block mt-1 pl-5.5">
+                    Equally distribute incoming leads across all selected telecallers in sequential turn.
                   </span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setDistributionMethod('MANUAL')}
-                  className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                  className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all ${
                     distributionMethod === 'MANUAL'
-                      ? 'border-sky-600 bg-sky-50/50 ring-2 ring-sky-500/20'
+                      ? 'border-sky-600 bg-sky-50/70 ring-2 ring-sky-500/20 shadow-sm'
                       : 'border-slate-200 bg-white hover:bg-slate-50'
                   }`}
                 >
-                  <span className="text-xs font-bold text-slate-900 block">Single Queue / Manual</span>
-                  <span className="text-[11px] text-slate-500 block mt-0.5">
-                    Assign all records to primary designated queue.
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${distributionMethod === 'MANUAL' ? 'border-sky-600' : 'border-slate-300'}`}>
+                      {distributionMethod === 'MANUAL' && <span className="w-1.5 h-1.5 rounded-full bg-sky-600" />}
+                    </span>
+                    <span className="text-xs font-bold text-slate-900">Single Primary Queue</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 block mt-1 pl-5.5">
+                    Assign all records to the first selected telecaller queue for centralized allocation.
                   </span>
                 </button>
               </div>
@@ -648,57 +681,73 @@ export function ImportWizard() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Select Active Telecallers ({selectedTelecallerIds.length} selected)
+                  Select Active Telecallers ({selectedTelecallerIds.length} of {telecallers.length} selected)
                 </span>
-                <button
-                  onClick={() =>
-                    setSelectedTelecallerIds(
-                      selectedTelecallerIds.length === telecallers.length ? [] : telecallers.map((t: User) => t.id)
-                    )
-                  }
-                  className="text-xs text-sky-600 font-semibold hover:underline cursor-pointer"
-                >
-                  {selectedTelecallerIds.length === telecallers.length ? 'Deselect All' : 'Select All'}
-                </button>
+                {telecallers.length > 0 && (
+                  <button
+                    onClick={() =>
+                      setSelectedTelecallerIds(
+                        selectedTelecallerIds.length === telecallers.length ? [] : telecallers.map((t: User) => t.id)
+                      )
+                    }
+                    className="text-xs text-sky-600 font-semibold hover:underline cursor-pointer"
+                  >
+                    {selectedTelecallerIds.length === telecallers.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {telecallers.map((t: User) => {
-                  const isChecked = selectedTelecallerIds.includes(t.id);
-                  return (
-                    <label
-                      key={t.id}
-                      className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-colors ${
-                        isChecked
-                          ? 'border-sky-500 bg-sky-50/30'
-                          : 'border-slate-200 bg-white hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedTelecallerIds([...selectedTelecallerIds, t.id]);
-                            } else {
-                              setSelectedTelecallerIds(selectedTelecallerIds.filter((id) => id !== t.id));
-                            }
-                          }}
-                          className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-4 w-4"
-                        />
-                        <div>
-                          <p className="text-xs font-bold text-slate-900">{t.name}</p>
-                          <p className="text-[11px] text-slate-500">{t.email}</p>
+              {telecallers.length === 0 ? (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs">
+                  <p className="font-semibold">No active telecaller accounts detected.</p>
+                  <p className="mt-1 text-amber-700">Please create or activate telecaller accounts under Team Management to allocate leads.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {telecallers.map((t: User) => {
+                    const isChecked = selectedTelecallerIds.includes(t.id);
+                    const initials = t.name
+                      ? t.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+                      : 'TC';
+
+                    return (
+                      <label
+                        key={t.id}
+                        className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                          isChecked
+                            ? 'border-sky-500 bg-sky-50/40 ring-1 ring-sky-500/20 shadow-soft-sm'
+                            : 'border-slate-200 bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTelecallerIds([...selectedTelecallerIds, t.id]);
+                              } else {
+                                setSelectedTelecallerIds(selectedTelecallerIds.filter((id) => id !== t.id));
+                              }
+                            }}
+                            className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-4 w-4"
+                          />
+                          <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-700 font-bold text-xs flex items-center justify-center shrink-0">
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-slate-900 truncate">{t.name}</p>
+                            <p className="text-[11px] text-slate-500 truncate">{t.email}</p>
+                          </div>
                         </div>
-                      </div>
-                      <Badge variant="blue" size="sm">
-                        {t._count?.assignedTelecallerLeads || 0} active
-                      </Badge>
-                    </label>
-                  );
-                })}
-              </div>
+                        <Badge variant="blue" size="sm">
+                          {t._count?.assignedTelecallerLeads || 0} leads
+                        </Badge>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-between pt-2">
@@ -712,7 +761,7 @@ export function ImportWizard() {
                 disabled={selectedTelecallerIds.length === 0}
                 icon={<FileCheck className="h-4 w-4" />}
               >
-                Execute Bulk Import & Assignment
+                {importing ? 'Importing Leads...' : 'Execute Bulk Import & Assignment'}
               </Button>
             </div>
           </CardContent>

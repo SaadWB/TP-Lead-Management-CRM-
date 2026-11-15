@@ -1,6 +1,7 @@
 import { Lead, Priority, CallOutcome } from '@crm/shared';
 import { prisma } from '../config/prisma';
 import { resolveUserAlias, areUserIdsEquivalent } from './userRepository';
+import { parseSafeDateObject } from '../utils/dateUtils';
 
 const leadIncludeFull = {
   assignedTelecaller: { select: { id: true, name: true, email: true } },
@@ -391,31 +392,35 @@ export class LeadRepository {
       ? (resolveUserAlias(leadData.createdById) || leadData.createdById)
       : null;
 
+    const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+    const rawPriority = String(leadData.priority || '').toUpperCase().trim();
+    const priority = validPriorities.includes(rawPriority) ? (rawPriority as any) : 'MEDIUM';
+
     const created = await prisma.lead.create({
       data: {
-        companyName: leadData.companyName,
-        serviceProduct: leadData.serviceProduct,
-        contactPerson: leadData.contactPerson || null,
-        phone: leadData.phone,
-        email: leadData.email ? leadData.email.toLowerCase().trim() : null,
-        alternatePhone: leadData.alternatePhone || null,
-        website: leadData.website || null,
-        city: leadData.city || null,
-        state: leadData.state || null,
-        priority: (leadData.priority as any) || 'MEDIUM',
-        pipelineStage: leadData.pipelineStage || 'New Lead',
-        salesStage: leadData.salesStage || null,
-        callAttempts: leadData.callAttempts || 0,
+        companyName: String(leadData.companyName || '').slice(0, 150),
+        serviceProduct: String(leadData.serviceProduct || 'General Procurement').slice(0, 150),
+        contactPerson: leadData.contactPerson ? String(leadData.contactPerson).slice(0, 100) : null,
+        phone: String(leadData.phone || '').slice(0, 30),
+        email: leadData.email ? String(leadData.email).toLowerCase().trim().slice(0, 100) : null,
+        alternatePhone: leadData.alternatePhone ? String(leadData.alternatePhone).slice(0, 30) : null,
+        website: leadData.website ? String(leadData.website).slice(0, 255) : null,
+        city: leadData.city ? String(leadData.city).slice(0, 100) : null,
+        state: leadData.state ? String(leadData.state).slice(0, 100) : null,
+        priority,
+        pipelineStage: String(leadData.pipelineStage || 'New Lead').slice(0, 50),
+        salesStage: leadData.salesStage ? String(leadData.salesStage).slice(0, 50) : null,
+        callAttempts: Number.isFinite(leadData.callAttempts) ? Number(leadData.callAttempts) : 0,
         isRetry: leadData.isRetry || false,
-        retryCount: leadData.retryCount || 0,
-        lastCallOutcome: leadData.lastCallOutcome || null,
-        lastContactDate: leadData.lastContactDate ? new Date(leadData.lastContactDate) : null,
-        lastStatusUpdatedAt: leadData.lastStatusUpdatedAt ? new Date(leadData.lastStatusUpdatedAt) : null,
-        nextFollowUpDate: leadData.nextFollowUpDate ? new Date(leadData.nextFollowUpDate) : null,
+        retryCount: Number.isFinite(leadData.retryCount) ? Number(leadData.retryCount) : 0,
+        lastCallOutcome: leadData.lastCallOutcome ? String(leadData.lastCallOutcome).slice(0, 50) : null,
+        lastContactDate: parseSafeDateObject(leadData.lastContactDate),
+        lastStatusUpdatedAt: parseSafeDateObject(leadData.lastStatusUpdatedAt),
+        nextFollowUpDate: parseSafeDateObject(leadData.nextFollowUpDate),
         nextAction: leadData.nextAction || null,
         notes: leadData.notes || null,
-        leadSource: leadData.leadSource || null,
-        leadSourceOther: leadData.leadSourceOther || null,
+        leadSource: leadData.leadSource ? String(leadData.leadSource).slice(0, 100) : null,
+        leadSourceOther: leadData.leadSourceOther ? String(leadData.leadSourceOther).slice(0, 100) : null,
         assignedTelecallerId,
         assignedSalesmanId,
         createdById,
@@ -429,35 +434,39 @@ export class LeadRepository {
 
   async update(id: string, updateData: Partial<Lead>): Promise<Lead | null> {
     const data: any = {};
-    if (updateData.companyName !== undefined) data.companyName = updateData.companyName;
-    if (updateData.serviceProduct !== undefined) data.serviceProduct = updateData.serviceProduct;
-    if (updateData.contactPerson !== undefined) data.contactPerson = updateData.contactPerson;
-    if (updateData.phone !== undefined) data.phone = updateData.phone;
-    if (updateData.email !== undefined) data.email = updateData.email ? updateData.email.toLowerCase().trim() : null;
-    if (updateData.alternatePhone !== undefined) data.alternatePhone = updateData.alternatePhone;
-    if (updateData.website !== undefined) data.website = updateData.website;
-    if (updateData.city !== undefined) data.city = updateData.city;
-    if (updateData.state !== undefined) data.state = updateData.state;
-    if (updateData.priority !== undefined) data.priority = updateData.priority;
-    if (updateData.pipelineStage !== undefined) data.pipelineStage = updateData.pipelineStage;
-    if (updateData.salesStage !== undefined) data.salesStage = updateData.salesStage;
-    if (updateData.callAttempts !== undefined) data.callAttempts = updateData.callAttempts;
+    if (updateData.companyName !== undefined) data.companyName = String(updateData.companyName || '').slice(0, 150);
+    if (updateData.serviceProduct !== undefined) data.serviceProduct = String(updateData.serviceProduct || '').slice(0, 150);
+    if (updateData.contactPerson !== undefined) data.contactPerson = updateData.contactPerson ? String(updateData.contactPerson).slice(0, 100) : null;
+    if (updateData.phone !== undefined) data.phone = String(updateData.phone || '').slice(0, 30);
+    if (updateData.email !== undefined) data.email = updateData.email ? String(updateData.email).toLowerCase().trim().slice(0, 100) : null;
+    if (updateData.alternatePhone !== undefined) data.alternatePhone = updateData.alternatePhone ? String(updateData.alternatePhone).slice(0, 30) : null;
+    if (updateData.website !== undefined) data.website = updateData.website ? String(updateData.website).slice(0, 255) : null;
+    if (updateData.city !== undefined) data.city = updateData.city ? String(updateData.city).slice(0, 100) : null;
+    if (updateData.state !== undefined) data.state = updateData.state ? String(updateData.state).slice(0, 100) : null;
+    if (updateData.priority !== undefined) {
+      const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+      const raw = String(updateData.priority || '').toUpperCase().trim();
+      data.priority = validPriorities.includes(raw) ? raw : 'MEDIUM';
+    }
+    if (updateData.pipelineStage !== undefined) data.pipelineStage = String(updateData.pipelineStage || 'New Lead').slice(0, 50);
+    if (updateData.salesStage !== undefined) data.salesStage = updateData.salesStage ? String(updateData.salesStage).slice(0, 50) : null;
+    if (updateData.callAttempts !== undefined) data.callAttempts = Number.isFinite(updateData.callAttempts) ? Number(updateData.callAttempts) : 0;
     if (updateData.isRetry !== undefined) data.isRetry = updateData.isRetry;
-    if (updateData.retryCount !== undefined) data.retryCount = updateData.retryCount;
-    if (updateData.lastCallOutcome !== undefined) data.lastCallOutcome = updateData.lastCallOutcome;
+    if (updateData.retryCount !== undefined) data.retryCount = Number.isFinite(updateData.retryCount) ? Number(updateData.retryCount) : 0;
+    if (updateData.lastCallOutcome !== undefined) data.lastCallOutcome = updateData.lastCallOutcome ? String(updateData.lastCallOutcome).slice(0, 50) : null;
     if (updateData.lastContactDate !== undefined) {
-      data.lastContactDate = updateData.lastContactDate ? new Date(updateData.lastContactDate) : null;
+      data.lastContactDate = parseSafeDateObject(updateData.lastContactDate);
     }
     if (updateData.lastStatusUpdatedAt !== undefined) {
-      data.lastStatusUpdatedAt = updateData.lastStatusUpdatedAt ? new Date(updateData.lastStatusUpdatedAt) : null;
+      data.lastStatusUpdatedAt = parseSafeDateObject(updateData.lastStatusUpdatedAt);
     }
     if (updateData.nextFollowUpDate !== undefined) {
-      data.nextFollowUpDate = updateData.nextFollowUpDate ? new Date(updateData.nextFollowUpDate) : null;
+      data.nextFollowUpDate = parseSafeDateObject(updateData.nextFollowUpDate);
     }
     if (updateData.nextAction !== undefined) data.nextAction = updateData.nextAction;
     if (updateData.notes !== undefined) data.notes = updateData.notes;
-    if (updateData.leadSource !== undefined) data.leadSource = updateData.leadSource;
-    if (updateData.leadSourceOther !== undefined) data.leadSourceOther = updateData.leadSourceOther;
+    if (updateData.leadSource !== undefined) data.leadSource = updateData.leadSource ? String(updateData.leadSource).slice(0, 100) : null;
+    if (updateData.leadSourceOther !== undefined) data.leadSourceOther = updateData.leadSourceOther ? String(updateData.leadSourceOther).slice(0, 100) : null;
     if (updateData.assignedTelecallerId !== undefined) {
       data.assignedTelecallerId = updateData.assignedTelecallerId
         ? (resolveUserAlias(updateData.assignedTelecallerId) || updateData.assignedTelecallerId)

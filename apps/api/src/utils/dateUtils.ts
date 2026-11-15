@@ -104,3 +104,16 @@ export function parseFlexibleDate(val: any): string | null {
   return null;
 }
 
+/**
+ * Returns a guaranteed valid JavaScript Date object, or null.
+ * Never returns an Invalid Date (which crashes Prisma client validation).
+ */
+export function parseSafeDateObject(val: any): Date | null {
+  if (val === null || val === undefined) return null;
+  const isoStr = parseFlexibleDate(val);
+  if (!isoStr) return null;
+  const d = new Date(isoStr);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+

@@ -26,12 +26,12 @@ export function errorHandler(
   }
 
   // 3. Database / Prisma driver errors
-  if (err.name === 'PrismaClientKnownRequestError' || err.name === 'PrismaClientValidationError') {
+  if (err.name?.startsWith('PrismaClient') || (err as any).code?.startsWith('P')) {
     console.error('[DATABASE ERROR]', err);
     sendError(
       res,
       process.env.NODE_ENV === 'production'
-        ? 'A database error occurred. Please try again later.'
+        ? 'A database error occurred. Please verify your data format and try again.'
         : `Database Error: ${err.message}`,
       500
     );
