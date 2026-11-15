@@ -107,7 +107,16 @@ class ApiClient {
         headers,
       });
 
-      const data: ApiResponse<T> = await response.json();
+      const responseText = await response.text();
+      let data: ApiResponse<T>;
+      try {
+        data = responseText ? JSON.parse(responseText) : ({} as ApiResponse<T>);
+      } catch {
+        if (!response.ok) {
+          throw new Error(`Server returned error (${response.status}): ${responseText.slice(0, 200) || response.statusText}`);
+        }
+        throw new Error(`Invalid response format from server: ${responseText.slice(0, 100)}`);
+      }
 
       if (!response.ok) {
         const isAuthRoute =
@@ -127,7 +136,7 @@ class ApiClient {
           this.setToken(null);
           localStorage.removeItem('crm_user');
         }
-        throw new Error(data.message || `Request failed with status ${response.status}`);
+        throw new Error(data?.message || `Request failed with status ${response.status}`);
       }
 
       return data;

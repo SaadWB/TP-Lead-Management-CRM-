@@ -381,7 +381,10 @@ export class LeadRepository {
     return leads.map(mapPrismaLeadToShared);
   }
 
-  async create(leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>): Promise<Lead> {
+  async create(
+    leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>,
+    options?: { includeRelations?: boolean }
+  ): Promise<Lead> {
     const assignedTelecallerId = leadData.assignedTelecallerId
       ? (resolveUserAlias(leadData.assignedTelecallerId) || leadData.assignedTelecallerId)
       : null;
@@ -426,7 +429,7 @@ export class LeadRepository {
         createdById,
         isDeleted: false,
       },
-      include: leadIncludeFull,
+      ...(options?.includeRelations === false ? {} : { include: leadIncludeFull }),
     });
 
     return mapPrismaLeadToShared(created);

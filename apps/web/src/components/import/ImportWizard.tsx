@@ -50,6 +50,7 @@ export function ImportWizard() {
 
   // Commit state
   const [importing, setImporting] = useState<boolean>(false);
+  const [importProgress, setImportProgress] = useState<{ current: number; total: number; percentage: number } | null>(null);
   const [importReport, setImportReport] = useState<any>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
@@ -184,6 +185,7 @@ export function ImportWizard() {
     if (!validationResult) return;
     setImporting(true);
     setErrorMessage('');
+    setImportProgress({ current: 0, total: 0, percentage: 0 });
 
     try {
       // Map rows with resolutions
@@ -207,23 +209,72 @@ export function ImportWizard() {
         };
       });
 
-      const res = await api.post<any>('/imports/commit', {
+      const CHUNK_SIZE = 100;
+      const totalRecords = preparedRecords.length;
+      setImportProgress({ current: 0, total: totalRecords, percentage: 0 });
+
+      let combinedProcessed = 0;
+      let combinedImported = 0;
+      let combinedUpdated = 0;
+      let combinedSkipped = 0;
+      const combinedTelecallerDist: Record<string, number> = {};
+
+      for (let i = 0; i < totalRecords; i += CHUNK_SIZE) {
+        const chunk = preparedRecords.slice(i, i + CHUNK_SIZE);
+        const res = await api.post<any>('/imports/commit', {
+          fileName: file?.name || 'leads_import.xlsx',
+          records: chunk,
+          distributionMethod,
+          selectedTelecallerIds,
+        });
+
+        if (!res.success || !res.data) {
+          throw new Error(res.message || 'Import batch failed');
+        }
+
+        combinedProcessed += res.data.totalProcessed || chunk.length;
+        combinedImported += res.data.importedCount || 0;
+        combinedUpdated += res.data.updatedCount || 0;
+        combinedSkipped += res.data.skippedCount || 0;
+
+        if (res.data.telecallerDistribution) {
+          Object.entries(res.data.telecallerDistribution).forEach(([tcId, count]) => {
+            combinedTelecallerDist[tcId] = (combinedTelecallerDist[tcId] || 0) + (count as number);
+          });
+        }
+
+        const processedSoFar = Math.min(i + chunk.length, totalRecords);
+        const pct = Math.round((processedSoFar / totalRecords) * 100);
+        setImportProgress({ current: processedSoFar, total: totalRecords, percentage: pct });
+      }
+
+      invalidateCache('/leads');
+      invalidateCache('/reports/dashboard');
+
+      const userMap = new Map(telecallers.map((u) => [u.id, u.name]));
+      const activeIds = selectedTelecallerIds.length > 0 ? selectedTelecallerIds : telecallers.map((t) => t.id);
+      const finalDistribution = activeIds.map((id) => ({
+        telecallerId: id,
+        name: userMap.get(id) || 'Telecaller',
+        count: combinedTelecallerDist[id] || 0,
+      }));
+
+      setImportReport({
         fileName: file?.name || 'leads_import.xlsx',
-        records: preparedRecords,
-        distributionMethod,
-        selectedTelecallerIds,
+        totalProcessed: combinedProcessed,
+        importedCount: combinedImported,
+        updatedCount: combinedUpdated,
+        skippedCount: combinedSkipped,
+        distribution: finalDistribution,
+        telecallerDistribution: combinedTelecallerDist,
       });
 
-      if (res.success && res.data) {
-        invalidateCache('/leads');
-        invalidateCache('/reports/dashboard');
-        setImportReport(res.data);
-        setCurrentStep(5); // Complete summary
-      }
+      setCurrentStep(5); // Complete summary
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to complete import');
     } finally {
       setImporting(false);
+      setImportProgress(null);
     }
   }
 
@@ -750,18 +801,42 @@ export function ImportWizard() {
               )}
             </div>
 
+            {importing && importProgress && (
+              <div className="p-4 bg-sky-50/80 border border-sky-200/90 rounded-xl space-y-2.5 animate-in fade-in duration-200">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-semibold text-sky-900 flex items-center gap-2">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin text-sky-600" />
+                    Importing leads into CRM...
+                  </span>
+                  <span className="font-bold text-sky-900 bg-white/90 px-2 py-0.5 rounded-md border border-sky-200/60 shadow-xs">
+                    {importProgress.current} / {importProgress.total} ({importProgress.percentage}%)
+                  </span>
+                </div>
+                <div className="w-full bg-sky-200/50 rounded-full h-2.5 overflow-hidden p-0.5">
+                  <div
+                    className="bg-gradient-to-r from-sky-500 to-sky-600 h-1.5 rounded-full transition-all duration-300 ease-out shadow-xs"
+                    style={{ width: `${importProgress.percentage}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between pt-2">
-              <Button variant="outline" size="sm" onClick={() => setCurrentStep(3)}>
+              <Button variant="outline" size="sm" onClick={() => setCurrentStep(3)} disabled={importing}>
                 Back to Duplicates
               </Button>
               <Button
                 size="sm"
                 onClick={handleConfirmImport}
                 loading={importing}
-                disabled={selectedTelecallerIds.length === 0}
+                disabled={selectedTelecallerIds.length === 0 || importing}
                 icon={<FileCheck className="h-4 w-4" />}
               >
-                {importing ? 'Importing Leads...' : 'Execute Bulk Import & Assignment'}
+                {importing
+                  ? importProgress
+                    ? `Importing (${importProgress.percentage}%)...`
+                    : 'Importing Leads...'
+                  : 'Execute Bulk Import & Assignment'}
               </Button>
             </div>
           </CardContent>

@@ -5,8 +5,10 @@ export const config = {
   api: {
     bodyParser: false,
     externalResolver: true,
+    responseLimit: false,
   },
 };
+export const maxDuration = 60;
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
