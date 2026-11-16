@@ -6,6 +6,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import {
   Lead,
   normalizeCallOutcome,
+  normalizePipelineStage,
   getSuggestedPipelineForOutcome,
   PIPELINE_STAGES,
   PIPELINE_STAGE_LIST,
@@ -490,10 +491,19 @@ export default function TelecallerTodayPage() {
         alert('Past dates are not allowed. Please choose a future date & time.');
         return;
       }
+      const isoDate = new Date(promptInputDate).toISOString();
+      const nextAct = promptInputNextAction || lead.nextAction || undefined;
+
+      // Close modal immediately and clear inputs to prevent popup freezing or delays
+      setPromptTarget(null);
+      setPromptInputDate('');
+      setPromptInputNextAction('');
+
       await executeOutcomeUpdate(lead, newOutcome, suggestedPipeline, {
-        nextFollowUpDate: new Date(promptInputDate).toISOString(),
-        nextAction: promptInputNextAction || lead.nextAction || undefined,
+        nextFollowUpDate: isoDate,
+        nextAction: nextAct,
       });
+      return;
     } else if (type === 'CLOSE_REASON') {
       if (!promptInputReason.trim()) {
         alert('Please enter a short reason for closing this lead.');
@@ -503,10 +513,15 @@ export default function TelecallerTodayPage() {
         ? `${lead.notes} | Closed reason (${newOutcome}): ${promptInputReason}`
         : `Closed reason (${newOutcome}): ${promptInputReason}`;
 
+      // Close modal immediately and clear inputs to prevent popup freezing or delays
+      setPromptTarget(null);
+      setPromptInputReason('');
+
       await executeOutcomeUpdate(lead, newOutcome, 'Closed', {
         nextFollowUpDate: undefined,
         notes: closingNotes,
       });
+      return;
     }
 
     setPromptTarget(null);
@@ -523,7 +538,7 @@ export default function TelecallerTodayPage() {
 
   // Pipeline Badge Colors
   function getPipelineBadgeColor(stageName: string) {
-    const norm = normalizeCallOutcome(stageName);
+    const norm = normalizePipelineStage(stageName);
     switch (norm) {
       case 'New Lead':
         return 'bg-blue-50 text-blue-800 border-blue-200';
@@ -1356,8 +1371,8 @@ export default function TelecallerTodayPage() {
             setDrawerLeadId(null);
           }}
           onLeadUpdated={(updated) => {
-            setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
-            mutateLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? updated : l)) : [updated]));
+            setLeads((prev) => prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)));
+            mutateLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)) : [{ ...updated }]));
           }}
         />
 

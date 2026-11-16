@@ -67,9 +67,17 @@ export async function rotateRefreshToken(
       return null;
     }
 
-    // Token reuse detection: If token was already revoked, someone is attempting to reuse it!
-    // As a critical security measure, revoke all refresh tokens for this user immediately!
+    // Token reuse & race-condition detection:
+    // If token was revoked within the last 60 seconds, treat as concurrent refresh request from multiple client tabs
     if (existing.revokedAt !== null) {
+      const revokedMs = new Date(existing.revokedAt).getTime();
+      const timeSinceRevoke = Date.now() - revokedMs;
+
+      if (timeSinceRevoke < 60 * 1000) {
+        // Within 60s grace window: concurrent refresh request, do not revoke session
+        return { newRefreshToken: rawToken, userId: existing.userId };
+      }
+
       console.warn(`[Tokens] Revoked refresh token reused for user ${existing.userId}. Revoking all tokens.`);
       await prisma.refreshToken.updateMany({
         where: { userId: existing.userId, revokedAt: null },

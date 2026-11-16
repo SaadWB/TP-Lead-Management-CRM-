@@ -96,7 +96,7 @@ export function NotificationPopover() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl bg-white shadow-soft-xl border border-slate-200/90 z-50 overflow-hidden animate-fade-in">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl bg-white shadow-soft-xl border border-slate-200/90 z-[100] overflow-hidden animate-fade-in">
           <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-slate-800">Notifications</span>

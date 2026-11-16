@@ -53,12 +53,13 @@ export function ScheduleFollowUpModal({
       const res = await api.post<Lead>(`/leads/${lead.id}/stage`, {
         pipelineStage: targetStage,
         meetingDate,
+        nextFollowUpDate: meetingDate,
         notes: notes.trim() || undefined,
       });
 
       if (res.success && res.data) {
-        onSuccess(res.data);
         onClose();
+        onSuccess(res.data);
       } else {
         throw new Error(res.message || 'Failed to schedule follow-up');
       }

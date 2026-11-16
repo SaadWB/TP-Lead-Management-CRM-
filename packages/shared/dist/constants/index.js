@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.IMPORT_TEMPLATE_COLUMNS = exports.DEFAULT_LEAD_SOURCE_LIST = exports.DEFAULT_LEAD_SOURCES = exports.ACTIVITY_TYPES = exports.LOST_REASONS = exports.TASK_STATUSES = exports.TASK_TYPES = exports.TELECALLER_KANBAN_COLUMNS = exports.SALES_STAGE_OPTIONS = exports.SALES_STAGES = exports.PRIORITIES = exports.CALL_OUTCOME_LIST = exports.TELECALLER_CALL_OUTCOMES = exports.CALL_OUTCOMES = exports.PIPELINE_STAGE_LIST = exports.PIPELINE_STAGES = exports.USER_ROLES = void 0;
 exports.getSuggestedPipelineForOutcome = getSuggestedPipelineForOutcome;
 exports.normalizeCallOutcome = normalizeCallOutcome;
+exports.normalizePipelineStage = normalizePipelineStage;
 exports.USER_ROLES = {
     SUPER_ADMIN: 'SUPER_ADMIN',
     TELECALLER: 'TELECALLER',
@@ -152,6 +153,24 @@ function normalizeCallOutcome(raw) {
     if (lower.includes('invalid') || lower.includes('wrong number'))
         return 'Wrong Number';
     if (lower === 'closed')
+        return 'Closed';
+    return val;
+}
+function normalizePipelineStage(raw) {
+    if (!raw)
+        return 'New Lead';
+    const val = raw.trim();
+    if (val === 'Connected – Discussed' || val.toLowerCase() === 'connected')
+        return 'Connected';
+    if (val.toLowerCase() === 'new' || val.toLowerCase() === 'new lead')
+        return 'New Lead';
+    if (val.toLowerCase() === 'attempting contact')
+        return 'Attempting Contact';
+    if (val.toLowerCase() === 'follow-up' || val.toLowerCase() === 'follow up')
+        return 'Follow-up';
+    if (val.toLowerCase() === 'demo')
+        return 'Demo';
+    if (val.toLowerCase() === 'closed')
         return 'Closed';
     return val;
 }

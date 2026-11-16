@@ -28,7 +28,7 @@ export function TopBar(props: TopBarProps) {
   const searchPlaceholder = props.searchPlaceholder ?? headerContext?.header.searchPlaceholder ?? 'Search company, phone, contact...';
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-3 sticky top-0 z-20">
+    <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-3 sticky top-0 z-40">
       {/* Left: Hamburger (mobile/tablet) + Title */}
       <div className="flex items-center gap-2 min-w-0">
         <button

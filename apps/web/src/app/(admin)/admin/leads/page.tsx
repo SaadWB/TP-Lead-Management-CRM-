@@ -15,6 +15,7 @@ import {
   TELECALLER_CALL_OUTCOMES,
   SALES_STAGE_OPTIONS,
   User,
+  normalizePipelineStage,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
@@ -125,6 +126,26 @@ function AdminLeadsContent() {
     fetchLeads();
   }, [stageFilter, outcomeFilter, salesStageFilter, priorityFilter, telecallerFilter, sourceFilter, currentKpi]);
 
+  // Keep table data continuously fresh without manual refresh
+  useEffect(() => {
+    function handleInvalidation(e: Event) {
+      const customEvent = e as CustomEvent<{ prefix?: string }>;
+      const prefix = customEvent.detail?.prefix;
+      if (!prefix || prefix.startsWith('/leads') || prefix.startsWith('/reports')) {
+        fetchLeads();
+      }
+    }
+    function handleFocus() {
+      fetchLeads();
+    }
+    window.addEventListener('crm:cache-invalidated', handleInvalidation);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('crm:cache-invalidated', handleInvalidation);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [stageFilter, outcomeFilter, salesStageFilter, priorityFilter, telecallerFilter, sourceFilter, currentKpi]);
+
   useEffect(() => {
     loadTelecallers();
     loadOptions();
@@ -135,7 +156,7 @@ function AdminLeadsContent() {
     if (cached) {
       const cStages = cached.pipelineStages || cached.stages;
       const cOutcomes = cached.callOutcomes || cached.outcomes;
-      if (cached.leadSources) setSourceOptions(cached.leadSources.filter((s: any) => s.isActive).map((s: any) => s.name));
+      if (cached.leadSources) setSourceOptions(cached.leadSources.filter((s: any) => s.isActive && s.name.toLowerCase() !== 'website').map((s: any) => s.name));
       if (cStages?.length > 0) setPipelineOptions(cStages.filter((s: any) => s.isActive).map((s: any) => s.name));
       if (cOutcomes?.length > 0) setCallOutcomeOptions(cOutcomes.filter((o: any) => o.isActive).map((o: any) => o.name));
       return;
@@ -153,7 +174,7 @@ function AdminLeadsContent() {
         const stages = res.data.pipelineStages || res.data.stages;
         const outcomes = res.data.callOutcomes || res.data.outcomes;
         if (res.data.leadSources) {
-          setSourceOptions(res.data.leadSources.filter((s) => s.isActive).map((s) => s.name));
+          setSourceOptions(res.data.leadSources.filter((s) => s.isActive && s.name.toLowerCase() !== 'website').map((s) => s.name));
         }
         if (stages && stages.length > 0) {
           setPipelineOptions(stages.filter((s) => s.isActive).map((s) => s.name));
@@ -168,7 +189,7 @@ function AdminLeadsContent() {
   }
 
   async function fetchLeads() {
-    const params: any = { limit: 1000 };
+    const params: any = { limit: 1000, excludeWebsiteLeads: true };
     if (currentKpi) params.kpi = currentKpi;
     if (stageFilter) params.pipelineStage = stageFilter;
     if (outcomeFilter) params.lastCallOutcome = outcomeFilter;
@@ -249,10 +270,14 @@ function AdminLeadsContent() {
 
   // Row-level pipeline stage update
   async function handleSinglePipelineUpdate(leadId: string, pipelineStage: string) {
+    const stageNorm = normalizePipelineStage(pipelineStage);
+    setLeads((prev) =>
+      prev.map((l) => (l.id === leadId ? { ...l, pipelineStage: stageNorm as any } : l))
+    );
     try {
-      const res = await api.patch<Lead>(`/leads/${leadId}`, { pipelineStage });
+      const res = await api.patch<Lead>(`/leads/${leadId}`, { pipelineStage: stageNorm });
       if (res.success && res.data) {
-        setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...res.data } : l)));
         invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
@@ -704,11 +729,11 @@ function AdminLeadsContent() {
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Pipeline Stage:</span>
                       <select
-                        value={lead.pipelineStage}
+                        value={normalizePipelineStage(lead.pipelineStage)}
                         onChange={(e) => handleSinglePipelineUpdate(lead.id, e.target.value)}
                         className={`w-full text-[11px] font-bold rounded-md px-2 py-1 border cursor-pointer ${stage.bg} ${stage.text} ${stage.border}`}
                       >
-                        {pipelineOptions.map((opt) => {
+                        {Array.from(new Set([...pipelineOptions, normalizePipelineStage(lead.pipelineStage)].filter(Boolean))).map((opt) => {
                           const optStage = getStageColor(opt);
                           return (
                             <option key={opt} value={opt} className={`${optStage.bg} ${optStage.text} font-bold`}>
@@ -1418,7 +1443,7 @@ function AdminLeadsContent() {
           setSelectedLeadId(null);
         }}
         onLeadUpdated={(updated) => {
-          setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+          setLeads((prev) => prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)));
         }}
       />
 

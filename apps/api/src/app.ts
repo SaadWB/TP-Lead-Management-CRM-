@@ -46,6 +46,19 @@ function parseCookies(req: Request, _res: Response, next: NextFunction): void {
 export function createApp(): Application {
   const app = express();
 
+  // Trust first proxy (Next.js rewrites, reverse proxies, Vercel)
+  app.set('trust proxy', 1);
+
+  // Disable caching for API responses to guarantee freshest CRM table data
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/v1')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+    next();
+  });
+
   // Explicitly remove fingerprinting header
   app.disable('x-powered-by');
 

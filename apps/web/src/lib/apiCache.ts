@@ -30,8 +30,14 @@ export function setMemoryCache<T>(key: string, data: T): void {
 
 export const mutateCache = setMemoryCache;
 
-export function getMemoryCache<T>(key: string): T | undefined {
-  return memoryCache.get(key)?.data;
+export function getMemoryCache<T>(key: string, maxAgeMs = 45000): T | undefined {
+  const entry = memoryCache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() - entry.timestamp > maxAgeMs) {
+    memoryCache.delete(key);
+    return undefined;
+  }
+  return entry.data;
 }
 
 export function invalidateCache(prefix?: string): void {

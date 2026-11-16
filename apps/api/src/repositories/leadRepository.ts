@@ -123,12 +123,12 @@ function mapPrismaLeadToShared(l: any): Lead {
     city: l.city || undefined,
     state: l.state || undefined,
     priority: l.priority as Priority,
-    pipelineStage: l.pipelineStage,
+    pipelineStage: l.pipelineStage === 'Connected – Discussed' ? 'Connected' : (l.pipelineStage || 'New Lead'),
     salesStage: l.salesStage || undefined,
     callAttempts: l.callAttempts || 0,
     isRetry: l.isRetry || false,
     retryCount: l.retryCount || 0,
-    lastCallOutcome: l.lastCallOutcome || undefined,
+    lastCallOutcome: l.lastCallOutcome ?? undefined,
     lastContactDate: l.lastContactDate ? new Date(l.lastContactDate).toISOString() : undefined,
     lastStatusUpdatedAt: l.lastStatusUpdatedAt ? new Date(l.lastStatusUpdatedAt).toISOString() : undefined,
     nextFollowUpDate: l.nextFollowUpDate ? new Date(l.nextFollowUpDate).toISOString() : undefined,
@@ -179,6 +179,7 @@ export interface LeadFilterOptions {
   page?: number;
   limit?: number;
   isDeleted?: boolean;
+  excludeWebsiteLeads?: boolean;
 }
 
 export class LeadRepository {
@@ -266,6 +267,14 @@ export class LeadRepository {
     if (options.leadSource) {
       where.leadSource = { contains: options.leadSource };
     }
+    if (options.excludeWebsiteLeads) {
+      where.NOT = where.NOT || [];
+      if (Array.isArray(where.NOT)) {
+        where.NOT.push({ leadSource: 'Website' });
+      } else {
+        where.NOT = [where.NOT, { leadSource: 'Website' }];
+      }
+    }
     if (options.assignedTelecallerId) {
       const effId = resolveUserAlias(options.assignedTelecallerId) || options.assignedTelecallerId;
       where.assignedTelecallerId = effId;
@@ -323,16 +332,17 @@ export class LeadRepository {
       }
     }
 
-    // Sorting
-    const sortField = options.sortBy || 'updatedAt';
-    const sortDirection = options.sortOrder === 'asc' ? ('asc' as const) : ('desc' as const);
-    let orderBy: any = { updatedAt: sortDirection };
+    // Sorting - default to createdAt asc so table sequence matches sheet order and doesn't shift on update
+    const sortField = options.sortBy || 'createdAt';
+    const sortDirection = options.sortOrder === 'desc' ? ('desc' as const) : ('asc' as const);
+    let orderBy: any = { createdAt: sortDirection };
 
     if (sortField === 'createdAt') orderBy = { createdAt: sortDirection };
+    else if (sortField === 'updatedAt') orderBy = { updatedAt: sortDirection };
     else if (sortField === 'companyName') orderBy = { companyName: sortDirection };
     else if (sortField === 'priority') orderBy = { priority: sortDirection };
     else if (sortField === 'nextFollowUpDate') orderBy = { nextFollowUpDate: sortDirection };
-    else orderBy = { updatedAt: sortDirection };
+    else orderBy = { createdAt: sortDirection };
 
     const total = await prisma.lead.count({ where });
     const page = options.page || 1;
@@ -382,7 +392,7 @@ export class LeadRepository {
   }
 
   async create(
-    leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>,
+    leadData: Omit<Lead, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: Date | string; updatedAt?: Date | string },
     options?: { includeRelations?: boolean }
   ): Promise<Lead> {
     const assignedTelecallerId = leadData.assignedTelecallerId
@@ -428,6 +438,7 @@ export class LeadRepository {
         assignedSalesmanId,
         createdById,
         isDeleted: false,
+        ...(leadData.createdAt ? { createdAt: new Date(leadData.createdAt), updatedAt: new Date(leadData.createdAt) } : {}),
       },
       ...(options?.includeRelations === false ? {} : { include: leadIncludeFull }),
     });

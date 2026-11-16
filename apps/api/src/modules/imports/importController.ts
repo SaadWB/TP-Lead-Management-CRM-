@@ -8,6 +8,7 @@ import {
   Priority,
   PipelineStage,
   normalizeCallOutcome,
+  normalizePipelineStage,
 } from '@crm/shared';
 import { leadRepository } from '../../repositories/leadRepository';
 import { userRepository } from '../../repositories/userRepository';
@@ -256,7 +257,7 @@ export async function validateAndReviewImport(req: Request, res: Response, next:
           phone,
           email: email || null,
           priority: (Object.values(PRIORITIES) as string[]).includes(priority) ? priority : 'MEDIUM',
-          pipelineStage: normalizeCallOutcome(pipelineStage) || 'New Lead',
+          pipelineStage: normalizePipelineStage(pipelineStage) || 'New Lead',
           callAttempts,
           lastCallOutcome,
           lastContactDate: lastContactDate || null,
@@ -375,95 +376,94 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
       return { record, assignedId };
     });
 
-    // 2. Process records in concurrent batches
-    const BATCH_SIZE = 25;
+    // 2. Process records maintaining exact sequence as provided in the uploaded sheet
     const newlyCreatedLeadEntries: { leadId: string; assignedId: string | null }[] = [];
+    const baseTimestamp = Date.now();
 
-    for (let i = 0; i < preparedTasks.length; i += BATCH_SIZE) {
-      const batch = preparedTasks.slice(i, i + BATCH_SIZE);
+    for (let idx = 0; idx < preparedTasks.length; idx++) {
+      const { record, assignedId } = preparedTasks[idx];
+      // Deterministic increasing timestamp ensuring exact row order from the sheet is preserved
+      const recordCreatedAt = new Date(baseTimestamp + idx * 50);
 
-      await Promise.all(
-        batch.map(async ({ record, assignedId }) => {
-          if (record.action === 'SKIP') {
-            skippedCount++;
-            return;
+      if (record.action === 'SKIP') {
+        skippedCount++;
+        continue;
+      }
+
+      if (record.action === 'UPDATE' && record.matchedExistingId) {
+        try {
+          const existing = await leadRepository.findById(record.matchedExistingId);
+          if (existing) {
+            await leadRepository.update(existing.id, {
+              serviceProduct: record.serviceProduct || existing.serviceProduct,
+              contactPerson: record.contactPerson || existing.contactPerson,
+              notes: record.notes ? `${existing.notes || ''}\n[Import Update]: ${record.notes}` : existing.notes,
+              leadSource: record.leadSource || existing.leadSource,
+              leadSourceOther: record.leadSourceOther || existing.leadSourceOther,
+              lastActivityAt: nowIso,
+            });
+
+            await activityRepository.create({
+              leadId: existing.id,
+              userId: req.user!.id,
+              type: 'LEAD_IMPORTED',
+              description: `Lead updated from bulk import file "${fileName}" by ${req.user!.name}`,
+            });
+
+            updatedCount++;
+            continue;
           }
+        } catch (err: any) {
+          console.warn('[commitImport] Error updating lead:', err.message);
+        }
+      }
 
-          if (record.action === 'UPDATE' && record.matchedExistingId) {
-            try {
-              const existing = await leadRepository.findById(record.matchedExistingId);
-              if (existing) {
-                await leadRepository.update(existing.id, {
-                  serviceProduct: record.serviceProduct || existing.serviceProduct,
-                  contactPerson: record.contactPerson || existing.contactPerson,
-                  notes: record.notes ? `${existing.notes || ''}\n[Import Update]: ${record.notes}` : existing.notes,
-                  leadSource: record.leadSource || existing.leadSource,
-                  leadSourceOther: record.leadSourceOther || existing.leadSourceOther,
-                  lastActivityAt: nowIso,
-                });
+      // Import new lead
+      try {
+        const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+        const rawPriority = String(record.priority || '').toUpperCase().trim();
+        const priority = validPriorities.includes(rawPriority) ? (rawPriority as any) : 'MEDIUM';
 
-                await activityRepository.create({
-                  leadId: existing.id,
-                  userId: req.user!.id,
-                  type: 'LEAD_IMPORTED',
-                  description: `Lead updated from bulk import file "${fileName}" by ${req.user!.name}`,
-                });
+        const lastContactDate = parseFlexibleDate(record.lastContactDate);
+        const nextFollowUpDate = parseFlexibleDate(record.nextFollowUpDate);
 
-                updatedCount++;
-                return;
-              }
-            } catch (err: any) {
-              console.warn('[commitImport] Error updating lead:', err.message);
-            }
-          }
+        const newLead = await leadRepository.create(
+          {
+            companyName: record.companyName,
+            serviceProduct: record.serviceProduct || 'General Procurement',
+            contactPerson: record.contactPerson || '',
+            phone: record.phone,
+            email: record.email || null,
+            alternatePhone: record.alternatePhone || null,
+            website: record.website || null,
+            city: null,
+            state: null,
+            priority,
+            pipelineStage: (normalizePipelineStage(record.pipelineStage) as PipelineStage) || 'New Lead',
+            callAttempts: record.callAttempts || 0,
+            isRetry: false,
+            retryCount: 0,
+            lastCallOutcome: record.lastCallOutcome || null,
+            lastContactDate,
+            nextFollowUpDate,
+            nextAction: record.nextAction || null,
+            notes: record.notes || null,
+            leadSource: record.leadSource || null,
+            leadSourceOther: record.leadSourceOther || null,
+            assignedTelecallerId: assignedId,
+            createdById: req.user!.id,
+            isDeleted: false,
+            createdAt: recordCreatedAt,
+          },
+          { includeRelations: false }
+        );
 
-          // Import new lead
-          try {
-            const validPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
-            const rawPriority = String(record.priority || '').toUpperCase().trim();
-            const priority = validPriorities.includes(rawPriority) ? (rawPriority as any) : 'MEDIUM';
-
-            const lastContactDate = parseFlexibleDate(record.lastContactDate);
-            const nextFollowUpDate = parseFlexibleDate(record.nextFollowUpDate);
-
-            const newLead = await leadRepository.create(
-              {
-                companyName: record.companyName,
-                serviceProduct: record.serviceProduct || 'General Procurement',
-                contactPerson: record.contactPerson || '',
-                phone: record.phone,
-                email: record.email || null,
-                alternatePhone: record.alternatePhone || null,
-                website: record.website || null,
-                city: null,
-                state: null,
-                priority,
-                pipelineStage: (normalizeCallOutcome(record.pipelineStage) as PipelineStage) || 'New Lead',
-                callAttempts: record.callAttempts || 0,
-                isRetry: false,
-                retryCount: 0,
-                lastCallOutcome: record.lastCallOutcome || null,
-                lastContactDate,
-                nextFollowUpDate,
-                nextAction: record.nextAction || null,
-                notes: record.notes || null,
-                leadSource: record.leadSource || null,
-                leadSourceOther: record.leadSourceOther || null,
-                assignedTelecallerId: assignedId,
-                createdById: req.user!.id,
-                isDeleted: false,
-              },
-              { includeRelations: false }
-            );
-
-            newlyCreatedLeadEntries.push({ leadId: newLead.id, assignedId });
-            importedCount++;
-          } catch (err: any) {
-            console.error('[commitImport] Error creating lead record:', err.message);
-            skippedCount++;
-          }
-        })
-      );
+        newlyCreatedLeadEntries.push({ leadId: newLead.id, assignedId });
+        importedCount++;
+      } catch (err: any) {
+        console.error('[commitImport] Error creating lead record:', err.message);
+        skippedCount++;
+      }
     }
 
     // 3. Bulk insert assignment histories and activities for created leads

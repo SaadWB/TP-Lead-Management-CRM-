@@ -102,6 +102,7 @@ class ApiClient {
 
     try {
       const response = await fetch(url, {
+        cache: 'no-store',
         credentials: 'include',
         ...options,
         headers,

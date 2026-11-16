@@ -7,6 +7,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import {
   Lead,
   normalizeCallOutcome,
+  normalizePipelineStage,
   getSuggestedPipelineForOutcome,
   PIPELINE_STAGES,
   PIPELINE_STAGE_LIST,
@@ -153,11 +154,11 @@ export default function TelecallerMyLeadsPage() {
   // Pin recently modified lead IDs to keep them visible when changing status/outcome
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<string>>(new Set());
 
-  // Sorting state
+  // Sorting state - default to createdAt asc to preserve exact sheet sequence and prevent data shifting on updates
   const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'nextFollowUpDate' | 'companyName'>(
-    initialFilters?.sortBy || 'updatedAt'
+    initialFilters?.sortBy || 'createdAt'
   );
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(initialFilters?.sortOrder || 'desc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(initialFilters?.sortOrder || 'asc');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -172,6 +173,7 @@ export default function TelecallerMyLeadsPage() {
   // Custom options state
   const [customPriorities, setCustomPriorities] = useState<string[]>([]);
   const [customOutcomes, setCustomOutcomes] = useState<string[]>([]);
+  const [pipelineOptions, setPipelineOptions] = useState<string[]>(PIPELINE_STAGE_LIST);
   const [addOptionModal, setAddOptionModal] = useState<{
     isOpen: boolean;
     type: 'PRIORITY' | 'CALL_OUTCOME';
@@ -287,6 +289,23 @@ export default function TelecallerMyLeadsPage() {
     } catch (err) {
       console.error('Error loading custom options:', err);
     }
+
+    try {
+      const optRes = await api.get<{
+        pipelineStages?: { name: string; isActive: boolean }[];
+        stages?: { name: string; isActive: boolean }[];
+      }>('/options');
+      if (optRes.success && optRes.data) {
+        const stages = optRes.data.pipelineStages || optRes.data.stages;
+        if (stages && stages.length > 0) {
+          const activeStages = stages.filter((s) => s.isActive).map((s) => s.name);
+          const combined = Array.from(new Set([...PIPELINE_STAGE_LIST, ...activeStages]));
+          setPipelineOptions(combined);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading pipeline stage options:', err);
+    }
   }
 
   // Combined options list
@@ -314,8 +333,14 @@ export default function TelecallerMyLeadsPage() {
       }
 
       // 1. Pipeline filter
-      if (pipelineFilter !== 'ALL') {
-        const normLeadPipeline = normalizeCallOutcome(lead.pipelineStage);
+      const normLeadPipeline = normalizePipelineStage(lead.pipelineStage);
+      if (pipelineFilter === 'ALL') {
+        // Closed pipeline leads should not appear in All Leads section.
+        // They should only be accessible through the dedicated top filter.
+        if (lead.pipelineStage === 'Closed' || normLeadPipeline === 'Closed') {
+          return false;
+        }
+      } else {
         if (normLeadPipeline !== pipelineFilter && lead.pipelineStage !== pipelineFilter) {
           return false;
         }
@@ -401,12 +426,16 @@ export default function TelecallerMyLeadsPage() {
 
   // Stage count aggregation for filter chips
   const stageCounts = useMemo(() => {
-    const counts: Record<string, number> = { ALL: leads.length };
-    PIPELINE_STAGE_LIST.forEach((st) => {
+    // Exclude closed leads from ALL tab count
+    const nonClosedCount = leads.filter(
+      (l) => l.pipelineStage !== 'Closed' && normalizePipelineStage(l.pipelineStage) !== 'Closed'
+    ).length;
+    const counts: Record<string, number> = { ALL: nonClosedCount };
+    pipelineOptions.forEach((st) => {
       counts[st] = 0;
     });
     leads.forEach((l) => {
-      const norm = normalizeCallOutcome(l.pipelineStage);
+      const norm = normalizePipelineStage(l.pipelineStage);
       if (counts[norm] !== undefined) {
         counts[norm]++;
       } else if (counts[l.pipelineStage] !== undefined) {
@@ -414,7 +443,7 @@ export default function TelecallerMyLeadsPage() {
       }
     });
     return counts;
-  }, [leads]);
+  }, [leads, pipelineOptions]);
 
   // Pagination calculation
   const totalItems = sortedLeads.length;
@@ -706,10 +735,19 @@ export default function TelecallerMyLeadsPage() {
         alert('Past dates are not allowed. Please choose a future date & time.');
         return;
       }
+      const isoDate = new Date(promptInputDate).toISOString();
+      const nextAct = promptInputNextAction || lead.nextAction || undefined;
+
+      // Close modal immediately and clear inputs to prevent popup freezing or delays
+      setPromptTarget(null);
+      setPromptInputDate('');
+      setPromptInputNextAction('');
+
       await executeOutcomeUpdate(lead, newOutcome, suggestedPipeline, {
-        nextFollowUpDate: new Date(promptInputDate).toISOString(),
-        nextAction: promptInputNextAction || lead.nextAction || undefined,
+        nextFollowUpDate: isoDate,
+        nextAction: nextAct,
       });
+      return;
     } else if (type === 'CLOSE_REASON') {
       if (!promptInputReason.trim()) {
         alert('Please enter a short reason for closing this lead.');
@@ -719,10 +757,15 @@ export default function TelecallerMyLeadsPage() {
         ? `${lead.notes} | Closed reason (${newOutcome}): ${promptInputReason}`
         : `Closed reason (${newOutcome}): ${promptInputReason}`;
 
+      // Close modal immediately and clear inputs to prevent popup freezing or delays
+      setPromptTarget(null);
+      setPromptInputReason('');
+
       await executeOutcomeUpdate(lead, newOutcome, 'Closed', {
         nextFollowUpDate: undefined,
         notes: closingNotes,
       });
+      return;
     }
 
     setPromptTarget(null);
@@ -730,7 +773,7 @@ export default function TelecallerMyLeadsPage() {
 
   // Pipeline Badge Colors for Dropdown
   function getPipelineBadgeColor(stageName: string) {
-    const norm = normalizeCallOutcome(stageName);
+    const norm = normalizePipelineStage(stageName);
     switch (norm) {
       case 'New Lead':
         return 'bg-blue-50 text-blue-800 border-blue-200';
@@ -840,7 +883,7 @@ export default function TelecallerMyLeadsPage() {
             </span>
           </button>
 
-          {PIPELINE_STAGE_LIST.map((stageName) => {
+          {pipelineOptions.map((stageName) => {
             const count = stageCounts[stageName] || 0;
             const isSelected = pipelineFilter === stageName;
             return (
@@ -1171,13 +1214,13 @@ export default function TelecallerMyLeadsPage() {
                         Pipeline Stage
                       </label>
                       <select
-                        value={lead.pipelineStage}
+                        value={normalizePipelineStage(lead.pipelineStage)}
                         onChange={(e) => handlePipelineChange(lead, e.target.value)}
                         className={`w-full text-xs font-bold rounded-lg px-2.5 py-2 border cursor-pointer ${getPipelineBadgeColor(
                           lead.pipelineStage
                         )}`}
                       >
-                        {PIPELINE_STAGE_LIST.map((stage) => {
+                        {pipelineOptions.map((stage) => {
                           const sMeta = getStageColor(stage);
                           return (
                             <option key={stage} value={stage} className={`font-semibold ${sMeta.text} bg-white`}>
@@ -1402,7 +1445,7 @@ export default function TelecallerMyLeadsPage() {
                     const isOpenLead = lead.pipelineStage !== 'Closed';
                     const isMissingAction = isOpenLead && !lead.nextAction?.trim();
                     const isMissingFollowUp = isOpenLead && !lead.nextFollowUpDate;
-                    const normalizedStage = normalizeCallOutcome(lead.pipelineStage) || lead.pipelineStage || 'New Lead';
+                    const normalizedStage = normalizePipelineStage(lead.pipelineStage);
 
                     return (
                       <tr
@@ -1507,7 +1550,7 @@ export default function TelecallerMyLeadsPage() {
                               normalizedStage
                             )}`}
                           >
-                            {PIPELINE_STAGE_LIST.map((stage) => {
+                            {pipelineOptions.map((stage) => {
                               const sMeta = getStageColor(stage);
                               return (
                                 <option key={stage} value={stage} className={`font-semibold ${sMeta.text} bg-white`}>
@@ -1820,8 +1863,8 @@ export default function TelecallerMyLeadsPage() {
             setSelectedLeadId(null);
           }}
           onLeadUpdated={(updated) => {
-            setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
-            mutateLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? updated : l)) : [updated]));
+            setLeads((prev) => prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)));
+            mutateLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)) : [{ ...updated }]));
           }}
         />
 

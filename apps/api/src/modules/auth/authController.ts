@@ -13,6 +13,7 @@ import {
   revokeSingleRefreshToken,
 } from '../../utils/tokens';
 import { auditLogRepository } from '../../repositories/auditLogRepository';
+import { authRateLimiter } from '../../middleware/rateLimiter';
 
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
@@ -59,6 +60,11 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
 
     // Successful login: reset failed attempts & lockout, update lastLoginAt and lastActiveAt in memory store
     const nowIso = new Date().toISOString();
+    const forwarded = req.headers['x-forwarded-for'];
+    const rawIp = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip || req.socket.remoteAddress || 'unknown-client';
+    const clientIp = rawIp === '::1' ? '127.0.0.1' : rawIp;
+    authRateLimiter.reset(clientIp);
+
     await userRepository.update(userWithPass.id, {
       failedLoginAttempts: 0,
       lockoutUntil: null,

@@ -36,7 +36,9 @@ class InMemoryRateLimiter {
         return next();
       }
 
-      const ip = req.ip || req.socket.remoteAddress || 'unknown-client';
+      const forwarded = req.headers['x-forwarded-for'];
+      const rawIp = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip || req.socket.remoteAddress || 'unknown-client';
+      const ip = rawIp === '::1' ? '127.0.0.1' : rawIp;
       const now = Date.now();
       let record = this.hits.get(ip);
 
@@ -64,11 +66,18 @@ class InMemoryRateLimiter {
   }
 }
 
-// 1. Strict Login Brute-Force Limiter: 5 attempts per 15 minutes per IP
+// 1. Login Rate Limiter: 30 attempts per 15 minutes per IP
 export const authRateLimiter = new InMemoryRateLimiter(
   15 * 60 * 1000,
-  5,
+  30,
   'Too many login attempts from this IP address. Please wait 15 minutes before trying again.'
+);
+
+// 2. Token Refresh Limiter: 180 requests per 15 minutes
+export const refreshRateLimiter = new InMemoryRateLimiter(
+  15 * 60 * 1000,
+  180,
+  'Too many token refresh requests. Please wait before retrying.'
 );
 
 // 2. Sensitive Endpoints Limiter: 10 requests per 15 minutes

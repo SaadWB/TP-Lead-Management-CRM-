@@ -22,7 +22,7 @@ import {
   Check,
   Compass,
 } from 'lucide-react';
-import { Lead, TELECALLER_KANBAN_COLUMNS, Priority, PRIORITIES, SalesStage, SALES_STAGE_OPTIONS, type User } from '@crm/shared';
+import { Lead, TELECALLER_KANBAN_COLUMNS, Priority, PRIORITIES, SalesStage, SALES_STAGE_OPTIONS, type User, normalizePipelineStage } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -151,16 +151,83 @@ export function LeadDrawer({
 
   async function handleOutcomeChange(newOutcome: string) {
     if (!lead) return;
+    const targetOutcome = newOutcome || null;
+    const updatedLead: Lead = {
+      ...lead,
+      lastCallOutcome: targetOutcome || undefined,
+    };
+    // Instant optimistic update to prevent UI lag or shifting
+    setLead(updatedLead);
+    onLeadUpdated(updatedLead);
+
     try {
-      const res = await api.patch<Lead>(`/leads/${lead.id}`, { lastCallOutcome: newOutcome || null });
+      const res = await api.patch<Lead>(`/leads/${lead.id}`, { lastCallOutcome: targetOutcome });
       if (res.success && res.data) {
-        setLead(res.data);
-        onLeadUpdated(res.data);
+        const merged = { ...updatedLead, ...res.data };
+        setLead(merged);
+        onLeadUpdated(merged);
         invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update outcome');
+      setLead(lead);
+      onLeadUpdated(lead);
+    }
+  }
+
+  async function handleSalesStageChange(newSalesStage: string) {
+    if (!lead) return;
+    if (!newSalesStage) {
+      try {
+        const res = await api.patch<Lead>(`/leads/${lead.id}`, { salesStage: null });
+        if (res.success && res.data) {
+          const merged: Lead = { ...lead, ...res.data, salesStage: undefined };
+          setLead(merged);
+          onLeadUpdated(merged);
+          invalidateCache('/leads');
+          invalidateCache('/reports/dashboard');
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to update sales stage');
+      }
+      return;
+    }
+
+    const targetStage = newSalesStage as SalesStage;
+    const isModalRequired =
+      targetStage === 'DEMO_SCHEDULED' ||
+      targetStage === 'FOLLOW_UP_REQUIRED' ||
+      targetStage === 'CONVERTED' ||
+      targetStage === 'LOST';
+
+    if (isModalRequired) {
+      setSelectedSalesStage(targetStage);
+      setShowSalesStageModal(true);
+      return;
+    }
+
+    const updatedLead: Lead = {
+      ...lead,
+      salesStage: targetStage,
+    };
+    // Instant optimistic update
+    setLead(updatedLead);
+    onLeadUpdated(updatedLead);
+
+    try {
+      const res = await api.patch<Lead>(`/leads/${lead.id}`, { salesStage: targetStage });
+      if (res.success && res.data) {
+        const merged = { ...updatedLead, ...res.data };
+        setLead(merged);
+        onLeadUpdated(merged);
+        invalidateCache('/leads');
+        invalidateCache('/reports/dashboard');
+      }
+    } catch (err: any) {
+      // If direct patch fails, open modal for full details
+      setSelectedSalesStage(targetStage);
+      setShowSalesStageModal(true);
     }
   }
 
@@ -200,25 +267,46 @@ export function LeadDrawer({
 
   async function handleSaveContactPerson() {
     if (!lead) return;
+    const trimmed = contactInput.trim() || null;
+    const updatedLead: Lead = {
+      ...lead,
+      contactPerson: trimmed || undefined,
+    };
+    // Instant optimistic update - prevents slow saving and prevents fields from blanking out
+    setLead(updatedLead);
+    onLeadUpdated(updatedLead);
+    setIsEditingContact(false);
+
     setSavingContact(true);
     try {
-      const res = await api.patch<Lead>(`/leads/${lead.id}`, { contactPerson: contactInput.trim() || null });
+      const res = await api.patch<Lead>(`/leads/${lead.id}`, { contactPerson: trimmed });
       if (res.success && res.data) {
-        setLead(res.data);
-        onLeadUpdated(res.data);
-        setIsEditingContact(false);
+        const merged = { ...updatedLead, ...res.data };
+        setLead(merged);
+        onLeadUpdated(merged);
+        invalidateCache('/leads');
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update contact person');
+      setLead(lead);
+      onLeadUpdated(lead);
     } finally {
       setSavingContact(false);
     }
   }
 
   useEffect(() => {
-    if (leadId && isOpen) {
-      loadLead(leadId);
+    if (!isOpen) {
+      // Clear lead immediately on close so next lead opened doesn't show old data
+      setLead(null);
       setIsEditingContact(false);
+      return;
+    }
+    if (leadId) {
+      // Reset previous lead so previous details are never displayed for a new lead
+      setLead(null);
+      setIsEditingContact(false);
+      loadLead(leadId);
     }
   }, [leadId, isOpen]);
 
@@ -312,15 +400,17 @@ export function LeadDrawer({
               </div>
               <div className="min-w-0">
                 <h2 className="text-base font-extrabold text-slate-900 truncate">
-                  {lead?.companyName || 'Loading...'}
+                  {lead ? lead.companyName : (loading ? 'Loading lead details...' : 'Lead Details')}
                 </h2>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-slate-500 font-medium">
-                    Contact: <strong>{lead?.contactPerson}</strong>
-                  </span>
-                  <span className="text-slate-300">•</span>
-                  <span className="text-xs text-slate-500">{lead?.serviceProduct}</span>
-                </div>
+                {lead && (
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-slate-500 font-medium">
+                      Contact: <strong>{lead.contactPerson || '-'}</strong>
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-xs text-slate-500">{lead.serviceProduct}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -333,6 +423,19 @@ export function LeadDrawer({
               </button>
             </div>
           </div>
+
+          {loading && !lead && (
+            <div className="flex-1 p-8 flex flex-col items-center justify-center text-slate-400 gap-3">
+              <div className="w-8 h-8 border-3 border-sky-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs font-semibold text-slate-500">Loading lead details...</p>
+            </div>
+          )}
+
+          {!loading && !lead && (
+            <div className="flex-1 p-8 flex flex-col items-center justify-center text-slate-400">
+              <p className="text-xs font-medium">No lead selected.</p>
+            </div>
+          )}
 
           {lead && (
             <>
@@ -387,94 +490,55 @@ export function LeadDrawer({
                   )}
                 </div>
 
-                {/* Stage Selector depending on role */}
-                {user?.role === 'SALESMAN' ? (
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Sales Stage:
-                    </span>
+                {/* Stage, Outcome & Sales Stage Controls */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">Pipeline:</span>
                     <select
-                      value={lead.salesStage || 'ASSIGNED'}
-                      onChange={(e) => {
-                        setSelectedSalesStage(e.target.value as SalesStage);
-                        setShowSalesStageModal(true);
-                      }}
-                      className="text-xs font-bold px-2.5 py-1 bg-white border border-slate-300 rounded-md text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs"
+                      value={normalizePipelineStage(lead.pipelineStage)}
+                      onChange={(e) => handleQuickStageChange(e.target.value)}
+                      className="text-xs font-semibold bg-transparent text-slate-800 focus:outline-none cursor-pointer"
                     >
+                      {Array.from(new Set([...pipelineOptions, normalizePipelineStage(lead.pipelineStage)].filter(Boolean))).map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-500">Outcome:</span>
+                    <select
+                      value={lead.lastCallOutcome || ''}
+                      onChange={(e) => handleOutcomeChange(e.target.value)}
+                      className="text-xs font-semibold bg-transparent text-slate-800 focus:outline-none cursor-pointer"
+                    >
+                      <option value="">-- No Outcome --</option>
+                      {outcomeOptions.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 bg-teal-50/80 px-2 py-0.5 rounded-md border border-teal-200">
+                    <span className="text-[10px] uppercase font-bold text-teal-700">Sales Stage:</span>
+                    <select
+                      value={lead.salesStage || ''}
+                      onChange={(e) => handleSalesStageChange(e.target.value)}
+                      className="text-xs font-semibold bg-transparent text-teal-900 focus:outline-none cursor-pointer"
+                    >
+                      <option value="">-- Not Assigned --</option>
                       {SALES_STAGE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
                           {opt.label}
                         </option>
                       ))}
                     </select>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedSalesStage((lead.salesStage as SalesStage) || 'ASSIGNED');
-                        setShowSalesStageModal(true);
-                      }}
-                      className="text-[11px] py-1 px-2.5 text-slate-700"
-                    >
-                      Update
-                    </Button>
                   </div>
-                ) : (
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Pipeline:
-                    </span>
-                    <select
-                      value={lead.pipelineStage}
-                      onChange={(e) => handleQuickStageChange(e.target.value)}
-                      className="text-xs font-semibold px-2 py-1 bg-slate-50 border border-slate-200 rounded-md text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
-                    >
-                      {user?.role === 'SUPER_ADMIN'
-                        ? pipelineOptions.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))
-                        : TELECALLER_KANBAN_COLUMNS.map((col) => (
-                            <option key={col.id} value={col.id}>
-                              {col.title}
-                            </option>
-                          ))}
-                    </select>
-
-                    {user?.role === 'SUPER_ADMIN' ? (
-                      <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
-                        <span className="text-[10px] uppercase font-bold text-slate-500">Outcome:</span>
-                        <select
-                          value={lead.lastCallOutcome || ''}
-                          onChange={(e) => handleOutcomeChange(e.target.value)}
-                          className="text-xs font-semibold bg-transparent text-slate-800 focus:outline-none cursor-pointer"
-                        >
-                          <option value="">-- No Outcome --</option>
-                          {outcomeOptions.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : (
-                      lead.lastCallOutcome && (
-                        <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
-                          <span className="text-[10px] uppercase font-bold text-slate-500">Outcome:</span>
-                          <span className="text-xs font-bold text-slate-800">{lead.lastCallOutcome}</span>
-                        </div>
-                      )
-                    )}
-
-                    {lead.salesStage && (
-                      <div className="flex items-center gap-1.5 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200">
-                        <span className="text-[10px] uppercase font-bold text-teal-700">Sales Stage:</span>
-                        <span className="text-xs font-bold text-teal-900">{lead.salesStage.replace(/_/g, ' ')}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+                </div>
               </div>
 
               {/* Navigation Tabs */}
@@ -545,58 +609,47 @@ export function LeadDrawer({
                           <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
                             Call Outcome
                           </span>
-                          {user?.role === 'SUPER_ADMIN' && (
-                            <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
-                          )}
+                          <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
                         </div>
-                        {user?.role === 'SUPER_ADMIN' ? (
-                          <select
-                            value={lead.lastCallOutcome || ''}
-                            onChange={(e) => handleOutcomeChange(e.target.value)}
-                            className={`mt-1 w-full text-xs font-bold rounded px-2 py-1 border cursor-pointer ${outcomeStyle.bg} ${outcomeStyle.text} ${outcomeStyle.border} focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs`}
-                          >
-                            <option value="" className="bg-slate-50 text-slate-700 font-normal">-- No Outcome --</option>
-                            {outcomeOptions.map((o) => {
-                              const optColor = getOutcomeColor(o);
-                              return (
-                                <option key={o} value={o} className={`${optColor.bg} ${optColor.text} font-bold`}>
-                                  {o}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        ) : (
-                          <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-bold border ${outcomeStyle.bg} ${outcomeStyle.text} ${outcomeStyle.border}`}>
-                            {lead.lastCallOutcome || 'Never contacted'}
-                          </span>
-                        )}
+                        <select
+                          value={lead.lastCallOutcome || ''}
+                          onChange={(e) => handleOutcomeChange(e.target.value)}
+                          className={`mt-1 w-full text-xs font-bold rounded px-2 py-1 border cursor-pointer ${outcomeStyle.bg} ${outcomeStyle.text} ${outcomeStyle.border} focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs`}
+                        >
+                          <option value="" className="bg-slate-50 text-slate-700 font-normal">-- No Outcome --</option>
+                          {outcomeOptions.map((o) => {
+                            const optColor = getOutcomeColor(o);
+                            return (
+                              <option key={o} value={o} className={`${optColor.bg} ${optColor.text} font-bold`}>
+                                {o}
+                              </option>
+                            );
+                          })}
+                        </select>
                       </div>
                       <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
                             Sales Stage
                           </span>
-                          {user?.role === 'SALESMAN' && (
-                            <button
-                              onClick={() => {
-                                setSelectedSalesStage((lead.salesStage as SalesStage) || 'ASSIGNED');
-                                setShowSalesStageModal(true);
-                              }}
-                              className="text-[9px] text-sky-600 hover:text-sky-800 font-bold uppercase tracking-wider cursor-pointer"
-                            >
-                              Update
-                            </button>
-                          )}
+                          <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
                         </div>
-                        <span
-                          className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-bold border ${
+                        <select
+                          value={lead.salesStage || ''}
+                          onChange={(e) => handleSalesStageChange(e.target.value)}
+                          className={`mt-1 w-full text-xs font-bold rounded px-2 py-1 border cursor-pointer ${
                             lead.salesStage
                               ? `${getStageColor(lead.salesStage).bg} ${getStageColor(lead.salesStage).text} ${getStageColor(lead.salesStage).border}`
-                              : 'bg-slate-100 text-slate-500 border-slate-200'
-                          }`}
+                              : 'bg-white text-slate-700 border-slate-200'
+                          } focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs`}
                         >
-                          {lead.salesStage ? lead.salesStage.replace(/_/g, ' ') : 'Not Assigned'}
-                        </span>
+                          <option value="" className="text-slate-500 font-normal">-- Not Assigned --</option>
+                          {SALES_STAGE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value} className="font-bold">
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                         <div className="flex items-center justify-between">

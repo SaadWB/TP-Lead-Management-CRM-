@@ -60,6 +60,7 @@ export async function listLeads(req: Request, res: Response, next: NextFunction)
       salesStage: req.query.salesStage as string | undefined,
       priority: req.query.priority as Priority | undefined,
       leadSource: req.query.leadSource as string | undefined,
+      excludeWebsiteLeads: req.query.excludeWebsiteLeads === 'true',
       followUpStatus: req.query.followUpStatus as any,
       kpi: req.query.kpi as string | undefined,
       dateField: req.query.dateField as any,
@@ -683,9 +684,7 @@ export async function updateSalesStage(req: Request, res: Response, next: NextFu
       if (lead.assignedSalesmanId !== req.user!.id) {
         throw new ForbiddenError('A Closer can update the Sales Stage only for leads assigned to them.');
       }
-    } else if (req.user!.role === USER_ROLES.TELECALLER) {
-      throw new ForbiddenError('Telecallers cannot update the Sales Stage.');
-    } else if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
+    } else if (req.user!.role !== USER_ROLES.SUPER_ADMIN && req.user!.role !== USER_ROLES.TELECALLER) {
       throw new ForbiddenError('Unauthorized to update sales stage.');
     }
 

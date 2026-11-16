@@ -157,6 +157,18 @@ export function normalizeCallOutcome(raw: string | null | undefined): string {
   return val;
 }
 
+export function normalizePipelineStage(raw: string | null | undefined): string {
+  if (!raw) return 'New Lead';
+  const val = raw.trim();
+  if (val === 'Connected – Discussed' || val.toLowerCase() === 'connected') return 'Connected';
+  if (val.toLowerCase() === 'new' || val.toLowerCase() === 'new lead') return 'New Lead';
+  if (val.toLowerCase() === 'attempting contact') return 'Attempting Contact';
+  if (val.toLowerCase() === 'follow-up' || val.toLowerCase() === 'follow up') return 'Follow-up';
+  if (val.toLowerCase() === 'demo') return 'Demo';
+  if (val.toLowerCase() === 'closed') return 'Closed';
+  return val;
+}
+
 export const TASK_TYPES = {
   CALL: 'CALL',
   FOLLOW_UP: 'FOLLOW_UP',

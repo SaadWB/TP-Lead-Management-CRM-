@@ -7,6 +7,7 @@ import {
   Lead,
   User,
   normalizeCallOutcome,
+  normalizePipelineStage,
   PIPELINE_STAGE_LIST,
   Priority,
   USER_ROLES,
@@ -62,6 +63,7 @@ export default function AdminWebsiteLeadsPage() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [selectedLeadIdForDrawer, setSelectedLeadIdForDrawer] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [pipelineOptions, setPipelineOptions] = useState<string[]>(PIPELINE_STAGE_LIST);
 
   // Bulk action state
   const [bulkTelecallerId, setBulkTelecallerId] = useState<string>('');
@@ -87,6 +89,57 @@ export default function AdminWebsiteLeadsPage() {
     setTimeout(() => setToastMessage(null), 3000);
   }
 
+  // Load pipeline options
+  React.useEffect(() => {
+    api.get<{
+      pipelineStages?: { name: string; isActive: boolean }[];
+      stages?: { name: string; isActive: boolean }[];
+    }>('/options').then((res) => {
+      if (res.success && res.data) {
+        const stages = res.data.pipelineStages || res.data.stages;
+        if (stages && stages.length > 0) {
+          const activeStages = stages.filter((s) => s.isActive).map((s) => s.name);
+          setPipelineOptions(Array.from(new Set([...PIPELINE_STAGE_LIST, ...activeStages])));
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Inline Pipeline Update
+  async function handlePipelineUpdate(leadId: string, newStage: string) {
+    try {
+      const res = await api.patch<Lead>(`/leads/${leadId}`, { pipelineStage: newStage });
+      if (res.success && res.data) {
+        mutateLeads((prev) => (prev ? prev.map((l) => (l.id === leadId ? { ...l, ...res.data! } : l)) : [res.data!]));
+        invalidateCache('/leads');
+        invalidateCache('/reports/dashboard');
+        triggerToast(`Pipeline updated to "${newStage}"`);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update pipeline stage');
+    }
+  }
+
+  function getPipelineBadgeColor(stageName: string) {
+    const norm = normalizePipelineStage(stageName);
+    switch (norm) {
+      case 'New Lead':
+        return 'bg-blue-50 text-blue-800 border-blue-200';
+      case 'Attempting Contact':
+        return 'bg-amber-50 text-amber-800 border-amber-200';
+      case 'Connected':
+        return 'bg-teal-50 text-teal-800 border-teal-200';
+      case 'Follow-up':
+        return 'bg-purple-50 text-purple-800 border-purple-200';
+      case 'Demo':
+        return 'bg-cyan-50 text-cyan-800 border-cyan-200';
+      case 'Closed':
+        return 'bg-slate-100 text-slate-700 border-slate-300';
+      default:
+        return 'bg-slate-50 text-slate-700 border-slate-200';
+    }
+  }
+
   // Filter leads client-side
   const filteredLeads = useMemo(() => {
     if (!websiteLeads) return [];
@@ -96,7 +149,7 @@ export default function AdminWebsiteLeadsPage() {
 
       // 2. Pipeline filter
       if (pipelineFilter !== 'ALL') {
-        const norm = normalizeCallOutcome(lead.pipelineStage);
+        const norm = normalizePipelineStage(lead.pipelineStage);
         if (norm !== pipelineFilter && lead.pipelineStage !== pipelineFilter) return false;
       }
 
@@ -682,7 +735,7 @@ export default function AdminWebsiteLeadsPage() {
                   sortedLeads.map((lead, idx) => {
                     const isSelected = selectedLeadIds.has(lead.id);
                     const priorityMeta = getPriorityColor(lead.priority);
-                    const stageNorm = normalizeCallOutcome(lead.pipelineStage) || lead.pipelineStage || 'New Lead';
+                    const stageNorm = normalizePipelineStage(lead.pipelineStage);
                     const stageMeta = getStageColor(stageNorm);
                     const outcomeMeta = getOutcomeColor(lead.lastCallOutcome);
 
@@ -791,14 +844,21 @@ export default function AdminWebsiteLeadsPage() {
                           </span>
                         </td>
 
-                        {/* Pipeline Stage */}
-                        <td className="p-3">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${stageMeta.bg} ${stageMeta.text}`}
+                        {/* Pipeline Stage Dropdown */}
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={stageNorm}
+                            onChange={(e) => handlePipelineUpdate(lead.id, e.target.value)}
+                            className={`w-full text-xs font-bold rounded-lg px-2.5 py-1.5 border cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs transition-colors ${getPipelineBadgeColor(
+                              stageNorm
+                            )}`}
                           >
-                            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
-                            {stageNorm}
-                          </span>
+                            {pipelineOptions.map((st) => (
+                              <option key={st} value={st} className="font-semibold text-slate-800 bg-white">
+                                {st}
+                              </option>
+                            ))}
+                          </select>
                         </td>
 
                         {/* Outcome */}
@@ -925,7 +985,8 @@ export default function AdminWebsiteLeadsPage() {
               setIsDrawerOpen(false);
               setSelectedLeadIdForDrawer(null);
             }}
-            onLeadUpdated={() => {
+            onLeadUpdated={(updated) => {
+              mutateLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)) : [{ ...updated }]));
               refreshLeads();
             }}
           />

@@ -74,6 +74,7 @@ export declare const TELECALLER_KANBAN_COLUMNS: {
 }[];
 export declare function getSuggestedPipelineForOutcome(outcome: string | null | undefined): string;
 export declare function normalizeCallOutcome(raw: string | null | undefined): string;
+export declare function normalizePipelineStage(raw: string | null | undefined): string;
 export declare const TASK_TYPES: {
     readonly CALL: "CALL";
     readonly FOLLOW_UP: "FOLLOW_UP";
