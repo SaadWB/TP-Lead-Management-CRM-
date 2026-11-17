@@ -69,7 +69,7 @@ export declare const createLeadSchema: z.ZodObject<{
     serviceProduct: z.ZodString;
     contactPerson: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     phone: z.ZodString;
-    email: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    email: z.ZodNullable<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>>;
     alternatePhone: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     website: z.ZodNullable<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>>;
     priority: z.ZodDefault<z.ZodString>;
@@ -124,7 +124,7 @@ export declare const updateLeadSchema: z.ZodObject<{
     serviceProduct: z.ZodOptional<z.ZodString>;
     contactPerson: z.ZodOptional<z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>>;
     phone: z.ZodOptional<z.ZodString>;
-    email: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+    email: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>>>;
     alternatePhone: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     website: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>>>;
     priority: z.ZodOptional<z.ZodDefault<z.ZodString>>;

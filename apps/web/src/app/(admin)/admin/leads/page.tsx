@@ -15,6 +15,7 @@ import {
   TELECALLER_CALL_OUTCOMES,
   SALES_STAGE_OPTIONS,
   User,
+  normalizePipelineStage,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';

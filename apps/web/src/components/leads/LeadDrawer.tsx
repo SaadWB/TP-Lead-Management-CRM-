@@ -763,7 +763,7 @@ export function LeadDrawer({
                             {lead.callAttempts || 0} Attempts
                           </span>
                           <span className="text-[11px] text-slate-500">
-                            {lead.lastContactedAt ? formatDateTime(lead.lastContactedAt) : 'Never'}
+                            {lead.lastContactDate ? formatDateTime(lead.lastContactDate) : (lead.lastActivityAt ? formatDateTime(lead.lastActivityAt) : 'Never')}
                           </span>
                         </div>
                       </div>

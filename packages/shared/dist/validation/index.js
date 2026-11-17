@@ -57,7 +57,7 @@ exports.createLeadSchema = zod_1.z.object({
     serviceProduct: zod_1.z.string().min(1, 'Service or product is required'),
     contactPerson: zod_1.z.string().optional().nullable().default(''),
     phone: zod_1.z.string().min(7, 'A valid phone number is required'),
-    email: zod_1.z.string().email('Invalid email').optional().nullable(),
+    email: zod_1.z.string().email('Invalid email').or(zod_1.z.literal('')).optional().nullable(),
     alternatePhone: zod_1.z.string().optional().nullable(),
     website: zod_1.z.string().url('Invalid website URL').or(zod_1.z.literal('')).optional().nullable(),
     priority: zod_1.z.string().default(constants_1.PRIORITIES.MEDIUM),
