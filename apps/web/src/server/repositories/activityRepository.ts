@@ -11,13 +11,21 @@ export class ActivityRepository {
     metadata?: Record<string, unknown> | null;
   }): Promise<LeadActivity> {
     const effectiveUserId = data.userId ? (resolveUserAlias(data.userId) || data.userId) : null;
+    let safeMetadata: any = undefined;
+    if (data.metadata) {
+      try {
+        safeMetadata = JSON.parse(JSON.stringify(data.metadata));
+      } catch {
+        safeMetadata = undefined;
+      }
+    }
     const act = await prisma.leadActivity.create({
       data: {
         leadId: data.leadId,
         userId: effectiveUserId,
         type: data.type,
         description: data.description,
-        metadata: data.metadata ? (data.metadata as any) : undefined,
+        metadata: safeMetadata,
       },
       include: {
         user: { select: { id: true, name: true, email: true, role: true } },

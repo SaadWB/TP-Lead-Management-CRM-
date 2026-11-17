@@ -15,11 +15,10 @@ import {
   TELECALLER_CALL_OUTCOMES,
   SALES_STAGE_OPTIONS,
   User,
-  normalizePipelineStage,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
-import { invalidateCache, getMemoryCache, setMemoryCache, getCacheKey } from '@/lib/apiCache';
+import { invalidateCache, getMemoryCache, setMemoryCache, getCacheKey, updateCachedLead } from '@/lib/apiCache';
 import {
   Users,
   Filter,
@@ -245,6 +244,7 @@ function AdminLeadsContent() {
       const res = await api.patch<Lead>(`/leads/${leadId}/priority`, { priority });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -260,7 +260,7 @@ function AdminLeadsContent() {
       });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
-        invalidateCache('/leads');
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -278,7 +278,7 @@ function AdminLeadsContent() {
       const res = await api.patch<Lead>(`/leads/${leadId}`, { pipelineStage: stageNorm });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...res.data } : l)));
-        invalidateCache('/leads');
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -292,7 +292,7 @@ function AdminLeadsContent() {
       const res = await api.patch<Lead>(`/leads/${leadId}`, { lastCallOutcome: lastCallOutcome || null });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
-        invalidateCache('/leads');
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -640,9 +640,8 @@ function AdminLeadsContent() {
               return (
                 <div
                   key={lead.id}
-                  className={`bg-white rounded-xl border shadow-soft-sm p-4 space-y-3 transition-colors ${
-                    isSelected ? 'border-sky-400 ring-2 ring-sky-200 bg-sky-50/20' : 'border-slate-200'
-                  }`}
+                  className={`bg-white rounded-xl border shadow-soft-sm p-4 space-y-3 transition-colors ${isSelected ? 'border-sky-400 ring-2 ring-sky-200 bg-sky-50/20' : 'border-slate-200'
+                    }`}
                 >
                   {/* Top row: Checkbox, # Serial, Company Name, Priority */}
                   <div className="flex items-start justify-between gap-2">
@@ -769,11 +768,10 @@ function AdminLeadsContent() {
                     <select
                       value={lead.assignedTelecallerId || ''}
                       onChange={(e) => handleSingleTelecallerUpdate(lead.id, e.target.value)}
-                      className={`w-full text-[11px] font-semibold rounded-md px-2 py-1 border cursor-pointer ${
-                        lead.assignedTelecallerId
-                          ? 'bg-white text-slate-800 border-slate-200 font-bold'
-                          : 'bg-amber-50/70 text-amber-800 border-amber-200 italic'
-                      }`}
+                      className={`w-full text-[11px] font-semibold rounded-md px-2 py-1 border cursor-pointer ${lead.assignedTelecallerId
+                        ? 'bg-white text-slate-800 border-slate-200 font-bold'
+                        : 'bg-amber-50/70 text-amber-800 border-amber-200 italic'
+                        }`}
                     >
                       <option value="">-- Unassigned --</option>
                       {telecallers.map((t) => (
@@ -967,7 +965,7 @@ function AdminLeadsContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {loading && filteredLeads.length === 0 ? (
+                  {loading ? (
                     [1, 2, 3, 4, 5, 6].map((i) => (
                       <tr key={i} className="animate-pulse">
                         <td style={{ width: 48 }} className="sticky left-0 z-10 bg-white p-3 text-center border-r border-slate-200/60">
@@ -1012,16 +1010,14 @@ function AdminLeadsContent() {
                             setSelectedLeadId(lead.id);
                             setIsDrawerOpen(true);
                           }}
-                          className={`group hover:bg-slate-50/80 cursor-pointer transition-colors ${
-                            isSelected ? 'bg-sky-50/40' : ''
-                          }`}
+                          className={`group hover:bg-slate-50/80 cursor-pointer transition-colors ${isSelected ? 'bg-sky-50/40' : ''
+                            }`}
                         >
                           {/* Sticky Checkbox Cell */}
                           <td
                             style={{ width: 48, minWidth: 48, maxWidth: 48 }}
-                            className={`sticky left-0 z-10 border-r border-slate-200/60 p-3 text-center overflow-hidden whitespace-nowrap min-w-0 ${
-                              isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
-                            }`}
+                            className={`sticky left-0 z-10 border-r border-slate-200/60 p-3 text-center overflow-hidden whitespace-nowrap min-w-0 ${isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
+                              }`}
                             onClick={(e) => {
                               e.stopPropagation();
                               toggleSelectLead(lead.id);
@@ -1039,9 +1035,8 @@ function AdminLeadsContent() {
                           {/* Sticky Serial Number Cell */}
                           <td
                             style={{ width: 56, minWidth: 56, maxWidth: 56 }}
-                            className={`sticky left-[48px] z-10 border-r border-slate-200/80 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] p-3 text-center text-slate-500 font-semibold overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${
-                              isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
-                            }`}
+                            className={`sticky left-[48px] z-10 border-r border-slate-200/80 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] p-3 text-center text-slate-500 font-semibold overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
+                              }`}
                             title={`Lead #${index + 1}`}
                           >
                             {index + 1}
@@ -1176,11 +1171,10 @@ function AdminLeadsContent() {
                             <select
                               value={lead.assignedTelecallerId || ''}
                               onChange={(e) => handleSingleTelecallerUpdate(lead.id, e.target.value)}
-                              className={`w-full max-w-full truncate text-[11px] font-semibold rounded px-1.5 py-1 border cursor-pointer ${
-                                lead.assignedTelecallerId
-                                  ? 'bg-slate-50 text-slate-800 border-slate-200 font-bold'
-                                  : 'bg-amber-50/70 text-amber-800 border-amber-200 italic'
-                              } focus:outline-none focus:ring-1 focus:ring-sky-500`}
+                              className={`w-full max-w-full truncate text-[11px] font-semibold rounded px-1.5 py-1 border cursor-pointer ${lead.assignedTelecallerId
+                                ? 'bg-slate-50 text-slate-800 border-slate-200 font-bold'
+                                : 'bg-amber-50/70 text-amber-800 border-amber-200 italic'
+                                } focus:outline-none focus:ring-1 focus:ring-sky-500`}
                             >
                               <option value="">-- Unassigned --</option>
                               {telecallers.map((t) => (
@@ -1212,8 +1206,8 @@ function AdminLeadsContent() {
                               lead.leadSource === 'Other' && lead.leadSourceOther
                                 ? `Lead Source: Other (${lead.leadSourceOther})`
                                 : lead.leadSource
-                                ? `Lead Source: ${lead.leadSource}`
-                                : 'No lead source'
+                                  ? `Lead Source: ${lead.leadSource}`
+                                  : 'No lead source'
                             }
                           >
                             {lead.leadSource ? (
@@ -1444,6 +1438,7 @@ function AdminLeadsContent() {
         }}
         onLeadUpdated={(updated) => {
           setLeads((prev) => prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)));
+          updateCachedLead(updated);
         }}
       />
 

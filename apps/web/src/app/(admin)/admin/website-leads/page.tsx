@@ -13,7 +13,7 @@ import {
   USER_ROLES,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
-import { useSWRData, invalidateCache } from '@/lib/apiCache';
+import { useSWRData, invalidateCache, updateCachedLead } from '@/lib/apiCache';
 import { useAuth } from '@/lib/authContext';
 import {
   Globe,
@@ -64,6 +64,20 @@ export default function AdminWebsiteLeadsPage() {
   const [selectedLeadIdForDrawer, setSelectedLeadIdForDrawer] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [pipelineOptions, setPipelineOptions] = useState<string[]>(PIPELINE_STAGE_LIST);
+  const [outcomeOptions, setOutcomeOptions] = useState<string[]>([
+    'No Answer',
+    'Busy',
+    'Call Cut',
+    'Call Back Later',
+    'Connected – Discussed',
+    'Details Requested',
+    'Demo Interested',
+    'Demo Scheduled',
+    'Demo Completed',
+    'Decision Pending',
+    'Not Interested',
+    'Wrong Number',
+  ]);
 
   // Bulk action state
   const [bulkTelecallerId, setBulkTelecallerId] = useState<string>('');
@@ -89,20 +103,42 @@ export default function AdminWebsiteLeadsPage() {
     setTimeout(() => setToastMessage(null), 3000);
   }
 
-  // Load pipeline options
+  // Load pipeline & outcome options
   React.useEffect(() => {
-    api.get<{
-      pipelineStages?: { name: string; isActive: boolean }[];
-      stages?: { name: string; isActive: boolean }[];
-    }>('/options').then((res) => {
-      if (res.success && res.data) {
-        const stages = res.data.pipelineStages || res.data.stages;
-        if (stages && stages.length > 0) {
-          const activeStages = stages.filter((s) => s.isActive).map((s) => s.name);
-          setPipelineOptions(Array.from(new Set([...PIPELINE_STAGE_LIST, ...activeStages])));
+    function loadOptions() {
+      api.get<{
+        pipelineStages?: { name: string; isActive: boolean }[];
+        stages?: { name: string; isActive: boolean }[];
+        callOutcomes?: { name: string; isActive: boolean }[];
+        outcomes?: { name: string; isActive: boolean }[];
+      }>('/options').then((res) => {
+        if (res.success && res.data) {
+          const stages = res.data.pipelineStages || res.data.stages;
+          const outcomes = res.data.callOutcomes || res.data.outcomes;
+          if (stages && stages.length > 0) {
+            const activeStages = stages.filter((s) => s.isActive).map((s) => s.name);
+            setPipelineOptions(Array.from(new Set([...PIPELINE_STAGE_LIST, ...activeStages])));
+          }
+          if (outcomes && outcomes.length > 0) {
+            const activeOutcomes = outcomes.filter((o) => o.isActive).map((o) => o.name);
+            setOutcomeOptions(activeOutcomes);
+          }
         }
+      }).catch(() => {});
+    }
+    loadOptions();
+
+    const handleInvalidation = (e: Event) => {
+      const customEvent = e as CustomEvent<{ prefix?: string }>;
+      const prefix = customEvent.detail?.prefix;
+      if (!prefix || prefix.startsWith('/options')) {
+        loadOptions();
       }
-    }).catch(() => {});
+    };
+    window.addEventListener('crm:cache-invalidated', handleInvalidation);
+    return () => {
+      window.removeEventListener('crm:cache-invalidated', handleInvalidation);
+    };
   }, []);
 
   // Inline Pipeline Update
@@ -111,12 +147,42 @@ export default function AdminWebsiteLeadsPage() {
       const res = await api.patch<Lead>(`/leads/${leadId}`, { pipelineStage: newStage });
       if (res.success && res.data) {
         mutateLeads((prev) => (prev ? prev.map((l) => (l.id === leadId ? { ...l, ...res.data! } : l)) : [res.data!]));
-        invalidateCache('/leads');
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
         triggerToast(`Pipeline updated to "${newStage}"`);
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update pipeline stage');
+    }
+  }
+
+  // Inline Priority Update
+  async function handlePriorityUpdate(leadId: string, priority: Priority) {
+    try {
+      const res = await api.patch<Lead>(`/leads/${leadId}/priority`, { priority });
+      if (res.success && res.data) {
+        mutateLeads((prev) => (prev ? prev.map((l) => (l.id === leadId ? { ...l, ...res.data! } : l)) : [res.data!]));
+        updateCachedLead(res.data);
+        invalidateCache('/reports/dashboard');
+        triggerToast(`Priority updated to "${priority}"`);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update priority');
+    }
+  }
+
+  // Inline Outcome Update
+  async function handleOutcomeUpdate(leadId: string, lastCallOutcome: string) {
+    try {
+      const res = await api.patch<Lead>(`/leads/${leadId}`, { lastCallOutcome: lastCallOutcome || null });
+      if (res.success && res.data) {
+        mutateLeads((prev) => (prev ? prev.map((l) => (l.id === leadId ? { ...l, ...res.data! } : l)) : [res.data!]));
+        updateCachedLead(res.data);
+        invalidateCache('/reports/dashboard');
+        triggerToast(`Outcome updated to "${lastCallOutcome || 'None'}"`);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update call outcome');
     }
   }
 
@@ -235,7 +301,7 @@ export default function AdminWebsiteLeadsPage() {
       });
       if (res.success && res.data) {
         mutateLeads((prev) => (prev ? prev.map((l) => (l.id === leadId ? res.data! : l)) : [res.data!]));
-        invalidateCache('/leads');
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
         triggerToast('Assigned telecaller successfully');
       }
@@ -835,13 +901,18 @@ export default function AdminWebsiteLeadsPage() {
                           </div>
                         </td>
 
-                        {/* Priority */}
-                        <td className="p-3">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold uppercase ${priorityMeta.bg} ${priorityMeta.text} ${priorityMeta.border} border`}
+                        {/* Priority Dropdown */}
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={lead.priority || 'MEDIUM'}
+                            onChange={(e) => handlePriorityUpdate(lead.id, e.target.value as Priority)}
+                            className={`w-full text-xs font-bold rounded-lg px-2 py-1 border cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs ${priorityMeta.bg} ${priorityMeta.text} ${priorityMeta.border}`}
                           >
-                            {lead.priority || 'MEDIUM'}
-                          </span>
+                            <option value="LOW" className="bg-white text-blue-700 font-bold">Low</option>
+                            <option value="MEDIUM" className="bg-white text-amber-800 font-bold">Medium</option>
+                            <option value="HIGH" className="bg-white text-orange-700 font-bold">High</option>
+                            <option value="URGENT" className="bg-white text-red-700 font-bold">Urgent</option>
+                          </select>
                         </td>
 
                         {/* Pipeline Stage Dropdown */}
@@ -861,18 +932,24 @@ export default function AdminWebsiteLeadsPage() {
                           </select>
                         </td>
 
-                        {/* Outcome */}
-                        <td className="p-3">
-                          {lead.lastCallOutcome ? (
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium border ${outcomeMeta.bg} ${outcomeMeta.text} ${outcomeMeta.border} truncate max-w-full`}
-                              title={lead.lastCallOutcome}
-                            >
-                              {lead.lastCallOutcome}
-                            </span>
-                          ) : (
-                            <span className="text-slate-400 text-xs italic">Awaiting Call</span>
-                          )}
+                        {/* Outcome Dropdown */}
+                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={lead.lastCallOutcome || ''}
+                            onChange={(e) => handleOutcomeUpdate(lead.id, e.target.value)}
+                            className={`w-full text-xs font-bold rounded-lg px-2 py-1 border cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs ${
+                              lead.lastCallOutcome
+                                ? `${outcomeMeta.bg} ${outcomeMeta.text} ${outcomeMeta.border}`
+                                : 'bg-slate-50 text-slate-600 border-slate-200'
+                            }`}
+                          >
+                            <option value="" className="bg-white text-slate-600 font-normal">-- Select Outcome --</option>
+                            {outcomeOptions.map((o) => (
+                              <option key={o} value={o} className="bg-white text-slate-800 font-semibold">
+                                {o}
+                              </option>
+                            ))}
+                          </select>
                         </td>
 
                         {/* Telecaller (Inline Dropdown) */}
@@ -987,7 +1064,7 @@ export default function AdminWebsiteLeadsPage() {
             }}
             onLeadUpdated={(updated) => {
               mutateLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)) : [{ ...updated }]));
-              refreshLeads();
+              updateCachedLead(updated);
             }}
           />
         )}

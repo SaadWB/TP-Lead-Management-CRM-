@@ -61,6 +61,41 @@ export function invalidateCache(prefix?: string): void {
 }
 
 /**
+ * Fast in-place cache mutation for leads:
+ * Updates the lead in all cached queries in 0ms without clearing cache or triggering full page re-fetches.
+ */
+export function updateCachedLead(updatedLead: any): void {
+  if (!updatedLead || !updatedLead.id) return;
+  memoryCache.forEach((entry, key) => {
+    if (key.startsWith('/leads') && Array.isArray(entry.data)) {
+      const idx = entry.data.findIndex((l: any) => l.id === updatedLead.id);
+      if (idx !== -1) {
+        const nextList = [...entry.data];
+        nextList[idx] = { ...nextList[idx], ...updatedLead };
+        entry.data = nextList;
+        entry.timestamp = Date.now();
+        const set = listeners.get(key);
+        if (set) {
+          set.forEach((fn) => fn(nextList));
+        }
+      }
+    } else if (key === `/leads/${updatedLead.id}` && entry.data) {
+      const nextItem = { ...entry.data, ...updatedLead };
+      entry.data = nextItem;
+      entry.timestamp = Date.now();
+      const set = listeners.get(key);
+      if (set) {
+        set.forEach((fn) => fn(nextItem));
+      }
+    }
+  });
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('crm:lead-updated', { detail: { lead: updatedLead } }));
+  }
+}
+
+/**
  * useSWRData hook for instant navigation with Stale-While-Revalidate caching.
  * Revisiting any page renders cached data instantly (0ms) and refreshes in background.
  */
@@ -140,10 +175,33 @@ export function useSWRData<T>(
     };
     window.addEventListener('focus', handleFocus);
 
+    // 5. In-place sync on instant lead update
+    const handleLeadUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<{ lead: any }>;
+      const updated = customEvent.detail?.lead;
+      if (!updated || !updated.id) return;
+      setData((prev: any) => {
+        if (!prev) return prev;
+        if (Array.isArray(prev)) {
+          const idx = prev.findIndex((l: any) => l.id === updated.id);
+          if (idx === -1) return prev;
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...updated };
+          return next as any;
+        }
+        if (prev.id === updated.id) {
+          return { ...prev, ...updated } as any;
+        }
+        return prev;
+      });
+    };
+    window.addEventListener('crm:lead-updated', handleLeadUpdated);
+
     return () => {
       listeners.get(cacheKey)?.delete(listener);
       window.removeEventListener('crm:cache-invalidated', handleInvalidation);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('crm:lead-updated', handleLeadUpdated);
     };
   }, [cacheKey, fetchData, options.revalidateOnFocus]);
 

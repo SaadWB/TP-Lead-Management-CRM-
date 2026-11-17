@@ -15,7 +15,7 @@ import {
   Priority,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
-import { useSWRData, invalidateCache } from '@/lib/apiCache';
+import { useSWRData, invalidateCache, updateCachedLead } from '@/lib/apiCache';
 import { useAuth } from '@/lib/authContext';
 import {
   Clock,
@@ -154,11 +154,9 @@ export default function TelecallerMyLeadsPage() {
   // Pin recently modified lead IDs to keep them visible when changing status/outcome
   const [recentlyUpdatedIds, setRecentlyUpdatedIds] = useState<Set<string>>(new Set());
 
-  // Sorting state - default to createdAt asc to preserve exact sheet sequence and prevent data shifting on updates
-  const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'nextFollowUpDate' | 'companyName'>(
-    initialFilters?.sortBy || 'createdAt'
-  );
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(initialFilters?.sortOrder || 'asc');
+  // Sorting state - default to createdAt asc to preserve exact sequence and prevent leads jumping rows on update
+  const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'nextFollowUpDate' | 'companyName'>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -273,6 +271,22 @@ export default function TelecallerMyLeadsPage() {
 
   useEffect(() => {
     fetchCustomOptions();
+    const handleInvalidation = (e: Event) => {
+      const customEvent = e as CustomEvent<{ prefix?: string }>;
+      const prefix = customEvent.detail?.prefix;
+      if (!prefix || prefix.startsWith('/options') || prefix.startsWith('/leads')) {
+        fetchCustomOptions();
+      }
+    };
+    const handleFocus = () => {
+      fetchCustomOptions();
+    };
+    window.addEventListener('crm:cache-invalidated', handleInvalidation);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('crm:cache-invalidated', handleInvalidation);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   async function fetchCustomOptions() {
@@ -292,14 +306,17 @@ export default function TelecallerMyLeadsPage() {
 
     try {
       const optRes = await api.get<{
-        pipelineStages?: { name: string; isActive: boolean }[];
-        stages?: { name: string; isActive: boolean }[];
+        pipelineStages?: { name: string; isActive: boolean; order?: number }[];
+        stages?: { name: string; isActive: boolean; order?: number }[];
       }>('/options');
       if (optRes.success && optRes.data) {
         const stages = optRes.data.pipelineStages || optRes.data.stages;
         if (stages && stages.length > 0) {
-          const activeStages = stages.filter((s) => s.isActive).map((s) => s.name);
-          const combined = Array.from(new Set([...PIPELINE_STAGE_LIST, ...activeStages]));
+          const activeStages = stages
+            .filter((s) => s.isActive)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+            .map((s) => s.name);
+          const combined = Array.from(new Set([...activeStages, ...PIPELINE_STAGE_LIST]));
           setPipelineOptions(combined);
         }
       }
@@ -327,23 +344,25 @@ export default function TelecallerMyLeadsPage() {
   // Filter leads client-side for ultra-fast response
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
-      // Pin recently modified leads so data does not vanish unexpectedly upon updating outcome or pipeline
-      if (recentlyUpdatedIds.has(lead.id)) {
-        return true;
-      }
-
       // 1. Pipeline filter
       const normLeadPipeline = normalizePipelineStage(lead.pipelineStage);
       if (pipelineFilter === 'ALL') {
-        // Closed pipeline leads should not appear in All Leads section.
-        // They should only be accessible through the dedicated top filter.
+        // Closed pipeline leads must never appear in All Leads section.
+        // They should only be accessible through the dedicated top "Closed" filter.
         if (lead.pipelineStage === 'Closed' || normLeadPipeline === 'Closed') {
           return false;
         }
       } else {
         if (normLeadPipeline !== pipelineFilter && lead.pipelineStage !== pipelineFilter) {
-          return false;
+          if (!recentlyUpdatedIds.has(lead.id)) {
+            return false;
+          }
         }
+      }
+
+      // Pin recently modified leads when active inside a specific tab
+      if (pipelineFilter !== 'ALL' && recentlyUpdatedIds.has(lead.id)) {
+        return true;
       }
 
       // 2. Outcome filter
@@ -394,7 +413,7 @@ export default function TelecallerMyLeadsPage() {
     });
   }, [leads, pipelineFilter, outcomeFilter, priorityFilter, searchTerm, datePreset, dateField, fromDate, toDate, recentlyUpdatedIds]);
 
-  // Sort leads client-side
+  // Sort leads client-side with stable row preservation so inline edits never jump rows to the top
   const sortedLeads = useMemo(() => {
     const list = [...filteredLeads];
     list.sort((a, b) => {
@@ -404,19 +423,19 @@ export default function TelecallerMyLeadsPage() {
       if (sortBy === 'createdAt') {
         valA = new Date(a.createdAt).getTime();
         valB = new Date(b.createdAt).getTime();
-      } else if (sortBy === 'updatedAt') {
-        valA = new Date(a.lastActivityAt || a.updatedAt).getTime();
-        valB = new Date(b.lastActivityAt || b.updatedAt).getTime();
       } else if (sortBy === 'nextFollowUpDate') {
         valA = a.nextFollowUpDate ? new Date(a.nextFollowUpDate).getTime() : 0;
         valB = b.nextFollowUpDate ? new Date(b.nextFollowUpDate).getTime() : 0;
       } else if (sortBy === 'companyName') {
-        valA = a.companyName.toLowerCase();
-        valB = b.companyName.toLowerCase();
+        valA = (a.companyName || '').toLowerCase();
+        valB = (b.companyName || '').toLowerCase();
         return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      } else if (sortBy === 'updatedAt') {
+        valA = new Date(a.updatedAt || a.createdAt).getTime();
+        valB = new Date(b.updatedAt || b.createdAt).getTime();
       } else {
-        valA = new Date(a.lastActivityAt || a.updatedAt).getTime();
-        valB = new Date(b.lastActivityAt || b.updatedAt).getTime();
+        valA = new Date(a.createdAt).getTime();
+        valB = new Date(b.createdAt).getTime();
       }
 
       return sortOrder === 'asc' ? valA - valB : valB - valA;
@@ -529,6 +548,7 @@ export default function TelecallerMyLeadsPage() {
       });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
         triggerSaveNotice(`Pipeline changed to "${newStage}"`);
         triggerUndo(previousLead, `Changed pipeline of ${lead.companyName} to ${newStage}`);
@@ -543,54 +563,10 @@ export default function TelecallerMyLeadsPage() {
   }
 
   // Inline Outcome Change
+  // Inline Outcome Change - immediate direct save without blocking modals
   async function handleOutcomeChange(lead: Lead, newOutcome: string) {
     if (!newOutcome || lead.lastCallOutcome === newOutcome) return;
     const suggestedPipeline = getSuggestedPipelineForOutcome(newOutcome);
-
-    // Prompt rules:
-    // 1. Date & Time required for Call Back Later and Demo Scheduled
-    if (newOutcome === 'Call Back Later' || newOutcome === 'Demo Scheduled') {
-      setPromptTarget({
-        lead,
-        newOutcome,
-        suggestedPipeline,
-        type: 'DATE_TIME',
-      });
-      setPromptInputDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
-      setPromptInputNextAction(lead.nextAction || (newOutcome === 'Demo Scheduled' ? 'Conduct software demo' : 'Call back prospect'));
-      return;
-    }
-
-    // 2. Follow-up date required for follow-up outcomes
-    if (
-      ['Demo Interested', 'Details Requested', 'Demo Completed', 'Decision Pending'].includes(newOutcome)
-    ) {
-      if (!lead.nextFollowUpDate) {
-        setPromptTarget({
-          lead,
-          newOutcome,
-          suggestedPipeline,
-          type: 'FOLLOW_UP_DATE',
-        });
-        setPromptInputDate('');
-        setPromptInputNextAction(lead.nextAction || `Follow up after ${newOutcome}`);
-        return;
-      }
-    }
-
-    // 3. Reason required for Closed outcomes (Not Interested, Wrong Number)
-    if (newOutcome === 'Not Interested' || newOutcome === 'Wrong Number') {
-      setPromptTarget({
-        lead,
-        newOutcome,
-        suggestedPipeline: 'Closed',
-        type: 'CLOSE_REASON',
-      });
-      setPromptInputReason('');
-      return;
-    }
-
-    // Direct save
     await executeOutcomeUpdate(lead, newOutcome, suggestedPipeline);
   }
 
@@ -629,6 +605,7 @@ export default function TelecallerMyLeadsPage() {
 
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
         triggerSaveNotice(`Saved: ${newOutcome}`);
         triggerUndo(previousLead, `Logged outcome "${newOutcome}" for ${lead.companyName}`);
@@ -1425,7 +1402,24 @@ export default function TelecallerMyLeadsPage() {
               </thead>
 
               <tbody className="divide-y divide-slate-100 bg-white">
-                {paginatedLeads.length === 0 ? (
+                {swrLoading && leads.length === 0 ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="p-3 text-center"><div className="h-4 bg-slate-200 rounded w-6 mx-auto" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-40 mb-1" /><div className="h-3 bg-slate-100 rounded w-24" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-28" /></td>
+                      <td className="p-3"><div className="h-6 bg-slate-200 rounded w-16" /></td>
+                      <td className="p-3"><div className="h-7 bg-slate-200 rounded w-28" /></td>
+                      <td className="p-3"><div className="h-7 bg-slate-200 rounded w-32" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-28" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-32" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-36" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-20" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-20" /></td>
+                      <td className="p-3 text-center"><div className="h-6 bg-slate-200 rounded w-16 mx-auto" /></td>
+                    </tr>
+                  ))
+                ) : paginatedLeads.length === 0 ? (
                   <tr>
                     <td colSpan={12} className="p-12 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-2">

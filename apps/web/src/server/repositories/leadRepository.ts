@@ -268,11 +268,17 @@ export class LeadRepository {
       where.leadSource = { contains: options.leadSource };
     }
     if (options.excludeWebsiteLeads) {
+      const websiteConditions = [
+        { leadSource: { contains: 'website' } },
+        { leadSource: { contains: 'Website' } },
+        { leadSource: 'Website' },
+        { leadSource: 'website' },
+      ];
       where.NOT = where.NOT || [];
       if (Array.isArray(where.NOT)) {
-        where.NOT.push({ leadSource: 'Website' });
+        where.NOT.push(...websiteConditions);
       } else {
-        where.NOT = [where.NOT, { leadSource: 'Website' }];
+        where.NOT = [where.NOT, ...websiteConditions];
       }
     }
     if (options.assignedTelecallerId) {

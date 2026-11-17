@@ -14,7 +14,7 @@ import {
   Priority,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
-import { useSWRData } from '@/lib/apiCache';
+import { useSWRData, updateCachedLead } from '@/lib/apiCache';
 import { useAuth } from '@/lib/authContext';
 import {
   Clock,
@@ -102,6 +102,48 @@ export default function TelecallerTodayPage() {
 
   // WhatsApp auto-suggestion prompt state
   const [whatsAppPromptLead, setWhatsAppPromptLead] = useState<Lead | null>(null);
+  const [pipelineOptions, setPipelineOptions] = useState<string[]>(PIPELINE_STAGE_LIST);
+
+  // Load active pipeline stages dynamically
+  useEffect(() => {
+    fetchOptions();
+    const handleInvalidation = (e: Event) => {
+      const customEvent = e as CustomEvent<{ prefix?: string }>;
+      const prefix = customEvent.detail?.prefix;
+      if (!prefix || prefix.startsWith('/options') || prefix.startsWith('/leads')) {
+        fetchOptions();
+      }
+    };
+    window.addEventListener('crm:cache-invalidated', handleInvalidation);
+    window.addEventListener('focus', fetchOptions);
+    return () => {
+      window.removeEventListener('crm:cache-invalidated', handleInvalidation);
+      window.removeEventListener('focus', fetchOptions);
+    };
+  }, []);
+
+  async function fetchOptions() {
+    try {
+      const res = await api.get<{
+        pipelineStages?: { name: string; isActive: boolean; order?: number }[];
+        stages?: { name: string; isActive: boolean; order?: number }[];
+      }>('/options');
+      if (res.success && res.data) {
+        const stages = res.data.pipelineStages || res.data.stages;
+        if (stages && stages.length > 0) {
+          const activeStages = stages
+            .filter((s) => s.isActive !== false)
+            .sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
+            .map((s) => s.name);
+          if (activeStages.length > 0) {
+            setPipelineOptions(activeStages);
+          }
+        }
+      }
+    } catch {
+      // Keep defaults on fallback
+    }
+  }
 
   // Sync with SWR data
   useEffect(() => {
@@ -316,6 +358,7 @@ export default function TelecallerTodayPage() {
         pipelineStage: newStage,
       });
       if (res.success && res.data) {
+        updateCachedLead(res.data);
         if (newStage !== 'Closed') {
           setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
         }
@@ -327,36 +370,10 @@ export default function TelecallerTodayPage() {
     }
   }
 
-  // Inline Outcome Change (Dropdown)
+  // Inline Outcome Change (Dropdown) - Direct instant update without blocking prompts
   async function handleOutcomeChange(lead: Lead, newOutcome: string) {
     if (!newOutcome || lead.lastCallOutcome === newOutcome) return;
     const suggestedPipeline = getSuggestedPipelineForOutcome(newOutcome);
-
-    // 1. Prompt for date & time if Call Back Later or Demo Scheduled
-    if (newOutcome === 'Call Back Later' || newOutcome === 'Demo Scheduled') {
-      setPromptTarget({
-        lead,
-        newOutcome,
-        suggestedPipeline,
-        type: 'DATE_TIME',
-      });
-      setPromptInputDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
-      setPromptInputNextAction(lead.nextAction || (newOutcome === 'Demo Scheduled' ? 'Conduct software demo' : 'Call back prospect'));
-      return;
-    }
-
-    // 2. Prompt for Closing Reason if Not Interested or Wrong Number
-    if (newOutcome === 'Not Interested' || newOutcome === 'Wrong Number') {
-      setPromptTarget({
-        lead,
-        newOutcome,
-        suggestedPipeline: 'Closed',
-        type: 'CLOSE_REASON',
-      });
-      setPromptInputReason('');
-      return;
-    }
-
     await executeOutcomeUpdate(lead, newOutcome, suggestedPipeline);
   }
 
@@ -384,6 +401,7 @@ export default function TelecallerTodayPage() {
       });
 
       if (res.success && res.data) {
+        updateCachedLead(res.data);
         if (!isClosed) {
           // If the new date is beyond 3 days, remove from current table
           const newDate = res.data.nextFollowUpDate ? res.data.nextFollowUpDate.split('T')[0] : null;
@@ -454,6 +472,7 @@ export default function TelecallerTodayPage() {
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, { priority: newPriority });
       if (res.success && res.data) {
+        updateCachedLead(res.data);
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
         triggerSaveNotice(`Priority: ${newPriority}`);
       }
@@ -979,7 +998,23 @@ export default function TelecallerTodayPage() {
               </thead>
 
               <tbody className="divide-y divide-slate-100 bg-white">
-                {displayLeads.length === 0 ? (
+                {loading && leads.length === 0 ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={`skel-${i}`} className="animate-pulse">
+                      <td className="p-3 text-center"><div className="h-4 bg-slate-200 rounded w-6 mx-auto" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-32 mb-1" /><div className="h-3 bg-slate-100 rounded w-20" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-28" /></td>
+                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-24" /></td>
+                      <td className="p-3"><div className="h-7 bg-slate-200 rounded w-24" /></td>
+                      <td className="p-3"><div className="h-7 bg-slate-200 rounded w-32" /></td>
+                      <td className="p-3"><div className="h-7 bg-slate-200 rounded w-36" /></td>
+                      <td className="p-3"><div className="h-7 bg-slate-200 rounded w-32" /></td>
+                      <td className="p-3"><div className="h-7 bg-slate-200 rounded w-32" /></td>
+                      <td className="p-3"><div className="h-7 bg-slate-200 rounded w-36" /></td>
+                      <td className="p-3 text-center"><div className="h-7 bg-slate-200 rounded w-28 mx-auto" /></td>
+                    </tr>
+                  ))
+                ) : displayLeads.length === 0 ? (
                   <tr>
                     <td colSpan={11} className="p-12 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-2">
@@ -1103,7 +1138,7 @@ export default function TelecallerTodayPage() {
                               lead.pipelineStage
                             )}`}
                           >
-                            {PIPELINE_STAGE_LIST.map((stage) => (
+                            {pipelineOptions.map((stage) => (
                               <option key={stage} value={stage}>
                                 {stage}
                               </option>
@@ -1371,6 +1406,7 @@ export default function TelecallerTodayPage() {
             setDrawerLeadId(null);
           }}
           onLeadUpdated={(updated) => {
+            updateCachedLead(updated);
             setLeads((prev) => prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)));
             mutateLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? { ...l, ...updated } : l)) : [{ ...updated }]));
           }}

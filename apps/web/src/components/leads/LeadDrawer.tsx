@@ -21,13 +21,17 @@ import {
   Pencil,
   Check,
   Compass,
+  Building,
+  UserCheck,
+  MessageSquare,
+  Loader2,
 } from 'lucide-react';
 import { Lead, TELECALLER_KANBAN_COLUMNS, Priority, PRIORITIES, SalesStage, SALES_STAGE_OPTIONS, type User, normalizePipelineStage } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { formatDateTime, formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
-import { invalidateCache } from '@/lib/apiCache';
+import { invalidateCache, updateCachedLead } from '@/lib/apiCache';
 import { CallLogModal } from './CallLogModal';
 import { TaskModal } from './TaskModal';
 import { HandoverModal } from '../kanban/HandoverModal';
@@ -71,6 +75,21 @@ export function LeadDrawer({
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [contactInput, setContactInput] = useState('');
   const [savingContact, setSavingContact] = useState(false);
+
+  // Full company info edit state (editable for both Admin & Telecaller)
+  const [isEditingInfo, setIsEditingInfo] = useState(false);
+  const [savingInfo, setSavingInfo] = useState(false);
+  const [infoForm, setInfoForm] = useState({
+    companyName: '',
+    contactPerson: '',
+    phone: '',
+    alternatePhone: '',
+    email: '',
+    website: '',
+    serviceProduct: '',
+    city: '',
+    state: '',
+  });
 
   const [pipelineOptions, setPipelineOptions] = useState<string[]>([
     'New Lead',
@@ -141,7 +160,7 @@ export function LeadDrawer({
       if (res.success && res.data) {
         setLead(res.data);
         onLeadUpdated(res.data);
-        invalidateCache('/leads');
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -159,6 +178,7 @@ export function LeadDrawer({
     // Instant optimistic update to prevent UI lag or shifting
     setLead(updatedLead);
     onLeadUpdated(updatedLead);
+    updateCachedLead(updatedLead);
 
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, { lastCallOutcome: targetOutcome });
@@ -166,7 +186,7 @@ export function LeadDrawer({
         const merged = { ...updatedLead, ...res.data };
         setLead(merged);
         onLeadUpdated(merged);
-        invalidateCache('/leads');
+        updateCachedLead(merged);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -185,7 +205,7 @@ export function LeadDrawer({
           const merged: Lead = { ...lead, ...res.data, salesStage: undefined };
           setLead(merged);
           onLeadUpdated(merged);
-          invalidateCache('/leads');
+          updateCachedLead(merged);
           invalidateCache('/reports/dashboard');
         }
       } catch (err: any) {
@@ -214,6 +234,7 @@ export function LeadDrawer({
     // Instant optimistic update
     setLead(updatedLead);
     onLeadUpdated(updatedLead);
+    updateCachedLead(updatedLead);
 
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, { salesStage: targetStage });
@@ -221,7 +242,7 @@ export function LeadDrawer({
         const merged = { ...updatedLead, ...res.data };
         setLead(merged);
         onLeadUpdated(merged);
-        invalidateCache('/leads');
+        updateCachedLead(merged);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -240,7 +261,7 @@ export function LeadDrawer({
       if (res.success && res.data) {
         setLead(res.data);
         onLeadUpdated(res.data);
-        invalidateCache('/leads');
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -257,7 +278,7 @@ export function LeadDrawer({
       if (res.success && res.data) {
         setLead(res.data);
         onLeadUpdated(res.data);
-        invalidateCache('/leads');
+        updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -275,6 +296,7 @@ export function LeadDrawer({
     // Instant optimistic update - prevents slow saving and prevents fields from blanking out
     setLead(updatedLead);
     onLeadUpdated(updatedLead);
+    updateCachedLead(updatedLead);
     setIsEditingContact(false);
 
     setSavingContact(true);
@@ -284,7 +306,7 @@ export function LeadDrawer({
         const merged = { ...updatedLead, ...res.data };
         setLead(merged);
         onLeadUpdated(merged);
-        invalidateCache('/leads');
+        updateCachedLead(merged);
       }
     } catch (err: any) {
       alert(err.message || 'Failed to update contact person');
@@ -294,6 +316,63 @@ export function LeadDrawer({
       setSavingContact(false);
     }
   }
+
+  // Save all Company Info & Primary Contact inputs (both Admin and Telecaller)
+  async function handleSaveCompanyInfo() {
+    if (!lead) return;
+    setSavingInfo(true);
+    const patchPayload: any = {
+      companyName: infoForm.companyName.trim() || lead.companyName,
+      contactPerson: infoForm.contactPerson.trim() || null,
+      phone: infoForm.phone.trim() || lead.phone,
+      alternatePhone: infoForm.alternatePhone.trim() || null,
+      email: infoForm.email.trim() || null,
+      website: infoForm.website.trim() || null,
+      serviceProduct: infoForm.serviceProduct.trim() || lead.serviceProduct,
+      city: infoForm.city.trim() || null,
+      state: infoForm.state.trim() || null,
+    };
+
+    const updatedLead: Lead = {
+      ...lead,
+      ...patchPayload,
+    };
+    setLead(updatedLead);
+    onLeadUpdated(updatedLead);
+    updateCachedLead(updatedLead);
+
+    try {
+      const res = await api.patch<Lead>(`/leads/${lead.id}`, patchPayload);
+      if (res.success && res.data) {
+        const merged = { ...updatedLead, ...res.data };
+        setLead(merged);
+        onLeadUpdated(merged);
+        updateCachedLead(merged);
+        setIsEditingInfo(false);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update company information');
+    } finally {
+      setSavingInfo(false);
+    }
+  }
+
+  // Populate infoForm whenever lead changes
+  useEffect(() => {
+    if (lead) {
+      setInfoForm({
+        companyName: lead.companyName || '',
+        contactPerson: lead.contactPerson || '',
+        phone: lead.phone || '',
+        alternatePhone: lead.alternatePhone || '',
+        email: lead.email || '',
+        website: lead.website || '',
+        serviceProduct: lead.serviceProduct || '',
+        city: lead.city || '',
+        state: lead.state || '',
+      });
+    }
+  }, [lead?.id]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -439,14 +518,14 @@ export function LeadDrawer({
 
           {lead && (
             <>
-              {/* Quick Action Bar */}
+              {/* Top Quick Actions Bar */}
               <div className="px-5 sm:px-6 py-2.5 bg-white border-b border-slate-100 flex items-center justify-between gap-2 overflow-x-auto">
                 <div className="flex items-center gap-2 shrink-0">
                   {/* Click-to-call */}
                   <a
                     href={`tel:${lead.phone}`}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-semibold text-xs border border-emerald-200 transition-colors cursor-pointer min-h-[36px]"
-                    title="Click-to-call using system dialer"
+                    title="Click-to-call primary number"
                   >
                     <Phone className="h-3.5 w-3.5" /> Call ({lead.phone})
                   </a>
@@ -489,50 +568,78 @@ export function LeadDrawer({
                     </Button>
                   )}
                 </div>
+              </div>
 
-                {/* Stage, Outcome & Sales Stage Controls */}
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
-                    <span className="text-[10px] uppercase font-bold text-slate-500">Pipeline:</span>
+              {/* Top Structured Pipeline & Status Bar: Priority, Pipeline, Last Outcome, Sales Pipeline */}
+              <div className="px-5 sm:px-6 py-2.5 bg-slate-50 border-b border-slate-200">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {/* 1. Priority */}
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-soft-xs">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-0.5">Priority</span>
+                    <select
+                      value={lead.priority}
+                      onChange={(e) => handlePriorityChange(e.target.value as Priority)}
+                      className={`w-full text-xs font-bold rounded px-1.5 py-1 border cursor-pointer ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
+                    >
+                      <option value="LOW" className="bg-white text-blue-700 font-bold">Low</option>
+                      <option value="MEDIUM" className="bg-white text-amber-800 font-bold">Medium</option>
+                      <option value="HIGH" className="bg-white text-orange-700 font-bold">High</option>
+                      <option value="URGENT" className="bg-white text-red-700 font-bold">Urgent</option>
+                    </select>
+                  </div>
+
+                  {/* 2. Pipeline */}
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-soft-xs">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-0.5">Pipeline</span>
                     <select
                       value={normalizePipelineStage(lead.pipelineStage)}
                       onChange={(e) => handleQuickStageChange(e.target.value)}
-                      className="text-xs font-semibold bg-transparent text-slate-800 focus:outline-none cursor-pointer"
+                      className={`w-full text-xs font-bold rounded px-1.5 py-1 border cursor-pointer ${stageStyle.bg} ${stageStyle.text} ${stageStyle.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
                     >
                       {Array.from(new Set([...pipelineOptions, normalizePipelineStage(lead.pipelineStage)].filter(Boolean))).map((opt) => (
-                        <option key={opt} value={opt}>
+                        <option key={opt} value={opt} className="bg-white text-slate-800 font-semibold">
                           {opt}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-200">
-                    <span className="text-[10px] uppercase font-bold text-slate-500">Outcome:</span>
+                  {/* 3. Last Outcome */}
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-soft-xs">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-0.5">Last Outcome</span>
                     <select
                       value={lead.lastCallOutcome || ''}
                       onChange={(e) => handleOutcomeChange(e.target.value)}
-                      className="text-xs font-semibold bg-transparent text-slate-800 focus:outline-none cursor-pointer"
+                      className={`w-full text-xs font-bold rounded px-1.5 py-1 border cursor-pointer ${
+                        lead.lastCallOutcome
+                          ? `${outcomeStyle.bg} ${outcomeStyle.text} ${outcomeStyle.border}`
+                          : 'bg-slate-50 text-slate-600 border-slate-200 font-normal'
+                      } focus:outline-none focus:ring-1 focus:ring-sky-500`}
                     >
-                      <option value="">-- No Outcome --</option>
+                      <option value="" className="bg-white text-slate-600 font-normal">-- Select Outcome --</option>
                       {outcomeOptions.map((o) => (
-                        <option key={o} value={o}>
+                        <option key={o} value={o} className="bg-white text-slate-800 font-semibold">
                           {o}
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div className="flex items-center gap-1.5 bg-teal-50/80 px-2 py-0.5 rounded-md border border-teal-200">
-                    <span className="text-[10px] uppercase font-bold text-teal-700">Sales Stage:</span>
+                  {/* 4. Sales Pipeline */}
+                  <div className="bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-soft-xs">
+                    <span className="text-[10px] uppercase font-bold text-teal-700 block mb-0.5">Sales Pipeline</span>
                     <select
                       value={lead.salesStage || ''}
                       onChange={(e) => handleSalesStageChange(e.target.value)}
-                      className="text-xs font-semibold bg-transparent text-teal-900 focus:outline-none cursor-pointer"
+                      className={`w-full text-xs font-bold rounded px-1.5 py-1 border cursor-pointer ${
+                        lead.salesStage
+                          ? `${getStageColor(lead.salesStage).bg} ${getStageColor(lead.salesStage).text} ${getStageColor(lead.salesStage).border}`
+                          : 'bg-white text-slate-600 border-slate-200 font-normal'
+                      } focus:outline-none focus:ring-1 focus:ring-teal-500`}
                     >
-                      <option value="">-- Not Assigned --</option>
+                      <option value="" className="bg-white text-slate-500 font-normal">-- Not Handed Over --</option>
                       {SALES_STAGE_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
+                        <option key={opt.value} value={opt.value} className="bg-white text-slate-800 font-semibold">
                           {opt.label}
                         </option>
                       ))}
@@ -574,86 +681,12 @@ export function LeadDrawer({
                 {/* 1. OVERVIEW TAB */}
                 {activeTab === 'overview' && (
                   <div className="space-y-6">
-                    {/* Status badges summary */}
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                    {/* Top Operational Assignment & Follow-up Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      {/* Assigned Telecaller */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                            Priority
-                          </span>
-                          {(user?.role === 'SUPER_ADMIN' || user?.role === 'TELECALLER') && (
-                            <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
-                          )}
-                        </div>
-                        {user?.role === 'SUPER_ADMIN' || user?.role === 'TELECALLER' ? (
-                          <select
-                            value={lead.priority}
-                            onChange={(e) => handlePriorityChange(e.target.value as Priority)}
-                            className={`mt-1 w-full text-xs font-bold rounded px-2 py-1 border cursor-pointer ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border} focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs`}
-                          >
-                            <option value="LOW" className="bg-blue-50 text-blue-700 font-bold">Low</option>
-                            <option value="MEDIUM" className="bg-amber-50 text-amber-800 font-bold">Medium</option>
-                            <option value="HIGH" className="bg-orange-50 text-orange-700 font-bold">High</option>
-                            <option value="URGENT" className="bg-red-50 text-red-700 font-bold">Urgent</option>
-                          </select>
-                        ) : (
-                          <span
-                            className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-bold border ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border}`}
-                          >
-                            {lead.priority}
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                            Call Outcome
-                          </span>
-                          <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
-                        </div>
-                        <select
-                          value={lead.lastCallOutcome || ''}
-                          onChange={(e) => handleOutcomeChange(e.target.value)}
-                          className={`mt-1 w-full text-xs font-bold rounded px-2 py-1 border cursor-pointer ${outcomeStyle.bg} ${outcomeStyle.text} ${outcomeStyle.border} focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs`}
-                        >
-                          <option value="" className="bg-slate-50 text-slate-700 font-normal">-- No Outcome --</option>
-                          {outcomeOptions.map((o) => {
-                            const optColor = getOutcomeColor(o);
-                            return (
-                              <option key={o} value={o} className={`${optColor.bg} ${optColor.text} font-bold`}>
-                                {o}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                            Sales Stage
-                          </span>
-                          <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
-                        </div>
-                        <select
-                          value={lead.salesStage || ''}
-                          onChange={(e) => handleSalesStageChange(e.target.value)}
-                          className={`mt-1 w-full text-xs font-bold rounded px-2 py-1 border cursor-pointer ${
-                            lead.salesStage
-                              ? `${getStageColor(lead.salesStage).bg} ${getStageColor(lead.salesStage).text} ${getStageColor(lead.salesStage).border}`
-                              : 'bg-white text-slate-700 border-slate-200'
-                          } focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs`}
-                        >
-                          <option value="" className="text-slate-500 font-normal">-- Not Assigned --</option>
-                          {SALES_STAGE_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value} className="font-bold">
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                          <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
                             Assigned Telecaller
                           </span>
                           {user?.role === 'SUPER_ADMIN' && (
@@ -664,7 +697,7 @@ export function LeadDrawer({
                           <select
                             value={lead.assignedTelecallerId || ''}
                             onChange={(e) => handleTelecallerChange(e.target.value)}
-                            className={`mt-1 w-full text-xs font-semibold rounded px-2 py-1 border cursor-pointer shadow-soft-xs ${
+                            className={`mt-1.5 w-full text-xs font-semibold rounded px-2 py-1.5 border cursor-pointer shadow-soft-xs ${
                               lead.assignedTelecallerId
                                 ? 'bg-white text-slate-800 border-slate-200 font-bold'
                                 : 'bg-amber-50/70 text-amber-800 border-amber-200 italic'
@@ -678,15 +711,20 @@ export function LeadDrawer({
                             ))}
                           </select>
                         ) : (
-                          <span className="text-xs font-semibold text-slate-800 block mt-1">
-                            {lead.assignedTelecaller?.name || telecallers.find((t) => t.id === lead.assignedTelecallerId)?.name || 'Unassigned'}
-                          </span>
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <UserCheck className="h-4 w-4 text-sky-600" />
+                            <span className="text-xs font-bold text-slate-800 truncate">
+                              {lead.assignedTelecaller?.name || telecallers.find((t) => t.id === lead.assignedTelecallerId)?.name || 'Unassigned'}
+                            </span>
+                          </div>
                         )}
                       </div>
-                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+
+                      {/* Assigned Sales Closer / Salesman */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                            Assigned Salesman
+                          <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
+                            Assigned Sales Closer
                           </span>
                           {user?.role === 'SUPER_ADMIN' && (
                             <span className="text-[9px] text-purple-600 font-bold uppercase tracking-wider">Editable</span>
@@ -696,7 +734,7 @@ export function LeadDrawer({
                           <select
                             value={lead.assignedSalesmanId || ''}
                             onChange={(e) => handleSalesmanChange(e.target.value)}
-                            className="mt-1 w-full text-xs font-semibold bg-white border border-slate-200 rounded px-2 py-1 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs"
+                            className="mt-1.5 w-full text-xs font-semibold bg-white border border-slate-200 rounded px-2 py-1.5 text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs"
                           >
                             <option value="">-- Not Handed Over --</option>
                             {salesmen.map((s) => (
@@ -706,143 +744,355 @@ export function LeadDrawer({
                             ))}
                           </select>
                         ) : (
-                          <span className="text-xs font-semibold text-slate-800 block mt-1">
-                            {lead.assignedSalesman?.name || salesmen.find((s) => s.id === lead.assignedSalesmanId)?.name || 'Not handed over'}
-                          </span>
+                          <div className="mt-1.5 flex items-center gap-1.5">
+                            <UserCheck className="h-4 w-4 text-teal-600" />
+                            <span className="text-xs font-bold text-slate-800 truncate">
+                              {lead.assignedSalesman?.name || salesmen.find((s) => s.id === lead.assignedSalesmanId)?.name || 'Not handed over'}
+                            </span>
+                          </div>
                         )}
+                      </div>
+
+                      {/* Call Attempts & Last Contact */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
+                          Call Activity
+                        </span>
+                        <div className="mt-1.5 flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-800">
+                            {lead.callAttempts || 0} Attempts
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            {lead.lastContactedAt ? formatDateTime(lead.lastContactedAt) : 'Never'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Next Follow-up Commitment */}
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
+                          Next Follow-up
+                        </span>
+                        <div className="mt-1.5">
+                          {lead.nextFollowUpDate ? (
+                            <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 block truncate">
+                              {formatDateTime(lead.nextFollowUpDate)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">No follow-up set</span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Company & Contact Details */}
-                    <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                        Primary Contact & Company Information
-                      </h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                        <div className="flex items-start gap-2.5">
-                          <UserIcon className="h-4 w-4 text-slate-400 mt-0.5" />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] text-slate-400 block">Contact Person</span>
-                              {!isEditingContact && (
-                                <button
-                                  onClick={() => {
-                                    setContactInput(lead.contactPerson || '');
-                                    setIsEditingContact(true);
-                                  }}
-                                  className="text-[10px] text-sky-600 hover:text-sky-800 font-semibold flex items-center gap-0.5 cursor-pointer"
+                    {/* Company & Primary Contact Details (Fully Editable for Admin & Telecaller) */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4 shadow-soft-xs">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4 text-sky-600" />
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                            Primary Contact & Company Information
+                          </h3>
+                        </div>
+                        {(user?.role === 'SUPER_ADMIN' || user?.role === 'TELECALLER') && (
+                          !isEditingInfo ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setInfoForm({
+                                  companyName: lead.companyName || '',
+                                  contactPerson: lead.contactPerson || '',
+                                  phone: lead.phone || '',
+                                  alternatePhone: lead.alternatePhone || '',
+                                  email: lead.email || '',
+                                  website: lead.website || '',
+                                  serviceProduct: lead.serviceProduct || '',
+                                  city: lead.city || '',
+                                  state: lead.state || '',
+                                });
+                                setIsEditingInfo(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-50 text-sky-700 hover:bg-sky-100 border border-sky-200 rounded-md text-xs font-bold transition-colors cursor-pointer"
+                            >
+                              <Pencil className="h-3 w-3" /> Edit Information
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={handleSaveCompanyInfo}
+                                disabled={savingInfo}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-md text-xs font-bold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                {savingInfo ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                Save Changes
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingInfo(false)}
+                                disabled={savingInfo}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md text-xs font-semibold transition-colors cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          )
+                        )}
+                      </div>
+
+                      {isEditingInfo ? (
+                        /* Edit Mode Form */
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Company Name *</label>
+                            <input
+                              type="text"
+                              value={infoForm.companyName}
+                              onChange={(e) => setInfoForm({ ...infoForm, companyName: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold"
+                              placeholder="Enter company name"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Contact Person</label>
+                            <input
+                              type="text"
+                              value={infoForm.contactPerson}
+                              onChange={(e) => setInfoForm({ ...infoForm, contactPerson: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              placeholder="Enter contact person"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Primary Phone *</label>
+                            <input
+                              type="text"
+                              value={infoForm.phone}
+                              onChange={(e) => setInfoForm({ ...infoForm, phone: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold"
+                              placeholder="e.g. +91 9876543210"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Alternate Phone (Extra Number)</label>
+                            <input
+                              type="text"
+                              value={infoForm.alternatePhone}
+                              onChange={(e) => setInfoForm({ ...infoForm, alternatePhone: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              placeholder="Alternate contact number"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Email Address</label>
+                            <input
+                              type="email"
+                              value={infoForm.email}
+                              onChange={(e) => setInfoForm({ ...infoForm, email: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              placeholder="email@example.com"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Service / Product *</label>
+                            <input
+                              type="text"
+                              value={infoForm.serviceProduct}
+                              onChange={(e) => setInfoForm({ ...infoForm, serviceProduct: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              placeholder="Service or Product name"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Website URL</label>
+                            <input
+                              type="text"
+                              value={infoForm.website}
+                              onChange={(e) => setInfoForm({ ...infoForm, website: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              placeholder="https://..."
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[11px] font-bold text-slate-600 block mb-1">City</label>
+                              <input
+                                type="text"
+                                value={infoForm.city}
+                                onChange={(e) => setInfoForm({ ...infoForm, city: e.target.value })}
+                                className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                placeholder="City"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-bold text-slate-600 block mb-1">State</label>
+                              <input
+                                type="text"
+                                value={infoForm.state}
+                                onChange={(e) => setInfoForm({ ...infoForm, state: e.target.value })}
+                                className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                placeholder="State"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* View Mode */
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                          <div className="flex items-start gap-2.5">
+                            <UserIcon className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Contact Person</span>
+                              <span className="text-xs font-bold text-slate-800">
+                                {lead.contactPerson || <span className="text-slate-400 font-normal italic">- (Not available)</span>}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <Building className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Company Name</span>
+                              <span className="text-xs font-bold text-slate-800">{lead.companyName}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <Phone className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <div className="flex-1">
+                              <span className="text-[11px] text-slate-400 block font-medium">Primary Phone</span>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-xs font-bold text-slate-800 font-mono">{lead.phone}</span>
+                                <a
+                                  href={`tel:${lead.phone}`}
+                                  className="p-1 text-sky-600 hover:bg-sky-50 rounded"
+                                  title="Call"
                                 >
-                                  <Pencil className="h-2.5 w-2.5" /> Edit
-                                </button>
+                                  <PhoneCall className="h-3 w-3" />
+                                </a>
+                                <a
+                                  href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                  title="WhatsApp"
+                                >
+                                  <MessageSquare className="h-3 w-3" />
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <Phone className="h-4 w-4 text-purple-400 mt-0.5" />
+                            <div className="flex-1">
+                              <span className="text-[11px] text-slate-400 block font-medium">Alternate Phone (Extra)</span>
+                              {lead.alternatePhone ? (
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-xs font-bold text-slate-800 font-mono">{lead.alternatePhone}</span>
+                                  <a
+                                    href={`tel:${lead.alternatePhone}`}
+                                    className="p-1 text-sky-600 hover:bg-sky-50 rounded"
+                                    title="Call Alternate"
+                                  >
+                                    <PhoneCall className="h-3 w-3" />
+                                  </a>
+                                  <a
+                                    href={`https://wa.me/${lead.alternatePhone.replace(/[^0-9]/g, '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                    title="WhatsApp Alternate"
+                                  >
+                                    <MessageSquare className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">None provided</span>
                               )}
                             </div>
-                            {isEditingContact ? (
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <input
-                                  type="text"
-                                  value={contactInput}
-                                  onChange={(e) => setContactInput(e.target.value)}
-                                  placeholder="Name (optional)"
-                                  className="text-xs px-2 py-1 border border-slate-300 rounded bg-white w-full max-w-[170px] focus:outline-none focus:ring-1 focus:ring-sky-500"
-                                />
-                                <button
-                                  onClick={handleSaveContactPerson}
-                                  disabled={savingContact}
-                                  className="p-1 bg-sky-600 text-white rounded hover:bg-sky-700 cursor-pointer"
-                                  title="Save"
-                                >
-                                  <Check className="h-3 w-3" />
-                                </button>
-                                <button
-                                  onClick={() => setIsEditingContact(false)}
-                                  className="p-1 bg-slate-200 text-slate-600 rounded hover:bg-slate-300 cursor-pointer"
-                                  title="Cancel"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-xs font-bold text-slate-800 block">
-                                {lead.contactPerson || (
-                                  <span className="text-slate-400 font-normal italic">- (Not available)</span>
-                                )}
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <Mail className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Email Address</span>
+                              <span className="text-xs font-semibold text-slate-800">
+                                {lead.email || <span className="text-slate-400 font-normal italic">None on file</span>}
                               </span>
-                            )}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-start gap-2.5">
-                          <Phone className="h-4 w-4 text-slate-400 mt-0.5" />
-                          <div>
-                            <span className="text-[11px] text-slate-400 block">Phone</span>
-                            <span className="text-xs font-bold text-slate-800">{lead.phone}</span>
+                          <div className="flex items-start gap-2.5">
+                            <FileText className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Service / Product</span>
+                              <span className="text-xs font-semibold text-slate-800">
+                                {lead.serviceProduct || 'Unspecified'}
+                              </span>
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-start gap-2.5">
-                          <Mail className="h-4 w-4 text-slate-400 mt-0.5" />
-                          <div>
-                            <span className="text-[11px] text-slate-400 block">Email Address</span>
-                            <span className="text-xs font-semibold text-slate-800">
-                              {lead.email || 'None on file'}
-                            </span>
+                          <div className="flex items-start gap-2.5">
+                            <Globe className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Website</span>
+                              {lead.website ? (
+                                <a
+                                  href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-xs font-semibold text-sky-600 hover:underline"
+                                >
+                                  {lead.website}
+                                </a>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">None</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="flex items-start gap-2.5">
-                          <Globe className="h-4 w-4 text-slate-400 mt-0.5" />
-                          <div>
-                            <span className="text-[11px] text-slate-400 block">Website</span>
-                            {lead.website ? (
-                              <a
-                                href={lead.website}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-xs font-semibold text-sky-600 hover:underline"
-                              >
-                                {lead.website}
-                              </a>
-                            ) : (
-                              <span className="text-xs text-slate-400">None</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Lead Source */}
-                        <div className="flex items-start gap-2.5">
-                          <Compass className="h-4 w-4 text-slate-400 mt-0.5" />
-                          <div>
-                            <span className="text-[11px] text-slate-400 block">Lead Source</span>
-                            <span className="text-xs font-semibold text-slate-800">
-                              {lead.leadSource || 'Unspecified'}
-                              {lead.leadSource === 'Other' && lead.leadSourceOther ? ` (${lead.leadSourceOther})` : ''}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Location (read-only for existing leads with historical data) */}
-                        {(lead.city || lead.state) && (
+                          {/* Location */}
                           <div className="flex items-start gap-2.5">
                             <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
                             <div>
-                              <span className="text-[11px] text-slate-400 block">Location (Historical)</span>
+                              <span className="text-[11px] text-slate-400 block font-medium">Location</span>
                               <span className="text-xs font-semibold text-slate-800">
-                                {[lead.city, lead.state].filter(Boolean).join(', ')}
+                                {[lead.city, lead.state].filter(Boolean).join(', ') || <span className="text-slate-400 italic">Not specified</span>}
                               </span>
                             </div>
                           </div>
-                        )}
 
-                        <div className="flex items-start gap-2.5">
-                          <Clock className="h-4 w-4 text-slate-400 mt-0.5" />
-                          <div>
-                            <span className="text-[11px] text-slate-400 block">Created On</span>
-                            <span className="text-xs font-semibold text-slate-800">
-                              {formatDateTime(lead.createdAt)}
-                            </span>
+                          {/* Lead Source */}
+                          <div className="flex items-start gap-2.5">
+                            <Compass className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Lead Source</span>
+                              <span className="text-xs font-semibold text-slate-800">
+                                {lead.leadSource || 'Unspecified'}
+                                {lead.leadSource === 'Other' && lead.leadSourceOther ? ` (${lead.leadSourceOther})` : ''}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <Clock className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Created On</span>
+                              <span className="text-xs font-semibold text-slate-800">
+                                {formatDateTime(lead.createdAt)}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* Next Action & Follow-up box */}

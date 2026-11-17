@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import dynamic from 'next/dynamic';
 import { Lead, SalesStage, SALES_STAGE_OPTIONS } from '@crm/shared';
 import { api } from '@/lib/apiClient';
-import { useSWRData } from '@/lib/apiCache';
+import { useSWRData, updateCachedLead } from '@/lib/apiCache';
 import { Award, RefreshCw, Edit3, Phone } from 'lucide-react';
 import { WhatsAppButton } from '@/components/leads/WhatsAppButton';
 import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
@@ -91,7 +91,15 @@ export default function SalesmanLeadsPage() {
 
         {/* Mobile Cards View (< md) */}
         <div className="md:hidden space-y-3">
-          {filtered.length === 0 ? (
+          {loading && leads.length === 0 ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={`m-skel-${i}`} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 animate-pulse">
+                <div className="h-4 bg-slate-200 rounded w-40" />
+                <div className="h-3 bg-slate-100 rounded w-24" />
+                <div className="h-8 bg-slate-50 rounded" />
+              </div>
+            ))
+          ) : filtered.length === 0 ? (
             <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
               No assigned leads in this filter
             </div>
@@ -271,7 +279,21 @@ export default function SalesmanLeadsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.length === 0 ? (
+                  {loading && leads.length === 0 ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <tr key={`skel-${i}`} className="animate-pulse">
+                        <td className="p-3.5"><div className="h-4 bg-slate-200 rounded w-32 mb-1" /><div className="h-3 bg-slate-100 rounded w-20" /></td>
+                        <td className="p-3.5"><div className="h-3.5 bg-slate-200 rounded w-24" /></td>
+                        <td className="p-3.5"><div className="h-3.5 bg-slate-200 rounded w-28" /></td>
+                        <td className="p-3.5"><div className="h-5 bg-slate-200 rounded w-16" /></td>
+                        <td className="p-3.5"><div className="h-5 bg-slate-200 rounded w-24" /></td>
+                        <td className="p-3.5"><div className="h-5 bg-slate-200 rounded w-24" /></td>
+                        <td className="p-3.5 hidden lg:table-cell"><div className="h-3.5 bg-slate-200 rounded w-20" /></td>
+                        <td className="p-3.5"><div className="h-3.5 bg-slate-200 rounded w-24" /></td>
+                        <td className="p-3.5 text-right"><div className="h-7 bg-slate-200 rounded w-16 ml-auto" /></td>
+                      </tr>
+                    ))
+                  ) : filtered.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="p-8 text-center text-slate-400">
                         No assigned leads in this filter
@@ -426,6 +448,7 @@ export default function SalesmanLeadsPage() {
           setSelectedLeadId(null);
         }}
         onLeadUpdated={(updated) => {
+          updateCachedLead(updated);
           fetchLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? updated : l)) : [updated]));
         }}
       />
@@ -437,6 +460,7 @@ export default function SalesmanLeadsPage() {
           lead={stageModalTarget.lead}
           initialStage={stageModalTarget.targetStage}
           onSuccess={(updated) => {
+            updateCachedLead(updated);
             fetchLeads((prev) => (prev ? prev.map((l) => (l.id === updated.id ? updated : l)) : [updated]));
             setStageModalTarget(null);
           }}

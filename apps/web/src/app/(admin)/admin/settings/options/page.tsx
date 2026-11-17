@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { api } from '@/lib/apiClient';
+import { invalidateCache } from '@/lib/apiCache';
 import { PipelineStageOption, CallOutcomeOption, LeadSourceOption, AuditLogItem } from '@crm/shared';
 import { TABLE_TOKENS } from '@/lib/tableTokens';
 import { formatDate } from '@/lib/utils';
@@ -98,6 +99,7 @@ export default function AdminOptionsSettingsPage() {
         setPipelineStages(optRes.data.pipelineStages || []);
         setCallOutcomes(optRes.data.callOutcomes || []);
         setLeadSources(optRes.data.leadSources || []);
+        invalidateCache('/options');
       }
       if (auditRes.success && auditRes.data) {
         setAuditLogs(auditRes.data);

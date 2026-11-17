@@ -69,7 +69,7 @@ export const createLeadSchema = z.object({
   serviceProduct: z.string().min(1, 'Service or product is required'),
   contactPerson: z.string().optional().nullable().default(''),
   phone: z.string().min(7, 'A valid phone number is required'),
-  email: z.string().email('Invalid email').optional().nullable(),
+  email: z.string().email('Invalid email').or(z.literal('')).optional().nullable(),
   alternatePhone: z.string().optional().nullable(),
   website: z.string().url('Invalid website URL').or(z.literal('')).optional().nullable(),
   priority: z.string().default(PRIORITIES.MEDIUM),

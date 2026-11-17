@@ -60,7 +60,7 @@ export async function listLeads(req: Request, res: Response, next: NextFunction)
       salesStage: req.query.salesStage as string | undefined,
       priority: req.query.priority as Priority | undefined,
       leadSource: req.query.leadSource as string | undefined,
-      excludeWebsiteLeads: req.query.excludeWebsiteLeads === 'true',
+      excludeWebsiteLeads: req.query.excludeWebsiteLeads === 'true' || (!req.query.leadSource && req.query.includeWebsite !== 'true'),
       followUpStatus: req.query.followUpStatus as any,
       kpi: req.query.kpi as string | undefined,
       dateField: req.query.dateField as any,
@@ -488,16 +488,7 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       targetPipeline = oldStage;
     }
 
-    // Validation rules for specific stage transitions
-    if (
-      (targetPipeline === 'Assign to Salesman' || targetPipeline === 'ASSIGNED_TO_SALESMAN') &&
-      !data.assignedSalesmanId &&
-      !lead.assignedSalesmanId
-    ) {
-      throw new BadRequestError('Assigning to Salesman requires selecting an active Sales Closer.');
-    }
-
-    // Dynamic & Fallback Rules for outcome flags:
+    // Pipeline or outcome option can be chosen freely without any blocking validation
     let followUpDate: string | undefined = data.nextFollowUpDate || (data as any).meetingDate || (req.body as any).followUpDate;
     const outcomeOption = targetOutcome
       ? await prisma.callOutcomeOption.findFirst({ where: { name: targetOutcome } })
@@ -507,40 +498,13 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       targetPipeline = outcomeOption.suggestedPipelineStage;
     }
 
-    const requiresDateTime =
-      outcomeOption?.requiresDateTime ||
-      targetOutcome === 'Call Back Later' ||
-      targetOutcome === 'Demo Scheduled';
-
-    const requiresNextFollowUp =
-      outcomeOption?.requiresNextFollowUp ||
-      targetOutcome === 'Demo Interested' ||
-      targetOutcome === 'Details Requested' ||
-      targetOutcome === 'Demo Completed' ||
-      targetOutcome === 'Decision Pending';
-
     const closesLead =
       outcomeOption?.closesLead ||
       targetOutcome === 'Not Interested' ||
       targetOutcome === 'Wrong Number';
 
-    if (requiresDateTime) {
-      if (!followUpDate) {
-        throw new BadRequestError(`Date and time are required when selecting "${targetOutcome}".`);
-      }
-      const parsedTime = new Date(followUpDate).getTime();
-      if (isNaN(parsedTime) || parsedTime < Date.now() - 60000) {
-        throw new BadRequestError('Date and time cannot be in the past.');
-      }
-    } else if (requiresNextFollowUp) {
-      if (!followUpDate && !lead.nextFollowUpDate) {
-        throw new BadRequestError(`Next follow-up date is required for "${targetOutcome}".`);
-      }
-    }
-
     if (closesLead) {
       targetPipeline = outcomeOption?.suggestedPipelineStage || 'Closed';
-      followUpDate = undefined;
     }
 
 
@@ -618,16 +582,25 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       updatePayload.salesStage = lead.salesStage || 'ASSIGNED';
     }
 
-    // Schedule task if follow-up date was set
+    // Schedule task if follow-up date was set (safely wrapped so task failures never block status updates)
     if (followUpDate) {
-      await followUpTaskRepository.create({
-        leadId: lead.id,
-        assignedUserId: req.user!.id,
-        taskType: (targetOutcome === 'Demo Scheduled' || targetOutcome === 'Demo Interested' || targetPipeline === 'Demo') ? 'DEMO' : 'CALL',
-        dueDate: followUpDate.split('T')[0],
-        dueTime: followUpDate.includes('T') ? followUpDate.split('T')[1].substring(0, 5) : '10:00',
-        notes: data.notes || `Scheduled follow-up for ${targetOutcome || targetPipeline}`,
-      });
+      try {
+        const dueDatePart = followUpDate.includes('T') ? followUpDate.split('T')[0] : followUpDate;
+        const dueTimePart = followUpDate.includes('T') ? followUpDate.split('T')[1].substring(0, 5) : '10:00';
+        const parsedDue = new Date(dueDatePart);
+        if (!isNaN(parsedDue.getTime())) {
+          await followUpTaskRepository.create({
+            leadId: lead.id,
+            assignedUserId: req.user!.id,
+            taskType: (targetOutcome === 'Demo Scheduled' || targetOutcome === 'Demo Interested' || targetPipeline === 'Demo') ? 'DEMO' : 'CALL',
+            dueDate: dueDatePart,
+            dueTime: dueTimePart,
+            notes: data.notes || `Scheduled follow-up for ${targetOutcome || targetPipeline}`,
+          });
+        }
+      } catch (err) {
+        console.error('[updateLeadStage] Follow-up task creation warning:', err);
+      }
     }
 
     // Won / Converted

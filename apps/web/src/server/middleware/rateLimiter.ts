@@ -66,11 +66,11 @@ class InMemoryRateLimiter {
   }
 }
 
-// 1. Login Rate Limiter: 30 attempts per 15 minutes per IP
+// 1. Login Rate Limiter: 300 attempts per 15 minutes per IP (supports multiple CRM telecallers on shared NAT/office IP)
 export const authRateLimiter = new InMemoryRateLimiter(
   15 * 60 * 1000,
-  30,
-  'Too many login attempts from this IP address. Please wait 15 minutes before trying again.'
+  300,
+  'Too many login attempts from this IP address. Please wait a few minutes before trying again.'
 );
 
 // 2. Token Refresh Limiter: 180 requests per 15 minutes
