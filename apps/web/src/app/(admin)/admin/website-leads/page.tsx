@@ -36,8 +36,11 @@ import {
   CheckCircle2,
   Calendar,
   Plus,
+  Copy,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
-import { formatDate, formatDateTime, getPriorityColor, getOutcomeColor, getStageColor } from '@/lib/utils';
+import { formatDate, formatDateTime, getPriorityColor, getOutcomeColor, getStageColor, getPriorityLabel } from '@/lib/utils';
 import { WhatsAppButton } from '@/components/leads/WhatsAppButton';
 import { Button } from '@/components/ui/Button';
 
@@ -63,6 +66,10 @@ export default function AdminWebsiteLeadsPage() {
   // Sorting
   const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'companyName' | 'priority'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // Pagination (Default 150+ rows per page per Requirement 4)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(150);
 
   // Selection
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
@@ -244,11 +251,13 @@ export default function AdminWebsiteLeadsPage() {
         const q = searchTerm.toLowerCase().trim();
         const matchesComp = !!(lead.companyName && lead.companyName.toLowerCase().includes(q));
         const matchesCont = !!(lead.contactPerson && lead.contactPerson.toLowerCase().includes(q));
+        const matchesAltCont = !!(lead.alternateName && lead.alternateName.toLowerCase().includes(q));
         const matchesPhone = !!(lead.phone && lead.phone.toLowerCase().includes(q));
+        const matchesAltPhone = !!(lead.alternatePhone && lead.alternatePhone.toLowerCase().includes(q));
         const matchesEmail = !!(lead.email && lead.email.toLowerCase().includes(q));
         const matchesProduct = !!(lead.serviceProduct && lead.serviceProduct.toLowerCase().includes(q));
         const matchesNotes = !!(lead.notes && lead.notes.toLowerCase().includes(q));
-        if (!matchesComp && !matchesCont && !matchesPhone && !matchesEmail && !matchesProduct && !matchesNotes) {
+        if (!matchesComp && !matchesCont && !matchesAltCont && !matchesPhone && !matchesAltPhone && !matchesEmail && !matchesProduct && !matchesNotes) {
           return false;
         }
       }
@@ -283,6 +292,14 @@ export default function AdminWebsiteLeadsPage() {
     });
     return list;
   }, [filteredLeads, sortBy, sortOrder]);
+
+  // Paginated leads (Default 150+ rows per page per Requirement 4)
+  const paginatedLeads = useMemo(() => {
+    if (pageSize === 0) return sortedLeads;
+    const start = (currentPage - 1) * pageSize;
+    return sortedLeads.slice(start, start + pageSize);
+  }, [sortedLeads, currentPage, pageSize]);
+  const totalPages = pageSize === 0 ? 1 : Math.ceil(sortedLeads.length / (pageSize || 1));
 
   // KPIs calculation
   const kpis = useMemo(() => {
@@ -813,7 +830,7 @@ export default function AdminWebsiteLeadsPage() {
                     </td>
                   </tr>
                 ) : (
-                  sortedLeads.map((lead, idx) => {
+                  paginatedLeads.map((lead, idx) => {
                     const isSelected = selectedLeadIds.has(lead.id);
                     const priorityMeta = getPriorityColor(lead.priority);
                     const stageNorm = normalizePipelineStage(lead.pipelineStage);
@@ -833,7 +850,7 @@ export default function AdminWebsiteLeadsPage() {
                       >
                         {/* Checkbox */}
                         <td
-                          className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/90 p-3 text-center border-r border-slate-100"
+                          className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/90 py-2 px-2.5 text-center border-r border-slate-100"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <input
@@ -845,7 +862,7 @@ export default function AdminWebsiteLeadsPage() {
                         </td>
 
                         {/* Company & Service */}
-                        <td className="sticky left-[44px] z-10 bg-white group-hover:bg-slate-50/90 p-3 border-r border-slate-100">
+                        <td className="sticky left-[44px] z-10 bg-white group-hover:bg-slate-50/90 py-2 px-2.5 border-r border-slate-100">
                           <div className="flex flex-col min-w-0">
                             <span
                               className="font-bold text-slate-900 truncate hover:text-sky-600 transition-colors cursor-pointer"
@@ -874,7 +891,7 @@ export default function AdminWebsiteLeadsPage() {
                         </td>
 
                         {/* Contact Person & Email */}
-                        <td className="p-3">
+                        <td className="py-2 px-2.5">
                           <div className="flex flex-col min-w-0">
                             <span className="font-semibold text-slate-800 truncate">
                               {lead.contactPerson || 'Not Provided'}
@@ -893,39 +910,74 @@ export default function AdminWebsiteLeadsPage() {
                           </div>
                         </td>
 
-                        {/* Phone */}
-                        <td className="p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={`tel:${lead.phone}`}
-                              className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 text-xs"
-                              title={`Dial ${lead.phone}`}
-                            >
-                              <Phone className="h-3 w-3 shrink-0" />
-                              <span>{lead.phone || 'No Phone'}</span>
-                            </a>
-                            {lead.phone && (
-                              <WhatsAppButton
-                                phone={lead.phone}
-                                leadId={lead.id}
-                                leadName={lead.contactPerson || lead.companyName}
-                                size="sm"
-                                showText={false}
-                              />
+                        {/* Phone (Stacked primary & alternate + click-to-copy, WhatsApp shifted to Action) */}
+                        <td className="py-2 px-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <a
+                                href={lead.phone ? `tel:${lead.phone}` : undefined}
+                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1 text-xs font-mono"
+                                title={`Dial ${lead.phone}`}
+                              >
+                                <Phone className="h-3 w-3 shrink-0" />
+                                <span>{lead.phone || 'No Phone'}</span>
+                              </a>
+                              {lead.phone && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (navigator?.clipboard) {
+                                      navigator.clipboard.writeText(lead.phone);
+                                      alert(`Copied ${lead.phone}`);
+                                    }
+                                  }}
+                                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0 cursor-pointer"
+                                  title="Copy phone number"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                            {lead.alternatePhone && (
+                              <div className="flex items-center gap-1.5 border-t border-slate-100 pt-0.5">
+                                <a
+                                  href={`tel:${lead.alternatePhone}`}
+                                  className="text-purple-700 font-medium hover:underline flex items-center gap-1 text-[11px] font-mono"
+                                  title={`Dial alternate: ${lead.alternatePhone}`}
+                                >
+                                  <Phone className="h-2.5 w-2.5 shrink-0" />
+                                  <span>{lead.alternatePhone}</span>
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (navigator?.clipboard) {
+                                      navigator.clipboard.writeText(lead.alternatePhone!);
+                                      alert(`Copied ${lead.alternatePhone}`);
+                                    }
+                                  }}
+                                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0 cursor-pointer"
+                                  title="Copy alternate phone"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              </div>
                             )}
                           </div>
                         </td>
 
-                        {/* Priority Dropdown */}
-                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Priority Dropdown (Cold, Warm, Hot, Urgent) */}
+                        <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
                           <select
                             value={lead.priority || 'MEDIUM'}
                             onChange={(e) => handlePriorityUpdate(lead.id, e.target.value as Priority)}
                             className={`w-full text-xs font-bold rounded-lg px-2 py-1 border cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 shadow-soft-xs ${priorityMeta.bg} ${priorityMeta.text} ${priorityMeta.border}`}
                           >
-                            <option value="LOW" className="bg-white text-blue-700 font-bold">Low</option>
-                            <option value="MEDIUM" className="bg-white text-amber-800 font-bold">Medium</option>
-                            <option value="HIGH" className="bg-white text-orange-700 font-bold">High</option>
+                            <option value="LOW" className="bg-white text-blue-700 font-bold">Cold</option>
+                            <option value="MEDIUM" className="bg-white text-amber-800 font-bold">Warm</option>
+                            <option value="HIGH" className="bg-white text-orange-700 font-bold">Hot</option>
                             <option value="URGENT" className="bg-white text-red-700 font-bold">Urgent</option>
                           </select>
                         </td>
@@ -1026,22 +1078,30 @@ export default function AdminWebsiteLeadsPage() {
                           {formatDateTime(lead.createdAt)}
                         </td>
 
-                        {/* Action Buttons */}
-                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-1">
+                        {/* Action Buttons (View, WhatsApp icon shifted here, Delete) */}
+                        <td className="py-2 px-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => {
                                 setSelectedLeadIdForDrawer(lead.id);
                                 setIsDrawerOpen(true);
                               }}
-                              className="px-2 py-1 rounded-md bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-xs transition-colors"
+                              className="px-2 py-1 rounded-md bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-xs transition-colors cursor-pointer"
                               title="Inspect Lead"
                             >
                               View
                             </button>
+                            {/* WhatsApp Button shifted from phone column per Requirement 6 */}
+                            <WhatsAppButton
+                              phone={lead.phone}
+                              leadId={lead.id}
+                              leadName={lead.contactPerson || lead.companyName}
+                              size="sm"
+                              showText={false}
+                            />
                             <button
                               onClick={() => handleDeleteLead(lead.id, lead.companyName)}
-                              className="p-1 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
+                              className="p-1 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
                               title="Delete Lead"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -1056,15 +1116,57 @@ export default function AdminWebsiteLeadsPage() {
             </table>
           </div>
 
-          {/* Table Footer */}
-          <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
-            <span>
-              Showing <strong className="text-slate-800">{sortedLeads.length}</strong> of{' '}
-              <strong className="text-slate-800">{websiteLeads?.length || 0}</strong> website leads
-            </span>
-            <span className="text-slate-400 text-[11px]">
-              Module isolated to Admin Panel • TenderProcure Leads CRM
-            </span>
+          {/* Table Footer with Pagination (Default 150+ rows per page per Requirement 4) */}
+          <div className="flex flex-wrap items-center justify-between px-4 py-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 gap-3">
+            <div className="flex items-center gap-2">
+              <span>Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-700 focus:outline-none cursor-pointer"
+              >
+                <option value={150}>150 (Default)</option>
+                <option value={250}>250</option>
+                <option value={500}>500</option>
+                <option value={0}>All Rows</option>
+              </select>
+              <span className="text-slate-400">|</span>
+              <span>
+                {sortedLeads.length === 0
+                  ? '0 leads'
+                  : pageSize === 0
+                  ? `Showing all ${sortedLeads.length} website leads`
+                  : `Showing ${(currentPage - 1) * pageSize + 1} - ${Math.min(
+                      currentPage * pageSize,
+                      sortedLeads.length
+                    )} of ${sortedLeads.length}`}
+              </span>
+            </div>
+
+            {pageSize > 0 && totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="px-2 font-bold text-slate-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

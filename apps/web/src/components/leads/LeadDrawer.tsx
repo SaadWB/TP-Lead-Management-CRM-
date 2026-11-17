@@ -25,13 +25,14 @@ import {
   UserCheck,
   MessageSquare,
   Loader2,
+  Copy,
 } from 'lucide-react';
 import { Lead, TELECALLER_KANBAN_COLUMNS, Priority, PRIORITIES, SalesStage, SALES_STAGE_OPTIONS, type User, normalizePipelineStage } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { formatDateTime, formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
-import { invalidateCache, updateCachedLead } from '@/lib/apiCache';
+import { formatDateTime, formatDate, getPriorityColor, getStageColor, getOutcomeColor, getPriorityLabel } from '@/lib/utils';
+import { invalidateCache, updateCachedLead, findLeadInCache } from '@/lib/apiCache';
 import { CallLogModal } from './CallLogModal';
 import { TaskModal } from './TaskModal';
 import { HandoverModal } from '../kanban/HandoverModal';
@@ -387,25 +388,36 @@ export function LeadDrawer({
 
   useEffect(() => {
     if (!isOpen) {
-      // Clear lead immediately on close so next lead opened doesn't show old data
+      // Clear lead on close so next lead opened doesn't show previous lead
       setLead(null);
       setIsEditingContact(false);
+      setIsEditingInfo(false);
       return;
     }
     if (leadId) {
-      // Reset previous lead so previous details are never displayed for a new lead
-      setLead(null);
+      // Check cache first for instant 0ms sidebar display without loading spinner
+      const cached = findLeadInCache(leadId);
+      if (cached) {
+        setLead(cached);
+        setLoading(false);
+      } else {
+        setLead(null);
+        setLoading(true);
+      }
       setIsEditingContact(false);
-      loadLead(leadId);
+      setIsEditingInfo(false);
+      loadLead(leadId, !cached);
     }
   }, [leadId, isOpen]);
 
-  async function loadLead(id: string) {
-    setLoading(true);
+  async function loadLead(id: string, showLoader = false) {
+    if (showLoader) setLoading(true);
     try {
       const res = await api.get<Lead>(`/leads/${id}`);
       if (res.success && res.data) {
-        setLead(res.data);
+        const fetchedLead = res.data;
+        setLead((prev) => (prev ? { ...prev, ...fetchedLead } : fetchedLead));
+        updateCachedLead(fetchedLead);
       }
     } catch (err) {
       console.error('Error fetching lead details:', err);
@@ -416,17 +428,27 @@ export function LeadDrawer({
 
   async function handleAddNote() {
     if (!lead || !newNote.trim()) return;
+    const noteText = newNote.trim();
+    const formattedNote = `[${new Date().toISOString().split('T')[0]} - ${user?.name || 'User'}]: ${noteText}`;
+    const updatedNotes = lead.notes
+      ? `${lead.notes}\n${formattedNote}`
+      : formattedNote;
+
+    // Instant optimistic update (0ms UI lag)
+    const optimisticLead: Lead = { ...lead, notes: updatedNotes };
+    setLead(optimisticLead);
+    onLeadUpdated(optimisticLead);
+    updateCachedLead(optimisticLead);
+    setNewNote('');
+
     setSubmittingNote(true);
     try {
-      const updatedNotes = lead.notes
-        ? `${lead.notes}\n[${new Date().toISOString().split('T')[0]} - ${user?.name}]: ${newNote.trim()}`
-        : `[${new Date().toISOString().split('T')[0]} - ${user?.name}]: ${newNote.trim()}`;
-
       const res = await api.patch<Lead>(`/leads/${lead.id}`, { notes: updatedNotes });
       if (res.success && res.data) {
-        setLead(res.data);
-        onLeadUpdated(res.data);
-        setNewNote('');
+        const merged = { ...optimisticLead, ...res.data };
+        setLead(merged);
+        onLeadUpdated(merged);
+        updateCachedLead(merged);
       }
     } catch (err) {
       console.error('Failed to add note:', err);
@@ -446,13 +468,26 @@ export function LeadDrawer({
       setShowScheduleModal(true);
       return;
     }
+
+    // Instant optimistic update (0ms UI lag)
+    const previousLead = { ...lead };
+    const optimisticLead: Lead = { ...lead, pipelineStage: newStage };
+    setLead(optimisticLead);
+    onLeadUpdated(optimisticLead);
+    updateCachedLead(optimisticLead);
+
     try {
       const res = await api.post<Lead>(`/leads/${lead.id}/stage`, { pipelineStage: newStage });
       if (res.success && res.data) {
-        setLead(res.data);
-        onLeadUpdated(res.data);
+        const merged = { ...optimisticLead, ...res.data };
+        setLead(merged);
+        onLeadUpdated(merged);
+        updateCachedLead(merged);
       }
     } catch (err: any) {
+      setLead(previousLead);
+      onLeadUpdated(previousLead);
+      updateCachedLead(previousLead);
       alert(err.message || 'Stage transition failed');
     }
   }
@@ -592,10 +627,10 @@ export function LeadDrawer({
                       onChange={(e) => handlePriorityChange(e.target.value as Priority)}
                       className={`w-full text-xs font-bold rounded px-1.5 py-1 border cursor-pointer ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
                     >
-                      <option value="LOW" className="bg-white text-blue-700 font-bold">Low</option>
-                      <option value="MEDIUM" className="bg-white text-amber-800 font-bold">Medium</option>
-                      <option value="HIGH" className="bg-white text-orange-700 font-bold">High</option>
-                      <option value="URGENT" className="bg-white text-red-700 font-bold">Urgent</option>
+                      <option value="LOW" className="bg-white text-blue-700 font-bold">Cold</option>
+                      <option value="MEDIUM" className="bg-white text-amber-800 font-bold">Warm</option>
+                      <option value="HIGH" className="bg-white text-orange-700 font-bold">Hot</option>
+                      <option value="URGENT" className="bg-white text-red-700 font-bold">Urgent (Hot)</option>
                     </select>
                   </div>
 
@@ -853,41 +888,21 @@ export function LeadDrawer({
                       </div>
 
                       {isEditingInfo ? (
-                        /* Edit Mode Form */
+                        /* Edit Mode Form: Primary Person, Primary Phone, Alternate Person, Alternate Phone, Company Name, Email, Service/Product, Website, Location */
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                          {/* 1. Primary Person */}
                           <div>
-                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Company Name *</label>
-                            <input
-                              type="text"
-                              value={infoForm.companyName}
-                              onChange={(e) => setInfoForm({ ...infoForm, companyName: e.target.value })}
-                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold"
-                              placeholder="Enter company name"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Contact Person</label>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Primary Person (Contact Person)</label>
                             <input
                               type="text"
                               value={infoForm.contactPerson}
                               onChange={(e) => setInfoForm({ ...infoForm, contactPerson: e.target.value })}
-                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                              placeholder="Enter contact person"
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold"
+                              placeholder="e.g. Jane Miller"
                             />
                           </div>
 
-                          <div>
-                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Alternate Name (Secondary Contact)</label>
-                            <input
-                              type="text"
-                              value={infoForm.alternateName}
-                              onChange={(e) => setInfoForm({ ...infoForm, alternateName: e.target.value })}
-                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
-                              placeholder="e.g. Second Contact Person"
-                            />
-                          </div>
-
+                          {/* 2. Primary Phone */}
                           <div>
                             <label className="text-[11px] font-bold text-slate-600 block mb-1">Primary Phone *</label>
                             <input
@@ -899,8 +914,21 @@ export function LeadDrawer({
                             />
                           </div>
 
+                          {/* 3. Alternate Person */}
                           <div>
-                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Alternate Phone (Extra Number)</label>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Alternate Person (Secondary Contact)</label>
+                            <input
+                              type="text"
+                              value={infoForm.alternateName}
+                              onChange={(e) => setInfoForm({ ...infoForm, alternateName: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              placeholder="e.g. Secondary Contact Person"
+                            />
+                          </div>
+
+                          {/* 4. Alternate Phone */}
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Alternate Phone (Secondary Number)</label>
                             <input
                               type="text"
                               value={infoForm.alternatePhone}
@@ -910,6 +938,19 @@ export function LeadDrawer({
                             />
                           </div>
 
+                          {/* 5. Company Name */}
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Company Name *</label>
+                            <input
+                              type="text"
+                              value={infoForm.companyName}
+                              onChange={(e) => setInfoForm({ ...infoForm, companyName: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500 font-semibold"
+                              placeholder="Enter company name"
+                            />
+                          </div>
+
+                          {/* 6. Email */}
                           <div>
                             <label className="text-[11px] font-bold text-slate-600 block mb-1">Email Address</label>
                             <input
@@ -921,6 +962,7 @@ export function LeadDrawer({
                             />
                           </div>
 
+                          {/* 7. Service / Product */}
                           <div>
                             <label className="text-[11px] font-bold text-slate-600 block mb-1">Service / Product *</label>
                             <input
@@ -932,6 +974,7 @@ export function LeadDrawer({
                             />
                           </div>
 
+                          {/* 8. Website */}
                           <div>
                             <label className="text-[11px] font-bold text-slate-600 block mb-1">Website URL</label>
                             <input
@@ -943,7 +986,8 @@ export function LeadDrawer({
                             />
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2">
+                          {/* 9. Location */}
+                          <div className="grid grid-cols-2 gap-2 sm:col-span-2">
                             <div>
                               <label className="text-[11px] font-bold text-slate-600 block mb-1">City</label>
                               <input
@@ -967,46 +1011,44 @@ export function LeadDrawer({
                           </div>
                         </div>
                       ) : (
-                        /* View Mode */
+                        /* View Mode: Strictly ordered as Primary Person, Primary Phone, Alternate Person, Alternate Phone, Company Name, Email, Service/Product, Website, Location, Lead Source, Created On */
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                          {/* 1. Primary Person */}
                           <div className="flex items-start gap-2.5">
-                            <UserIcon className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <UserIcon className="h-4 w-4 text-sky-600 mt-0.5 shrink-0" />
                             <div>
-                              <span className="text-[11px] text-slate-400 block font-medium">Contact Person</span>
+                              <span className="text-[11px] text-slate-400 block font-medium">Primary Person</span>
                               <span className="text-xs font-bold text-slate-800">
                                 {lead.contactPerson || <span className="text-slate-400 font-normal italic">- (Not available)</span>}
                               </span>
                             </div>
                           </div>
 
+                          {/* 2. Primary Phone */}
                           <div className="flex items-start gap-2.5">
-                            <UserIcon className="h-4 w-4 text-sky-500 mt-0.5" />
-                            <div>
-                              <span className="text-[11px] text-slate-400 block font-medium">Alternate Name</span>
-                              <span className="text-xs font-bold text-slate-800">
-                                {lead.alternateName || <span className="text-slate-400 font-normal italic">- (None)</span>}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-2.5">
-                            <Building className="h-4 w-4 text-slate-400 mt-0.5" />
-                            <div>
-                              <span className="text-[11px] text-slate-400 block font-medium">Company Name</span>
-                              <span className="text-xs font-bold text-slate-800">{lead.companyName}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-2.5">
-                            <Phone className="h-4 w-4 text-slate-400 mt-0.5" />
-                            <div className="flex-1">
+                            <Phone className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
                               <span className="text-[11px] text-slate-400 block font-medium">Primary Phone</span>
-                              <div className="flex items-center gap-2 mt-0.5">
+                              <div className="flex items-center gap-1.5 mt-0.5">
                                 <span className="text-xs font-bold text-slate-800 font-mono">{lead.phone}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (navigator?.clipboard) {
+                                      navigator.clipboard.writeText(lead.phone);
+                                      alert(`Copied ${lead.phone} to clipboard`);
+                                    }
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded cursor-pointer transition-colors"
+                                  title="Copy Primary Phone on click"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
                                 <a
                                   href={`tel:${lead.phone}`}
-                                  className="p-1 text-sky-600 hover:bg-sky-50 rounded"
-                                  title="Call"
+                                  className="p-1 text-sky-600 hover:bg-sky-50 rounded cursor-pointer"
+                                  title="Call Primary Phone"
                                 >
                                   <PhoneCall className="h-3 w-3" />
                                 </a>
@@ -1014,7 +1056,7 @@ export function LeadDrawer({
                                   href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                  className="p-1 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer"
                                   title="WhatsApp"
                                 >
                                   <MessageSquare className="h-3 w-3" />
@@ -1023,16 +1065,42 @@ export function LeadDrawer({
                             </div>
                           </div>
 
+                          {/* 3. Alternate Person */}
                           <div className="flex items-start gap-2.5">
-                            <Phone className="h-4 w-4 text-purple-400 mt-0.5" />
-                            <div className="flex-1">
-                              <span className="text-[11px] text-slate-400 block font-medium">Alternate Phone (Extra)</span>
+                            <UserIcon className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Alternate Person</span>
+                              <span className="text-xs font-bold text-slate-800">
+                                {lead.alternateName || <span className="text-slate-400 font-normal italic">- (None)</span>}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* 4. Alternate Phone */}
+                          <div className="flex items-start gap-2.5">
+                            <Phone className="h-4 w-4 text-purple-600 mt-0.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[11px] text-slate-400 block font-medium">Alternate Phone</span>
                               {lead.alternatePhone ? (
-                                <div className="flex items-center gap-2 mt-0.5">
+                                <div className="flex items-center gap-1.5 mt-0.5">
                                   <span className="text-xs font-bold text-slate-800 font-mono">{lead.alternatePhone}</span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (navigator?.clipboard) {
+                                        navigator.clipboard.writeText(lead.alternatePhone!);
+                                        alert(`Copied ${lead.alternatePhone} to clipboard`);
+                                      }
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded cursor-pointer transition-colors"
+                                    title="Copy Alternate Phone on click"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
                                   <a
                                     href={`tel:${lead.alternatePhone}`}
-                                    className="p-1 text-sky-600 hover:bg-sky-50 rounded"
+                                    className="p-1 text-sky-600 hover:bg-sky-50 rounded cursor-pointer"
                                     title="Call Alternate"
                                   >
                                     <PhoneCall className="h-3 w-3" />
@@ -1041,7 +1109,7 @@ export function LeadDrawer({
                                     href={`https://wa.me/${lead.alternatePhone.replace(/[^0-9]/g, '')}`}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                                    className="p-1 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer"
                                     title="WhatsApp Alternate"
                                   >
                                     <MessageSquare className="h-3 w-3" />
@@ -1053,18 +1121,29 @@ export function LeadDrawer({
                             </div>
                           </div>
 
+                          {/* 5. Company Name */}
                           <div className="flex items-start gap-2.5">
-                            <Mail className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <Building className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                             <div>
-                              <span className="text-[11px] text-slate-400 block font-medium">Email Address</span>
+                              <span className="text-[11px] text-slate-400 block font-medium">Company Name</span>
+                              <span className="text-xs font-bold text-slate-800">{lead.companyName}</span>
+                            </div>
+                          </div>
+
+                          {/* 6. Email */}
+                          <div className="flex items-start gap-2.5">
+                            <Mail className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Email</span>
                               <span className="text-xs font-semibold text-slate-800">
                                 {lead.email || <span className="text-slate-400 font-normal italic">None on file</span>}
                               </span>
                             </div>
                           </div>
 
+                          {/* 7. Service / Product */}
                           <div className="flex items-start gap-2.5">
-                            <FileText className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <FileText className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                             <div>
                               <span className="text-[11px] text-slate-400 block font-medium">Service / Product</span>
                               <span className="text-xs font-semibold text-slate-800">
@@ -1073,8 +1152,9 @@ export function LeadDrawer({
                             </div>
                           </div>
 
+                          {/* 8. Website */}
                           <div className="flex items-start gap-2.5">
-                            <Globe className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <Globe className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                             <div>
                               <span className="text-[11px] text-slate-400 block font-medium">Website</span>
                               {lead.website ? (
@@ -1092,9 +1172,9 @@ export function LeadDrawer({
                             </div>
                           </div>
 
-                          {/* Location */}
+                          {/* 9. Location */}
                           <div className="flex items-start gap-2.5">
-                            <MapPin className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <MapPin className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                             <div>
                               <span className="text-[11px] text-slate-400 block font-medium">Location</span>
                               <span className="text-xs font-semibold text-slate-800">
@@ -1103,9 +1183,9 @@ export function LeadDrawer({
                             </div>
                           </div>
 
-                          {/* Lead Source */}
+                          {/* 10. Lead Source */}
                           <div className="flex items-start gap-2.5">
-                            <Compass className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <Compass className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                             <div>
                               <span className="text-[11px] text-slate-400 block font-medium">Lead Source</span>
                               <span className="text-xs font-semibold text-slate-800">
@@ -1115,8 +1195,9 @@ export function LeadDrawer({
                             </div>
                           </div>
 
+                          {/* 11. Created On */}
                           <div className="flex items-start gap-2.5">
-                            <Clock className="h-4 w-4 text-slate-400 mt-0.5" />
+                            <Clock className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
                             <div>
                               <span className="text-[11px] text-slate-400 block font-medium">Created On</span>
                               <span className="text-xs font-semibold text-slate-800">

@@ -37,8 +37,10 @@ import {
   Plus,
   Search,
   MessageSquare,
+  Copy,
+  Check,
 } from 'lucide-react';
-import { formatDate, formatDateTime, getPriorityColor, getOutcomeColor, getStageColor } from '@/lib/utils';
+import { formatDate, formatDateTime, getPriorityColor, getOutcomeColor, getStageColor, getPriorityLabel } from '@/lib/utils';
 import { WhatsAppButton, WhatsAppIcon } from '@/components/leads/WhatsAppButton';
 import { openWhatsAppChat } from '@/lib/whatsapp';
 import { Modal } from '@/components/ui/Modal';
@@ -161,7 +163,7 @@ export default function TelecallerMyLeadsPage() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(25);
+  const [pageSize, setPageSize] = useState<number>(150);
 
   // Undo Toast state (7-second undo window)
   const [undoToast, setUndoToast] = useState<UndoState | null>(null);
@@ -388,15 +390,17 @@ export default function TelecallerMyLeadsPage() {
         return false;
       }
 
-      // 4. Search query (company, contact person, phone, email)
+      // 4. Search query (company, contact person, alternate contact, phone, alternate phone, email, service product)
       if (searchTerm) {
         const q = searchTerm.toLowerCase().trim();
         const matchesCompany = !!(lead.companyName && lead.companyName.toLowerCase().includes(q));
         const matchesContact = !!(lead.contactPerson && lead.contactPerson.toLowerCase().includes(q));
+        const matchesAltContact = !!(lead.alternateName && lead.alternateName.toLowerCase().includes(q));
         const matchesPhone = !!(lead.phone && lead.phone.toLowerCase().includes(q));
+        const matchesAltPhone = !!(lead.alternatePhone && lead.alternatePhone.toLowerCase().includes(q));
         const matchesEmail = !!(lead.email && lead.email.toLowerCase().includes(q));
         const matchesProduct = !!(lead.serviceProduct && lead.serviceProduct.toLowerCase().includes(q));
-        if (!matchesCompany && !matchesContact && !matchesPhone && !matchesEmail && !matchesProduct) {
+        if (!matchesCompany && !matchesContact && !matchesAltContact && !matchesPhone && !matchesAltPhone && !matchesEmail && !matchesProduct) {
           return false;
         }
       }
@@ -841,16 +845,39 @@ export default function TelecallerMyLeadsPage() {
           )}
         </div>
 
-        {/* Mobile Search Bar (Always visible on mobile) */}
-        <div className="md:hidden relative">
-          <Search className="h-4 w-4 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search company, phone, contact..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 shadow-soft-xs min-h-[44px]"
-          />
+        {/* Fast Leads Search Bar (Prominently visible on desktop & mobile) */}
+        <div className="relative bg-white rounded-xl border border-slate-200/90 shadow-soft-xs p-2 flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
+              placeholder="Fast Search leads: Company Name, Phone, Contact Person, Alternate Phone..."
+              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setCurrentPage(1);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 rounded-full cursor-pointer"
+                title="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          {searchTerm && (
+            <span className="text-xs font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2.5 py-1.5 rounded-lg shrink-0">
+              {filteredLeads.length} leads found
+            </span>
+          )}
         </div>
 
         {/* 7 Filter Chips Above Table (Counts for All + 6 Playbook Stages) */}
@@ -1501,20 +1528,69 @@ export default function TelecallerMyLeadsPage() {
                           </div>
                         </td>
 
-                        {/* Sticky Column 3: Phone (Fixed like company column, showing ONLY number per Requirement 3 & 4) */}
-                        <td className="sticky left-[308px] z-10 bg-white group-hover:bg-slate-50/90 p-3 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]" onClick={(e) => e.stopPropagation()}>
-                          <a
-                            href={lead.phone ? `tel:${lead.phone}` : undefined}
-                            className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 text-xs font-mono"
-                            title={lead.phone ? `Dial ${lead.phone}` : undefined}
-                          >
-                            <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
-                            <span className="truncate">{lead.phone || 'No Phone'}</span>
-                          </a>
+                        {/* Sticky Column 3: Phone (Stacked primary & alternate numbers + single-click copy) */}
+                        <td className="sticky left-[308px] z-10 bg-white group-hover:bg-slate-50/90 py-2 px-2.5 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex flex-col gap-1 min-w-0">
+                            {/* Primary Phone */}
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <a
+                                href={lead.phone ? `tel:${lead.phone}` : undefined}
+                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1 text-xs font-mono truncate"
+                                title={lead.phone ? `Call ${lead.phone}` : undefined}
+                              >
+                                <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
+                                <span className="truncate">{lead.phone || 'No Phone'}</span>
+                              </a>
+                              {lead.phone && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (navigator?.clipboard) {
+                                      navigator.clipboard.writeText(lead.phone);
+                                      alert(`Copied ${lead.phone}`);
+                                    }
+                                  }}
+                                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0"
+                                  title="Copy phone number"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Alternate Phone (Stacked upar niche) */}
+                            {lead.alternatePhone && (
+                              <div className="flex items-center gap-1.5 min-w-0 border-t border-slate-100 pt-0.5">
+                                <a
+                                  href={`tel:${lead.alternatePhone}`}
+                                  className="text-purple-700 font-medium hover:underline flex items-center gap-1 text-[11px] font-mono truncate"
+                                  title={`Call alternate: ${lead.alternatePhone}`}
+                                >
+                                  <Phone className="h-2.5 w-2.5 text-purple-600 shrink-0" />
+                                  <span className="truncate">{lead.alternatePhone}</span>
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (navigator?.clipboard) {
+                                      navigator.clipboard.writeText(lead.alternatePhone!);
+                                      alert(`Copied ${lead.alternatePhone}`);
+                                    }
+                                  }}
+                                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0"
+                                  title="Copy alternate phone"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
 
-                        {/* Priority Dropdown */}
-                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Priority Dropdown (Cold, Warm, Hot, Urgent) */}
+                        <td className="py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
                           <select
                             value={(lead.priority || 'MEDIUM').toUpperCase()}
                             onChange={(e) => handlePriorityChange(lead, e.target.value as Priority)}
@@ -1524,7 +1600,7 @@ export default function TelecallerMyLeadsPage() {
                               const pMeta = getPriorityColor(p);
                               return (
                                 <option key={p} value={p} className={`font-bold ${pMeta.text} bg-white`}>
-                                  {p}
+                                  {getPriorityLabel(p)}
                                 </option>
                               );
                             })}
@@ -1714,9 +1790,9 @@ export default function TelecallerMyLeadsPage() {
                 }}
                 className="bg-white border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-700 focus:outline-none cursor-pointer"
               >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
+                <option value={150}>150 (Default)</option>
+                <option value={250}>250</option>
+                <option value={500}>500</option>
                 <option value={0}>All Rows</option>
               </select>
               <span className="text-slate-400">|</span>

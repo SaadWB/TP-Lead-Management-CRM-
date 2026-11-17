@@ -382,7 +382,7 @@ export class LeadRepository {
 
     const total = await prisma.lead.count({ where });
     const page = options.page || 1;
-    const limit = options.limit !== undefined ? options.limit : 50;
+    const limit = options.limit !== undefined ? options.limit : 150;
     const skip = limit > 0 ? (page - 1) * limit : 0;
     const take = limit > 0 ? limit : undefined;
 

@@ -19,7 +19,7 @@ import {
   isLeadClosedWon,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
-import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
+import { formatDate, getPriorityColor, getStageColor, getOutcomeColor, getPriorityLabel } from '@/lib/utils';
 import { invalidateCache, getMemoryCache, setMemoryCache, getCacheKey, updateCachedLead, removeCachedLead } from '@/lib/apiCache';
 import {
   Users,
@@ -32,6 +32,10 @@ import {
   Trash2,
   X,
   AlertTriangle,
+  Copy,
+  ChevronLeft,
+  ChevronRight,
+  Check,
 } from 'lucide-react';
 import { WhatsAppButton } from '@/components/leads/WhatsAppButton';
 
@@ -108,6 +112,10 @@ function AdminLeadsContent() {
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Pagination (Default 150+ rows per page)
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(150);
 
   const kpiTitles: Record<string, string> = {
     total: 'Total Leads',
@@ -433,7 +441,9 @@ function AdminLeadsContent() {
     return (
       (lead.companyName || '').toLowerCase().includes(q) ||
       (lead.contactPerson && lead.contactPerson.toLowerCase().includes(q)) ||
+      (lead.alternateName && lead.alternateName.toLowerCase().includes(q)) ||
       (lead.phone || '').toLowerCase().includes(q) ||
+      (lead.alternatePhone && lead.alternatePhone.toLowerCase().includes(q)) ||
       (lead.serviceProduct && lead.serviceProduct.toLowerCase().includes(q))
     );
   });
@@ -446,6 +456,14 @@ function AdminLeadsContent() {
       return dateA - dateB; // Ascending order
     });
   }, [filteredLeads]);
+
+  // Paginated leads (Default 150+ rows per page per Requirement 4)
+  const paginatedLeads = React.useMemo(() => {
+    if (pageSize === 0) return sortedLeads;
+    const start = (currentPage - 1) * pageSize;
+    return sortedLeads.slice(start, start + pageSize);
+  }, [sortedLeads, currentPage, pageSize]);
+  const totalPages = pageSize === 0 ? 1 : Math.ceil(sortedLeads.length / pageSize);
 
   function toggleSelectAll() {
     if (selectedLeadIds.length === sortedLeads.length) {
@@ -551,10 +569,10 @@ function AdminLeadsContent() {
               className="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
             >
               <option value="">All Priorities</option>
+              <option value="LOW">Cold (Low)</option>
+              <option value="MEDIUM">Warm (Medium)</option>
+              <option value="HIGH">Hot (High)</option>
               <option value="URGENT">Urgent</option>
-              <option value="HIGH">High</option>
-              <option value="MEDIUM">Medium</option>
-              <option value="LOW">Low</option>
             </select>
 
             <select
@@ -614,9 +632,9 @@ function AdminLeadsContent() {
                   onChange={(e) => setBulkPriority(e.target.value as Priority)}
                   className="text-xs bg-slate-800 border border-slate-700 rounded px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                 >
-                  <option value="LOW">Low Priority</option>
-                  <option value="MEDIUM">Medium Priority</option>
-                  <option value="HIGH">High Priority</option>
+                  <option value="LOW">Cold Priority</option>
+                  <option value="MEDIUM">Warm Priority</option>
+                  <option value="HIGH">Hot Priority</option>
                   <option value="URGENT">Urgent Priority</option>
                 </select>
                 <button
@@ -877,16 +895,16 @@ function AdminLeadsContent() {
                   <col style={{ width: '48px' }} />
                   <col style={{ width: '56px' }} />
                   <col style={{ width: '220px' }} />
-                  <col style={{ width: '160px' }} />
-                  <col style={{ width: '160px' }} />
-                  <col style={{ width: '110px' }} />
-                  <col style={{ width: '180px' }} />
-                  <col style={{ width: '160px' }} />
-                  <col style={{ width: '160px' }} />
                   <col style={{ width: '150px' }} />
-                  <col style={{ width: '150px' }} />
-                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '170px' }} />
                   <col style={{ width: '110px' }} />
+                  <col style={{ width: '170px' }} />
+                  <col style={{ width: '140px' }} />
+                  <col style={{ width: '150px' }} />
+                  <col style={{ width: '140px' }} />
+                  <col style={{ width: '140px' }} />
+                  <col style={{ width: '140px' }} />
+                  <col style={{ width: '130px' }} />
                 </colgroup>
                 <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200 select-none sticky top-0 z-20 shadow-soft-xs">
                   <tr>
@@ -1005,7 +1023,7 @@ function AdminLeadsContent() {
 
                     {/* 11. Action */}
                     <th
-                      style={{ width: 110, minWidth: 110, maxWidth: 110 }}
+                      style={{ width: 130, minWidth: 130, maxWidth: 130 }}
                       className="p-3 text-center font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                       title="Quick Actions"
                     >
@@ -1046,11 +1064,12 @@ function AdminLeadsContent() {
                       </td>
                     </tr>
                   ) : (
-                    sortedLeads.map((lead, index) => {
+                    paginatedLeads.map((lead, index) => {
                       const priority = getPriorityColor(lead.priority);
                       const stage = getStageColor(lead.pipelineStage);
                       const outcome = getOutcomeColor(lead.lastCallOutcome);
                       const isSelected = selectedLeadIds.includes(lead.id);
+                      const rowNumber = pageSize === 0 ? index + 1 : (currentPage - 1) * pageSize + index + 1;
 
                       return (
                         <tr
@@ -1065,7 +1084,7 @@ function AdminLeadsContent() {
                           {/* Sticky Checkbox Cell */}
                           <td
                             style={{ width: 48, minWidth: 48, maxWidth: 48 }}
-                            className={`sticky left-0 z-10 border-r border-slate-200/60 p-3 text-center overflow-hidden whitespace-nowrap min-w-0 ${isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
+                            className={`sticky left-0 z-10 border-r border-slate-200/60 p-2.5 text-center overflow-hidden whitespace-nowrap min-w-0 ${isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
                               }`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1084,17 +1103,17 @@ function AdminLeadsContent() {
                           {/* Sticky Serial Number Cell */}
                           <td
                             style={{ width: 56, minWidth: 56, maxWidth: 56 }}
-                            className={`sticky left-[48px] z-10 border-r border-slate-200/80 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] p-3 text-center text-slate-500 font-semibold overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
+                            className={`sticky left-[48px] z-10 border-r border-slate-200/80 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] p-2.5 text-center text-slate-500 font-semibold overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${isSelected ? 'bg-sky-50' : 'bg-white group-hover:bg-slate-50'
                               }`}
-                            title={`Lead #${index + 1}`}
+                            title={`Lead #${rowNumber}`}
                           >
-                            {index + 1}
+                            {rowNumber}
                           </td>
 
                           {/* 1. Company */}
                           <td
                             style={{ width: 220, minWidth: 220, maxWidth: 220 }}
-                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            className="p-2.5 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                             title={`${lead.companyName} (${lead.serviceProduct})`}
                           >
                             <span
@@ -1113,8 +1132,8 @@ function AdminLeadsContent() {
 
                           {/* 2. Contact */}
                           <td
-                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
-                            className="p-3 font-semibold text-slate-700 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            style={{ width: 150, minWidth: 150, maxWidth: 150 }}
+                            className="p-2.5 font-semibold text-slate-700 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                             title={lead.contactPerson || 'Not available'}
                           >
                             <span className="block truncate">
@@ -1124,50 +1143,89 @@ function AdminLeadsContent() {
                             </span>
                           </td>
 
-                          {/* 3. Phone */}
+                          {/* 3. Phone (Stacked 2 numbers + click-to-copy, WhatsApp shifted to Actions) */}
                           <td
-                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
-                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            style={{ width: 170, minWidth: 170, maxWidth: 170 }}
+                            className="p-2.5 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                             onClick={(e) => e.stopPropagation()}
-                            title={`Phone: ${lead.phone}`}
+                            title={`Phone: ${lead.phone}${lead.alternatePhone ? ` / ${lead.alternatePhone}` : ''}`}
                           >
-                            <div className="flex items-center gap-1.5 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                              <a
-                                href={`tel:${lead.phone}`}
-                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1 min-w-0 truncate"
-                                title={`Call ${lead.phone}`}
-                              >
-                                <Phone className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{lead.phone}</span>
-                              </a>
-                              <WhatsAppButton
-                                phone={lead.phone}
-                                leadId={lead.id}
-                                leadName={lead.contactPerson || lead.companyName}
-                                size="sm"
-                                showText={false}
-                                className="shrink-0"
-                              />
+                            <div className="flex flex-col gap-1 min-w-0">
+                              {/* Primary Phone */}
+                              <div className="flex items-center gap-1 min-w-0">
+                                <a
+                                  href={`tel:${lead.phone}`}
+                                  className="text-emerald-700 font-semibold hover:underline flex items-center gap-1 min-w-0 truncate text-[11px]"
+                                  title={`Call ${lead.phone}`}
+                                >
+                                  <Phone className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">{lead.phone}</span>
+                                </a>
+                                {lead.phone && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (navigator?.clipboard) {
+                                        navigator.clipboard.writeText(lead.phone);
+                                        alert(`Copied ${lead.phone}`);
+                                      }
+                                    }}
+                                    className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0 cursor-pointer"
+                                    title="Click to copy primary phone"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Alternate Phone if present (Stacked upar niche) */}
+                              {lead.alternatePhone && (
+                                <div className="flex items-center gap-1 min-w-0 border-t border-slate-100 pt-0.5">
+                                  <a
+                                    href={`tel:${lead.alternatePhone}`}
+                                    className="text-purple-700 font-medium hover:underline flex items-center gap-1 min-w-0 truncate text-[11px]"
+                                    title={`Call alternate: ${lead.alternatePhone}`}
+                                  >
+                                    <Phone className="h-2.5 w-2.5 shrink-0" />
+                                    <span className="truncate">{lead.alternatePhone}</span>
+                                  </a>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (navigator?.clipboard) {
+                                        navigator.clipboard.writeText(lead.alternatePhone!);
+                                        alert(`Copied ${lead.alternatePhone}`);
+                                      }
+                                    }}
+                                    className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0 cursor-pointer"
+                                    title="Click to copy alternate phone"
+                                  >
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </td>
 
-                          {/* 4. Priority */}
+                          {/* 4. Priority (Cold, Warm, Hot, Urgent) */}
                           <td
                             style={{ width: 110, minWidth: 110, maxWidth: 110 }}
-                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+                            className="p-2.5 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                             onClick={(e) => e.stopPropagation()}
-                            title={`Priority: ${lead.priority}`}
+                            title={`Priority: ${getPriorityLabel(lead.priority)}`}
                           >
                             <select
                               value={lead.priority}
                               onChange={(e) => handleSinglePriorityUpdate(lead.id, e.target.value as Priority)}
                               className={`w-full max-w-full truncate text-[11px] font-bold rounded px-1.5 py-1 border cursor-pointer ${priority.bg} ${priority.text} ${priority.border} focus:outline-none focus:ring-1 focus:ring-sky-500`}
-                              title={`Priority: ${lead.priority}`}
+                              title={`Priority: ${getPriorityLabel(lead.priority)}`}
                             >
-                              <option value="LOW" className="bg-blue-50 text-blue-700 font-bold">LOW</option>
-                              <option value="MEDIUM" className="bg-amber-50 text-amber-800 font-bold">MEDIUM</option>
-                              <option value="HIGH" className="bg-orange-50 text-orange-700 font-bold">HIGH</option>
-                              <option value="URGENT" className="bg-red-50 text-red-700 font-bold">URGENT</option>
+                              <option value="LOW" className="bg-blue-50 text-blue-700 font-bold">Cold</option>
+                              <option value="MEDIUM" className="bg-amber-50 text-amber-800 font-bold">Warm</option>
+                              <option value="HIGH" className="bg-orange-50 text-orange-700 font-bold">Hot</option>
+                              <option value="URGENT" className="bg-red-50 text-red-700 font-bold">Urgent</option>
                             </select>
                           </td>
 
@@ -1283,24 +1341,33 @@ function AdminLeadsContent() {
                             </span>
                           </td>
 
-                          {/* 11. Action */}
+                          {/* 11. Action (View, WhatsApp icon shifted here, Delete) */}
                           <td
-                            style={{ width: 110, minWidth: 110, maxWidth: 110 }}
-                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-center"
+                            style={{ width: 130, minWidth: 130, maxWidth: 130 }}
+                            className="p-2.5 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-center"
                             onClick={(e) => e.stopPropagation()}
                             title="Actions"
                           >
-                            <div className="flex items-center justify-center gap-1 min-w-0">
+                            <div className="flex items-center justify-center gap-1.5 min-w-0">
                               <button
                                 onClick={() => {
                                   setSelectedLeadId(lead.id);
                                   setIsDrawerOpen(true);
                                 }}
-                                className="px-2.5 py-1 rounded bg-sky-50 text-sky-700 hover:bg-sky-100 font-bold text-[11px] transition-colors cursor-pointer shrink-0"
+                                className="px-2 py-1 rounded bg-sky-50 text-sky-700 hover:bg-sky-100 font-bold text-[11px] transition-colors cursor-pointer shrink-0"
                                 title="View Lead Details"
                               >
                                 View
                               </button>
+                              {/* WhatsApp Button shifted to Action Column per Requirement 6 */}
+                              <WhatsAppButton
+                                phone={lead.phone}
+                                leadId={lead.id}
+                                leadName={lead.contactPerson || lead.companyName}
+                                size="sm"
+                                showText={false}
+                                className="shrink-0"
+                              />
                               <button
                                 onClick={() => setDeleteTarget(lead)}
                                 className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer shrink-0"
@@ -1316,6 +1383,59 @@ function AdminLeadsContent() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Table Pagination Footer (Default 150+ rows per page per Requirement 4) */}
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-slate-500">
+                <span>Rows per page:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 font-semibold text-slate-700 focus:outline-none cursor-pointer"
+                >
+                  <option value={150}>150 (Default)</option>
+                  <option value={250}>250</option>
+                  <option value={500}>500</option>
+                  <option value={0}>All Rows</option>
+                </select>
+                <span className="text-slate-400">|</span>
+                <span className="font-semibold text-slate-700">
+                  {sortedLeads.length === 0
+                    ? '0 leads'
+                    : pageSize === 0
+                      ? `Showing all ${sortedLeads.length} leads`
+                      : `Showing ${(currentPage - 1) * pageSize + 1} - ${Math.min(
+                        currentPage * pageSize,
+                        sortedLeads.length
+                      )} of ${sortedLeads.length}`}
+                </span>
+              </div>
+
+              {pageSize > 0 && totalPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="px-2 font-bold text-slate-700">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

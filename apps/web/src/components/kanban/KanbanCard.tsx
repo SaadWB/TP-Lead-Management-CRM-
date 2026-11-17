@@ -6,7 +6,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Lead, TELECALLER_KANBAN_COLUMNS } from '@crm/shared';
 import { Phone, Calendar, ArrowRight, UserCheck, Clock, GripVertical } from 'lucide-react';
 import { Badge } from '../ui/Badge';
-import { formatDate, getPriorityColor } from '@/lib/utils';
+import { formatDate, getPriorityColor, getPriorityLabel } from '@/lib/utils';
 
 interface KanbanCardProps {
   lead: Lead;
@@ -66,7 +66,7 @@ export function KanbanCard({ lead, onCardClick, onQuickMove }: KanbanCardProps) 
           <span
             className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${priorityStyle.bg} ${priorityStyle.text} ${priorityStyle.border}`}
           >
-            {lead.priority}
+            {getPriorityLabel(lead.priority)}
           </span>
           {lead.callAttempts > 0 && (
             <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-semibold">
@@ -111,16 +111,31 @@ export function KanbanCard({ lead, onCardClick, onQuickMove }: KanbanCardProps) 
       )}
 
       {/* Contact Person & Click-to-call */}
-      <div className="flex items-center justify-between text-[11px] text-slate-600 py-1 border-t border-slate-100">
-        <span className="font-medium truncate max-w-[140px] text-slate-700">{lead.contactPerson || '-'}</span>
-        <a
-          href={`tel:${lead.phone}`}
-          onClick={(e) => e.stopPropagation()}
-          className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 hover:underline"
-          title="Click to dial"
-        >
-          <Phone className="h-3 w-3" /> {lead.phone}
-        </a>
+      <div className="text-[11px] text-slate-600 py-1 border-t border-slate-100 space-y-1">
+        <div className="flex items-center justify-between">
+          <span className="font-medium truncate max-w-[130px] text-slate-700">{lead.contactPerson || '-'}</span>
+          <a
+            href={`tel:${lead.phone}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 hover:underline"
+            title="Click to dial"
+          >
+            <Phone className="h-3 w-3" /> {lead.phone}
+          </a>
+        </div>
+        {lead.alternatePhone && (
+          <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 border-t border-slate-50">
+            <span className="truncate max-w-[130px]">{lead.alternateName || 'Alt Contact'}</span>
+            <a
+              href={`tel:${lead.alternatePhone}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-slate-600 hover:text-slate-800 font-mono flex items-center gap-1 hover:underline"
+              title="Click to dial alternate"
+            >
+              <Phone className="h-2.5 w-2.5 text-slate-400" /> {lead.alternatePhone}
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Follow-up / Overdue Alert */}

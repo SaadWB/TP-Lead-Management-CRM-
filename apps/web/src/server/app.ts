@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { config } from './config';
+import { ensureDatabaseSchema } from './config/prisma';
 import { errorHandler } from './middleware/errorHandler';
 import { NotFoundError } from './utils/errors';
 import { apiRateLimiter } from './middleware/rateLimiter';
@@ -54,6 +55,7 @@ export function createApp(): Application {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
+    ensureDatabaseSchema().catch(() => {});
     next();
   });
 

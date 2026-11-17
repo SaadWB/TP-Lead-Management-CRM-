@@ -140,6 +140,23 @@ export function updateCachedLead(updatedLead: any): void {
 }
 
 /**
+ * Instantly retrieve a lead from memory cache (either from `/leads/:id` or any cached lead array).
+ * Returns undefined if not yet present in cache.
+ */
+export function findLeadInCache(leadId: string): any | undefined {
+  if (!leadId) return undefined;
+  const direct = getMemoryCache<any>(`/leads/${leadId}`, 60000);
+  if (direct) return direct;
+  for (const [key, entry] of memoryCache.entries()) {
+    if (key.startsWith('/leads') && Array.isArray(entry.data)) {
+      const match = entry.data.find((l: any) => l?.id === leadId);
+      if (match) return match;
+    }
+  }
+  return undefined;
+}
+
+/**
  * useSWRData hook for instant navigation with Stale-While-Revalidate caching.
  * Revisiting any page renders cached data instantly (0ms) and refreshes in background.
  */

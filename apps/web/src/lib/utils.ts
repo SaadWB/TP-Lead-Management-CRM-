@@ -44,16 +44,29 @@ export function formatCurrency(amount?: number | null): string {
   }).format(amount);
 }
 
+export function getPriorityLabel(priority?: string | null): string {
+  if (!priority) return 'Warm';
+  const norm = priority.toUpperCase().trim();
+  if (norm === 'LOW' || norm === 'COLD') return 'Cold';
+  if (norm === 'MEDIUM' || norm === 'WARM') return 'Warm';
+  if (norm === 'HIGH' || norm === 'HOT') return 'Hot';
+  if (norm === 'URGENT') return 'Urgent';
+  return priority;
+}
+
 export function getPriorityColor(priority: string) {
-  const norm = (priority || '').toUpperCase();
+  const norm = (priority || '').toUpperCase().trim();
   switch (norm) {
     case 'URGENT':
       return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-300', dot: 'bg-red-500' };
     case 'HIGH':
+    case 'HOT':
       return { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-300', dot: 'bg-orange-500' };
     case 'MEDIUM':
+    case 'WARM':
       return { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-300', dot: 'bg-amber-500' };
     case 'LOW':
+    case 'COLD':
       return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-300', dot: 'bg-blue-500' };
     default:
       return { bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300', dot: 'bg-slate-400' };

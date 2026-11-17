@@ -219,39 +219,39 @@ export default function AdminUsersPage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
                   <tr>
-                    <th className="p-3.5">Name & Email</th>
-                    <th className="p-3.5">Role</th>
-                    <th className="p-3.5">Phone</th>
-                    <th className="p-3.5 text-center">Active Leads Queue</th>
-                    <th className="p-3.5">Status</th>
-                    <th className="p-3.5">Member Since</th>
-                    <th className="p-3.5 text-right">Actions</th>
+                    <th className="py-2 px-2.5">Name & Email</th>
+                    <th className="py-2 px-2.5">Role</th>
+                    <th className="py-2 px-2.5">Phone</th>
+                    <th className="py-2 px-2.5 text-center">Active Leads Queue</th>
+                    <th className="py-2 px-2.5">Status</th>
+                    <th className="py-2 px-2.5">Member Since</th>
+                    <th className="py-2 px-2.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {loading && users.length === 0 ? (
                     [1, 2, 3, 4, 5].map((i) => (
                       <tr key={i} className="animate-pulse">
-                        <td className="p-3.5">
+                        <td className="py-2 px-2.5">
                           <div className="w-36 h-3 bg-slate-200 rounded mb-1.5" />
                           <div className="w-48 h-2.5 bg-slate-100 rounded" />
                         </td>
-                        <td className="p-3.5">
+                        <td className="py-2 px-2.5">
                           <div className="w-20 h-5 bg-slate-100 rounded" />
                         </td>
-                        <td className="p-3.5">
+                        <td className="py-2 px-2.5">
                           <div className="w-24 h-3 bg-slate-100 rounded" />
                         </td>
-                        <td className="p-3.5 text-center">
+                        <td className="py-2 px-2.5 text-center">
                           <div className="w-14 h-4 bg-slate-100 rounded mx-auto" />
                         </td>
-                        <td className="p-3.5">
+                        <td className="py-2 px-2.5">
                           <div className="w-16 h-5 bg-slate-100 rounded" />
                         </td>
-                        <td className="p-3.5">
+                        <td className="py-2 px-2.5">
                           <div className="w-20 h-3 bg-slate-100 rounded" />
                         </td>
-                        <td className="p-3.5 text-right">
+                        <td className="py-2 px-2.5 text-right">
                           <div className="w-16 h-6 bg-slate-100 rounded ml-auto" />
                         </td>
                       </tr>
@@ -282,30 +282,30 @@ export default function AdminUsersPage() {
 
                       return (
                         <tr key={u.id} className="hover:bg-slate-50/70 transition-colors">
-                          <td className="p-3.5">
+                          <td className="py-2 px-2.5">
                             <span className="font-bold text-slate-900 block">{u.name}</span>
                             <span className="text-[11px] text-slate-500 block">{u.email}</span>
                           </td>
-                          <td className="p-3.5">
+                          <td className="py-2 px-2.5">
                             <Badge variant={roleBadge} size="sm">
                               {u.role.replace('_', ' ')}
                             </Badge>
                           </td>
-                          <td className="p-3.5 font-medium text-slate-600">{u.phone || '—'}</td>
-                          <td className="p-3.5 text-center">
+                          <td className="py-2 px-2.5 font-medium text-slate-600">{u.phone || '—'}</td>
+                          <td className="py-2 px-2.5 text-center">
                             <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
                               {leadCount} leads
                             </span>
                           </td>
-                          <td className="p-3.5">
+                          <td className="py-2 px-2.5">
                             <Badge variant={u.isActive ? 'emerald' : 'slate'} size="sm" dot>
                               {u.isActive ? 'Active' : 'Deactivated'}
                             </Badge>
                           </td>
-                          <td className="p-3.5 text-slate-400 font-mono text-[11px]">
+                          <td className="py-2 px-2.5 text-slate-400 font-mono text-[11px]">
                             {formatDate(u.createdAt)}
                           </td>
-                          <td className="p-3.5 text-right">
+                          <td className="py-2 px-2.5 text-right">
                             <Button
                               variant={u.isActive ? 'outline' : 'primary'}
                               size="sm"

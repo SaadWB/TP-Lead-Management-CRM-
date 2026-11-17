@@ -18,12 +18,16 @@ interface CreateLeadModalProps {
 }
 
 export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource }: CreateLeadModalProps) {
-  const [companyName, setCompanyName] = useState('');
-  const [serviceProduct, setServiceProduct] = useState('');
   const [contactPerson, setContactPerson] = useState('');
-  const [alternateName, setAlternateName] = useState('');
   const [phone, setPhone] = useState('');
+  const [alternateName, setAlternateName] = useState('');
+  const [alternatePhone, setAlternatePhone] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
+  const [serviceProduct, setServiceProduct] = useState('');
+  const [website, setWebsite] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
   const [priority, setPriority] = useState<Priority>('MEDIUM');
   const [leadSource, setLeadSource] = useState<string>(defaultLeadSource || '');
   const [leadSourceOther, setLeadSourceOther] = useState('');
@@ -94,7 +98,11 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource 
         contactPerson: contactPerson.trim() || undefined,
         alternateName: alternateName.trim() || undefined,
         phone: phone.trim(),
+        alternatePhone: alternatePhone.trim() || undefined,
         email: email.trim() || undefined,
+        website: website.trim() || undefined,
+        city: city.trim() || undefined,
+        state: state.trim() || undefined,
         priority,
         leadSource: leadSource || defaultLeadSource || undefined,
         leadSourceOther: leadSource?.toLowerCase() === 'other' ? leadSourceOther.trim() || undefined : undefined,
@@ -110,12 +118,16 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource 
         onSuccess(res.data);
         onClose();
         // Reset form
-        setCompanyName('');
-        setServiceProduct('');
         setContactPerson('');
-        setAlternateName('');
         setPhone('');
+        setAlternateName('');
+        setAlternatePhone('');
+        setCompanyName('');
         setEmail('');
+        setServiceProduct('');
+        setWebsite('');
+        setCity('');
+        setState('');
         setPriority('MEDIUM');
         setLeadSource(defaultLeadSource || '');
         setLeadSourceOther('');
@@ -144,6 +156,40 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource 
           </div>
         )}
 
+        {/* 1. Primary Person & 2. Primary Phone */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="Primary Person (Contact Person)"
+            value={contactPerson}
+            onChange={(e) => setContactPerson(e.target.value)}
+            placeholder="e.g. Jane Miller"
+          />
+          <Input
+            label="Primary Phone"
+            required
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+91 9876543210"
+          />
+        </div>
+
+        {/* 3. Alternate Person & 4. Alternate Phone */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="Alternate Person (Secondary Contact)"
+            value={alternateName}
+            onChange={(e) => setAlternateName(e.target.value)}
+            placeholder="e.g. Secondary Contact Person"
+          />
+          <Input
+            label="Alternate Phone (Secondary Phone)"
+            value={alternatePhone}
+            onChange={(e) => setAlternatePhone(e.target.value)}
+            placeholder="Secondary contact number"
+          />
+        </div>
+
+        {/* 5. Company Name & 6. Email */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Company Name"
@@ -151,38 +197,6 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource 
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             placeholder="e.g. Apex Industrial Solutions"
-          />
-          <Input
-            label="Service / Product Required"
-            required
-            value={serviceProduct}
-            onChange={(e) => setServiceProduct(e.target.value)}
-            placeholder="e.g. Defense Tender Auto-Tracker"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input
-            label="Contact Person"
-            value={contactPerson}
-            onChange={(e) => setContactPerson(e.target.value)}
-            placeholder="e.g. Jane Miller"
-          />
-          <Input
-            label="Alternate Contact Name"
-            value={alternateName}
-            onChange={(e) => setAlternateName(e.target.value)}
-            placeholder="e.g. Secondary Contact Person"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input
-            label="Phone Number"
-            required
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+1-555-0123"
           />
           <Input
             label="Email Address"
@@ -193,18 +207,41 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource 
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Select
-            label="Priority Level"
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as Priority)}
-            options={[
-              { value: 'LOW', label: 'Low Priority' },
-              { value: 'MEDIUM', label: 'Medium Priority' },
-              { value: 'HIGH', label: 'High Priority' },
-              { value: 'URGENT', label: 'Urgent Priority' },
-            ]}
+        {/* 7. Service/Product & 8. Website */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="Service / Product Required"
+            required
+            value={serviceProduct}
+            onChange={(e) => setServiceProduct(e.target.value)}
+            placeholder="e.g. Defense Tender Auto-Tracker"
           />
+          <Input
+            label="Website URL"
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            placeholder="https://..."
+          />
+        </div>
+
+        {/* 9. Location (City, State) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input
+            label="City"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="e.g. Mumbai"
+          />
+          <Input
+            label="State"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            placeholder="e.g. Maharashtra"
+          />
+        </div>
+
+        {/* 10. Lead Source, Priority (Cold, Warm, Hot, Urgent), Assign Lead To */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Select
             label="Lead Source"
             value={leadSource}
@@ -212,6 +249,17 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource 
             options={[
               { value: '', label: 'Select lead source' },
               ...sourceOptions,
+            ]}
+          />
+          <Select
+            label="Priority Level"
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as Priority)}
+            options={[
+              { value: 'LOW', label: 'Cold (Low)' },
+              { value: 'MEDIUM', label: 'Warm (Medium)' },
+              { value: 'HIGH', label: 'Hot (High)' },
+              { value: 'URGENT', label: 'Urgent (Hot)' },
             ]}
           />
           <Select

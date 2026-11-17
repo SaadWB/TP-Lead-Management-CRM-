@@ -13,6 +13,7 @@ import {
 import { api } from '@/lib/apiClient';
 import { useSWRData } from '@/lib/apiCache';
 import { RefreshCw, Filter, Phone, CheckCircle2 } from 'lucide-react';
+import { getPriorityLabel } from '@/lib/utils';
 
 const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
   ssr: false,
@@ -25,7 +26,7 @@ const DEFAULT_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
 
 export default function TelecallerCallingDashboardPage() {
   const { data: cachedLeads, loading: swrLoading, mutate: mutateLeads, refresh: refreshLeads } =
-    useSWRData<Lead[]>('/leads', { limit: 100 });
+    useSWRData<Lead[]>('/leads', { limit: 1000 });
 
   const [leads, setLeads] = useState<Lead[]>(cachedLeads || []);
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
@@ -57,9 +58,11 @@ export default function TelecallerCallingDashboardPage() {
         const q = searchTerm.toLowerCase().trim();
         const matchesCompany = lead.companyName.toLowerCase().includes(q);
         const matchesContact = !!(lead.contactPerson && lead.contactPerson.toLowerCase().includes(q));
+        const matchesAltContact = !!(lead.alternateName && lead.alternateName.toLowerCase().includes(q));
         const matchesPhone = lead.phone.toLowerCase().includes(q);
+        const matchesAltPhone = !!(lead.alternatePhone && lead.alternatePhone.toLowerCase().includes(q));
         const matchesEmail = !!(lead.email && lead.email.toLowerCase().includes(q));
-        if (!matchesCompany && !matchesContact && !matchesPhone && !matchesEmail) {
+        if (!matchesCompany && !matchesContact && !matchesAltContact && !matchesPhone && !matchesAltPhone && !matchesEmail) {
           return false;
         }
       }
@@ -94,7 +97,7 @@ export default function TelecallerCallingDashboardPage() {
               <option value="">All Priorities</option>
               {DEFAULT_PRIORITIES.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {getPriorityLabel(p)}
                 </option>
               ))}
             </select>
