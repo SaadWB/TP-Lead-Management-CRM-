@@ -42,6 +42,7 @@ export interface Lead {
     companyName: string;
     serviceProduct: string;
     contactPerson?: string | null;
+    alternateName?: string | null;
     phone: string;
     email?: string | null;
     alternatePhone?: string | null;

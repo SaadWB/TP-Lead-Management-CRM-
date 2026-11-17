@@ -116,6 +116,7 @@ function mapPrismaLeadToShared(l: any): Lead {
     companyName: l.companyName,
     serviceProduct: l.serviceProduct,
     contactPerson: l.contactPerson || undefined,
+    alternateName: l.alternateName || undefined,
     phone: l.phone,
     email: l.email || undefined,
     alternatePhone: l.alternatePhone || undefined,
@@ -183,10 +184,16 @@ export interface LeadFilterOptions {
 }
 
 export class LeadRepository {
-  async findById(id: string): Promise<Lead | null> {
+  async findById(id: string, options?: { includeRelations?: boolean }): Promise<Lead | null> {
+    const include = options?.includeRelations === false
+      ? {
+          assignedTelecaller: { select: { id: true, name: true, email: true } },
+          assignedSalesman: { select: { id: true, name: true, email: true } },
+        }
+      : leadIncludeFull;
     const lead = await prisma.lead.findUnique({
       where: { id },
-      include: leadIncludeFull,
+      include,
     });
     if (!lead) return null;
     return mapPrismaLeadToShared(lead);
@@ -293,6 +300,7 @@ export class LeadRepository {
       const searchConditions = [
         { companyName: { contains: q } },
         { contactPerson: { contains: q } },
+        { alternateName: { contains: q } },
         { phone: { contains: q } },
         { email: { contains: q } },
         { id: { contains: q } },
@@ -414,6 +422,7 @@ export class LeadRepository {
         companyName: String(leadData.companyName || '').slice(0, 150),
         serviceProduct: String(leadData.serviceProduct || 'General Procurement').slice(0, 150),
         contactPerson: leadData.contactPerson ? String(leadData.contactPerson).slice(0, 100) : null,
+        alternateName: leadData.alternateName ? String(leadData.alternateName).slice(0, 100) : null,
         phone: String(leadData.phone || '').slice(0, 30),
         email: leadData.email ? String(leadData.email).toLowerCase().trim().slice(0, 100) : null,
         alternatePhone: leadData.alternatePhone ? String(leadData.alternatePhone).slice(0, 30) : null,
@@ -451,6 +460,7 @@ export class LeadRepository {
     if (updateData.companyName !== undefined) data.companyName = String(updateData.companyName || '').slice(0, 150);
     if (updateData.serviceProduct !== undefined) data.serviceProduct = String(updateData.serviceProduct || '').slice(0, 150);
     if (updateData.contactPerson !== undefined) data.contactPerson = updateData.contactPerson ? String(updateData.contactPerson).slice(0, 100) : null;
+    if (updateData.alternateName !== undefined) data.alternateName = updateData.alternateName ? String(updateData.alternateName).slice(0, 100) : null;
     if (updateData.phone !== undefined) data.phone = String(updateData.phone || '').slice(0, 30);
     if (updateData.email !== undefined) data.email = updateData.email ? String(updateData.email).toLowerCase().trim().slice(0, 100) : null;
     if (updateData.alternatePhone !== undefined) data.alternatePhone = updateData.alternatePhone ? String(updateData.alternatePhone).slice(0, 30) : null;

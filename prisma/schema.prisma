@@ -97,6 +97,7 @@ model Lead {
   companyName          String       @db.VarChar(150)
   serviceProduct       String       @db.VarChar(150)
   contactPerson        String?      @db.VarChar(100)
+  alternateName        String?      @db.VarChar(100)
   phone                String       @db.VarChar(30)
   email                String?      @db.VarChar(100)
   alternatePhone       String?      @db.VarChar(30)

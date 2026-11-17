@@ -68,6 +68,7 @@ export declare const createLeadSchema: z.ZodObject<{
     companyName: z.ZodString;
     serviceProduct: z.ZodString;
     contactPerson: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+    alternateName: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     phone: z.ZodString;
     email: z.ZodNullable<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>>;
     alternatePhone: z.ZodNullable<z.ZodOptional<z.ZodString>>;
@@ -88,6 +89,7 @@ export declare const createLeadSchema: z.ZodObject<{
     companyName: string;
     contactPerson: string | null;
     serviceProduct: string;
+    alternateName: string | null;
     priority: string;
     lastCallOutcome?: string | null | undefined;
     email?: string | null | undefined;
@@ -108,6 +110,7 @@ export declare const createLeadSchema: z.ZodObject<{
     lastCallOutcome?: string | null | undefined;
     email?: string | null | undefined;
     contactPerson?: string | null | undefined;
+    alternateName?: string | null | undefined;
     alternatePhone?: string | null | undefined;
     website?: string | null | undefined;
     priority?: string | undefined;
@@ -123,6 +126,7 @@ export declare const updateLeadSchema: z.ZodObject<{
     companyName: z.ZodOptional<z.ZodString>;
     serviceProduct: z.ZodOptional<z.ZodString>;
     contactPerson: z.ZodOptional<z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>>;
+    alternateName: z.ZodOptional<z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>>;
     phone: z.ZodOptional<z.ZodString>;
     email: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodLiteral<"">]>>>>;
     alternatePhone: z.ZodOptional<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
@@ -148,6 +152,7 @@ export declare const updateLeadSchema: z.ZodObject<{
     companyName?: string | undefined;
     contactPerson?: string | null | undefined;
     serviceProduct?: string | undefined;
+    alternateName?: string | null | undefined;
     alternatePhone?: string | null | undefined;
     website?: string | null | undefined;
     city?: string | null | undefined;
@@ -168,6 +173,7 @@ export declare const updateLeadSchema: z.ZodObject<{
     companyName?: string | undefined;
     contactPerson?: string | null | undefined;
     serviceProduct?: string | undefined;
+    alternateName?: string | null | undefined;
     alternatePhone?: string | null | undefined;
     website?: string | null | undefined;
     city?: string | null | undefined;
@@ -350,6 +356,7 @@ export declare const importCommitSchema: z.ZodObject<{
         companyName: z.ZodString;
         serviceProduct: z.ZodString;
         contactPerson: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
+        alternateName: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
         phone: z.ZodString;
         email: z.ZodNullable<z.ZodOptional<z.ZodString>>;
         alternatePhone: z.ZodNullable<z.ZodOptional<z.ZodString>>;
@@ -375,6 +382,7 @@ export declare const importCommitSchema: z.ZodObject<{
         companyName: string;
         contactPerson: string | null;
         serviceProduct: string;
+        alternateName: string | null;
         priority: string;
         callAttempts: number;
         action: "IMPORT" | "SKIP" | "UPDATE";
@@ -400,6 +408,7 @@ export declare const importCommitSchema: z.ZodObject<{
         lastCallOutcome?: string | null | undefined;
         email?: string | null | undefined;
         contactPerson?: string | null | undefined;
+        alternateName?: string | null | undefined;
         alternatePhone?: string | null | undefined;
         website?: string | null | undefined;
         city?: string | null | undefined;
@@ -426,6 +435,7 @@ export declare const importCommitSchema: z.ZodObject<{
         companyName: string;
         contactPerson: string | null;
         serviceProduct: string;
+        alternateName: string | null;
         priority: string;
         callAttempts: number;
         action: "IMPORT" | "SKIP" | "UPDATE";
@@ -456,6 +466,7 @@ export declare const importCommitSchema: z.ZodObject<{
         lastCallOutcome?: string | null | undefined;
         email?: string | null | undefined;
         contactPerson?: string | null | undefined;
+        alternateName?: string | null | undefined;
         alternatePhone?: string | null | undefined;
         website?: string | null | undefined;
         city?: string | null | undefined;

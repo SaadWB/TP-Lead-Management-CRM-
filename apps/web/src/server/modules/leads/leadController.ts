@@ -129,6 +129,7 @@ export async function createLead(req: Request, res: Response, next: NextFunction
       companyName: data.companyName,
       serviceProduct: data.serviceProduct,
       contactPerson: data.contactPerson || '',
+      alternateName: data.alternateName || null,
       phone: data.phone,
       email: data.email || null,
       alternatePhone: data.alternatePhone || null,
@@ -200,7 +201,7 @@ export async function createLead(req: Request, res: Response, next: NextFunction
 
 export async function updateLead(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const lead = await leadRepository.findById(req.params.id);
+    const lead = await leadRepository.findById(req.params.id, { includeRelations: false });
     if (!lead) {
       throw new NotFoundError('Lead not found');
     }

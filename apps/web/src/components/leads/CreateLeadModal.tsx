@@ -7,22 +7,25 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Priority, Lead, User, DEFAULT_LEAD_SOURCES } from '@crm/shared';
 import { api } from '@/lib/apiClient';
+import { invalidateCache, prependCachedLead } from '@/lib/apiCache';
 import { Plus } from 'lucide-react';
 
 interface CreateLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (lead: Lead) => void;
+  defaultLeadSource?: string;
 }
 
-export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalProps) {
+export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource }: CreateLeadModalProps) {
   const [companyName, setCompanyName] = useState('');
   const [serviceProduct, setServiceProduct] = useState('');
   const [contactPerson, setContactPerson] = useState('');
+  const [alternateName, setAlternateName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [priority, setPriority] = useState<Priority>('MEDIUM');
-  const [leadSource, setLeadSource] = useState<string>('');
+  const [leadSource, setLeadSource] = useState<string>(defaultLeadSource || '');
   const [leadSourceOther, setLeadSourceOther] = useState('');
   const [sourceOptions, setSourceOptions] = useState<{ value: string; label: string }[]>(
     DEFAULT_LEAD_SOURCES.map((s) => ({ value: s, label: s }))
@@ -35,6 +38,9 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
 
   useEffect(() => {
     if (!isOpen) return;
+    if (defaultLeadSource) {
+      setLeadSource(defaultLeadSource);
+    }
     // Fetch live options from server so newly configured sources appear immediately
     api.get<{ leadSources?: { name: string; isActive: boolean; order: number }[] }>('/options')
       .then((res) => {
@@ -86,10 +92,11 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
         companyName: companyName.trim(),
         serviceProduct: serviceProduct.trim(),
         contactPerson: contactPerson.trim() || undefined,
+        alternateName: alternateName.trim() || undefined,
         phone: phone.trim(),
         email: email.trim() || undefined,
         priority,
-        leadSource: leadSource || undefined,
+        leadSource: leadSource || defaultLeadSource || undefined,
         leadSourceOther: leadSource?.toLowerCase() === 'other' ? leadSourceOther.trim() || undefined : undefined,
         assignedTelecallerId: isSalesman ? undefined : assignedUserId || undefined,
         assignedSalesmanId: isSalesman ? assignedUserId || undefined : undefined,
@@ -97,16 +104,20 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
       });
 
       if (res.success && res.data) {
+        prependCachedLead(res.data);
+        invalidateCache('/leads');
+        invalidateCache('/reports/dashboard');
         onSuccess(res.data);
         onClose();
         // Reset form
         setCompanyName('');
         setServiceProduct('');
         setContactPerson('');
+        setAlternateName('');
         setPhone('');
         setEmail('');
         setPriority('MEDIUM');
-        setLeadSource('');
+        setLeadSource(defaultLeadSource || '');
         setLeadSourceOther('');
         setAssignedUserId('');
         setNotes('');
@@ -150,13 +161,22 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess }: CreateLeadModalP
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Contact Person"
             value={contactPerson}
             onChange={(e) => setContactPerson(e.target.value)}
             placeholder="e.g. Jane Miller"
           />
+          <Input
+            label="Alternate Contact Name"
+            value={alternateName}
+            onChange={(e) => setAlternateName(e.target.value)}
+            placeholder="e.g. Secondary Contact Person"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Phone Number"
             required

@@ -129,6 +129,7 @@ export async function createLead(req: Request, res: Response, next: NextFunction
       companyName: data.companyName,
       serviceProduct: data.serviceProduct,
       contactPerson: data.contactPerson || '',
+      alternateName: data.alternateName || null,
       phone: data.phone,
       email: data.email || null,
       alternatePhone: data.alternatePhone || null,
@@ -200,7 +201,7 @@ export async function createLead(req: Request, res: Response, next: NextFunction
 
 export async function updateLead(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const lead = await leadRepository.findById(req.params.id);
+    const lead = await leadRepository.findById(req.params.id, { includeRelations: false });
     if (!lead) {
       throw new NotFoundError('Lead not found');
     }
@@ -325,7 +326,7 @@ export async function restoreLead(req: Request, res: Response, next: NextFunctio
     if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
       throw new ForbiddenError('Only Super Admin can restore leads.');
     }
-    const lead = await leadRepository.findById(req.params.id);
+    const lead = await leadRepository.findById(req.params.id, { includeRelations: false });
     if (!lead) throw new NotFoundError('Lead not found');
 
     await leadRepository.restore(req.params.id);
@@ -355,7 +356,7 @@ export async function updateLeadPriority(req: Request, res: Response, next: Next
     if (req.user!.role !== USER_ROLES.SUPER_ADMIN && req.user!.role !== USER_ROLES.TELECALLER) {
       throw new ForbiddenError('You do not have permission to update lead priority.');
     }
-    const lead = await leadRepository.findById(req.params.id);
+    const lead = await leadRepository.findById(req.params.id, { includeRelations: false });
     if (!lead) throw new NotFoundError('Lead not found');
 
     assertLeadAccess(req.user, lead);
@@ -407,7 +408,7 @@ export async function deleteLead(req: Request, res: Response, next: NextFunction
     if (req.user!.role !== USER_ROLES.SUPER_ADMIN) {
       throw new ForbiddenError('Only Super Admin can delete leads.');
     }
-    const lead = await leadRepository.findById(req.params.id);
+    const lead = await leadRepository.findById(req.params.id, { includeRelations: false });
     if (!lead) throw new NotFoundError('Lead not found');
 
     await leadRepository.delete(req.params.id);
@@ -457,7 +458,7 @@ export async function bulkDeleteLeads(req: Request, res: Response, next: NextFun
 
 export async function updateLeadStage(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const lead = await leadRepository.findById(req.params.id);
+    const lead = await leadRepository.findById(req.params.id, { includeRelations: false });
     if (!lead) {
       throw new NotFoundError('Lead not found');
     }
@@ -673,7 +674,7 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
 
 export async function updateSalesStage(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const lead = await leadRepository.findById(req.params.id);
+    const lead = await leadRepository.findById(req.params.id, { includeRelations: false });
     if (!lead) {
       throw new NotFoundError('Lead not found');
     }
@@ -944,7 +945,7 @@ export async function addCustomOption(req: Request, res: Response, next: NextFun
 
 export async function logWhatsAppActivity(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const lead = await leadRepository.findById(req.params.id);
+    const lead = await leadRepository.findById(req.params.id, { includeRelations: false });
     if (!lead) throw new NotFoundError('Lead not found');
 
     assertLeadAccess(req.user, lead);

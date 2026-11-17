@@ -49,13 +49,11 @@ export function createApp(): Application {
   // Trust first proxy (Next.js rewrites, reverse proxies, Vercel)
   app.set('trust proxy', 1);
 
-  // Disable caching for API responses to guarantee freshest CRM table data
-  app.use((req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/v1')) {
-      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
-    }
+  // Disable caching for all API responses to guarantee freshest CRM table data
+  app.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     next();
   });
 

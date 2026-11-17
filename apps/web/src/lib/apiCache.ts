@@ -30,7 +30,7 @@ export function setMemoryCache<T>(key: string, data: T): void {
 
 export const mutateCache = setMemoryCache;
 
-export function getMemoryCache<T>(key: string, maxAgeMs = 45000): T | undefined {
+export function getMemoryCache<T>(key: string, maxAgeMs = 15000): T | undefined {
   const entry = memoryCache.get(key);
   if (!entry) return undefined;
   if (Date.now() - entry.timestamp > maxAgeMs) {
@@ -57,6 +57,50 @@ export function invalidateCache(prefix?: string): void {
   toDelete.forEach((k) => memoryCache.delete(k));
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('crm:cache-invalidated', { detail: { prefix } }));
+  }
+}
+
+/**
+ * Prepend newly created lead into all active cached queries in 0ms.
+ */
+export function prependCachedLead(lead: any): void {
+  if (!lead || !lead.id) return;
+  memoryCache.forEach((entry, key) => {
+    if (key.startsWith('/leads') && Array.isArray(entry.data)) {
+      if (!entry.data.some((l: any) => l.id === lead.id)) {
+        const nextList = [lead, ...entry.data];
+        entry.data = nextList;
+        entry.timestamp = Date.now();
+        const set = listeners.get(key);
+        if (set) {
+          set.forEach((fn) => fn(nextList));
+        }
+      }
+    }
+  });
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('crm:lead-created', { detail: { lead } }));
+  }
+}
+
+/**
+ * Remove deleted lead from all active cached queries in 0ms.
+ */
+export function removeCachedLead(leadId: string): void {
+  if (!leadId) return;
+  memoryCache.forEach((entry, key) => {
+    if (key.startsWith('/leads') && Array.isArray(entry.data)) {
+      const nextList = entry.data.filter((l: any) => l.id !== leadId);
+      entry.data = nextList;
+      entry.timestamp = Date.now();
+      const set = listeners.get(key);
+      if (set) {
+        set.forEach((fn) => fn(nextList));
+      }
+    }
+  });
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('crm:lead-deleted', { detail: { leadId } }));
   }
 }
 

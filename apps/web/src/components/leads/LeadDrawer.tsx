@@ -82,6 +82,7 @@ export function LeadDrawer({
   const [infoForm, setInfoForm] = useState({
     companyName: '',
     contactPerson: '',
+    alternateName: '',
     phone: '',
     alternatePhone: '',
     email: '',
@@ -320,10 +321,10 @@ export function LeadDrawer({
   // Save all Company Info & Primary Contact inputs (both Admin and Telecaller)
   async function handleSaveCompanyInfo() {
     if (!lead) return;
-    setSavingInfo(true);
     const patchPayload: any = {
       companyName: infoForm.companyName.trim() || lead.companyName,
       contactPerson: infoForm.contactPerson.trim() || null,
+      alternateName: infoForm.alternateName.trim() || null,
       phone: infoForm.phone.trim() || lead.phone,
       alternatePhone: infoForm.alternatePhone.trim() || null,
       email: infoForm.email.trim() || null,
@@ -337,10 +338,13 @@ export function LeadDrawer({
       ...lead,
       ...patchPayload,
     };
+    // Instant optimistic update: exit edit mode in 0ms with zero lag
     setLead(updatedLead);
     onLeadUpdated(updatedLead);
     updateCachedLead(updatedLead);
+    setIsEditingInfo(false);
 
+    setSavingInfo(true);
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, patchPayload);
       if (res.success && res.data) {
@@ -348,9 +352,15 @@ export function LeadDrawer({
         setLead(merged);
         onLeadUpdated(merged);
         updateCachedLead(merged);
-        setIsEditingInfo(false);
+        invalidateCache('/leads');
+        invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
+      // Revert if error
+      setLead(lead);
+      onLeadUpdated(lead);
+      updateCachedLead(lead);
+      setIsEditingInfo(true);
       alert(err.message || 'Failed to update company information');
     } finally {
       setSavingInfo(false);
@@ -363,6 +373,7 @@ export function LeadDrawer({
       setInfoForm({
         companyName: lead.companyName || '',
         contactPerson: lead.contactPerson || '',
+        alternateName: lead.alternateName || '',
         phone: lead.phone || '',
         alternatePhone: lead.alternatePhone || '',
         email: lead.email || '',
@@ -802,6 +813,7 @@ export function LeadDrawer({
                                 setInfoForm({
                                   companyName: lead.companyName || '',
                                   contactPerson: lead.contactPerson || '',
+                                  alternateName: lead.alternateName || '',
                                   phone: lead.phone || '',
                                   alternatePhone: lead.alternatePhone || '',
                                   email: lead.email || '',
@@ -862,6 +874,17 @@ export function LeadDrawer({
                               onChange={(e) => setInfoForm({ ...infoForm, contactPerson: e.target.value })}
                               className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
                               placeholder="Enter contact person"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[11px] font-bold text-slate-600 block mb-1">Alternate Name (Secondary Contact)</label>
+                            <input
+                              type="text"
+                              value={infoForm.alternateName}
+                              onChange={(e) => setInfoForm({ ...infoForm, alternateName: e.target.value })}
+                              className="w-full text-xs px-2.5 py-1.5 border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-sky-500"
+                              placeholder="e.g. Second Contact Person"
                             />
                           </div>
 
@@ -952,6 +975,16 @@ export function LeadDrawer({
                               <span className="text-[11px] text-slate-400 block font-medium">Contact Person</span>
                               <span className="text-xs font-bold text-slate-800">
                                 {lead.contactPerson || <span className="text-slate-400 font-normal italic">- (Not available)</span>}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-2.5">
+                            <UserIcon className="h-4 w-4 text-sky-500 mt-0.5" />
+                            <div>
+                              <span className="text-[11px] text-slate-400 block font-medium">Alternate Name</span>
+                              <span className="text-xs font-bold text-slate-800">
+                                {lead.alternateName || <span className="text-slate-400 font-normal italic">- (None)</span>}
                               </span>
                             </div>
                           </div>

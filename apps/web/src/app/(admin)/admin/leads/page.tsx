@@ -20,7 +20,7 @@ import {
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
-import { invalidateCache, getMemoryCache, setMemoryCache, getCacheKey, updateCachedLead } from '@/lib/apiCache';
+import { invalidateCache, getMemoryCache, setMemoryCache, getCacheKey, updateCachedLead, removeCachedLead } from '@/lib/apiCache';
 import {
   Users,
   Filter,
@@ -134,16 +134,33 @@ function AdminLeadsContent() {
       const customEvent = e as CustomEvent<{ prefix?: string }>;
       const prefix = customEvent.detail?.prefix;
       if (!prefix || prefix.startsWith('/leads') || prefix.startsWith('/reports')) {
-        fetchLeads();
+        fetchLeads(true);
+      }
+    }
+    function handleLeadCreated(e: Event) {
+      const customEvent = e as CustomEvent<{ lead?: Lead }>;
+      if (customEvent.detail?.lead) {
+        setLeads((prev) => [customEvent.detail!.lead!, ...prev.filter((l) => l.id !== customEvent.detail!.lead!.id)]);
+      }
+    }
+    function handleLeadDeleted(e: Event) {
+      const customEvent = e as CustomEvent<{ leadId?: string }>;
+      if (customEvent.detail?.leadId) {
+        setLeads((prev) => prev.filter((l) => l.id !== customEvent.detail!.leadId));
       }
     }
     function handleFocus() {
-      fetchLeads();
+      fetchLeads(true);
     }
+
     window.addEventListener('crm:cache-invalidated', handleInvalidation);
+    window.addEventListener('crm:lead-created', handleLeadCreated);
+    window.addEventListener('crm:lead-deleted', handleLeadDeleted);
     window.addEventListener('focus', handleFocus);
     return () => {
       window.removeEventListener('crm:cache-invalidated', handleInvalidation);
+      window.removeEventListener('crm:lead-created', handleLeadCreated);
+      window.removeEventListener('crm:lead-deleted', handleLeadDeleted);
       window.removeEventListener('focus', handleFocus);
     };
   }, [stageFilter, outcomeFilter, salesStageFilter, priorityFilter, telecallerFilter, sourceFilter, currentKpi]);
@@ -158,7 +175,7 @@ function AdminLeadsContent() {
     if (cached) {
       const cStages = cached.pipelineStages || cached.stages;
       const cOutcomes = cached.callOutcomes || cached.outcomes;
-      if (cached.leadSources) setSourceOptions(cached.leadSources.filter((s: any) => s.isActive && s.name.toLowerCase() !== 'website').map((s: any) => s.name));
+      if (cached.leadSources) setSourceOptions(cached.leadSources.filter((s: any) => s.isActive).map((s: any) => s.name));
       if (cStages?.length > 0) setPipelineOptions(cStages.filter((s: any) => s.isActive).map((s: any) => s.name));
       if (cOutcomes?.length > 0) setCallOutcomeOptions(cOutcomes.filter((o: any) => o.isActive).map((o: any) => o.name));
       return;
@@ -176,7 +193,7 @@ function AdminLeadsContent() {
         const stages = res.data.pipelineStages || res.data.stages;
         const outcomes = res.data.callOutcomes || res.data.outcomes;
         if (res.data.leadSources) {
-          setSourceOptions(res.data.leadSources.filter((s) => s.isActive && s.name.toLowerCase() !== 'website').map((s) => s.name));
+          setSourceOptions(res.data.leadSources.filter((s) => s.isActive).map((s) => s.name));
         }
         if (stages && stages.length > 0) {
           setPipelineOptions(stages.filter((s) => s.isActive).map((s) => s.name));
@@ -190,8 +207,8 @@ function AdminLeadsContent() {
     }
   }
 
-  async function fetchLeads() {
-    const params: any = { limit: 1000, excludeWebsiteLeads: true };
+  async function fetchLeads(bypassCache = false) {
+    const params: any = { limit: 2000 };
     if (currentKpi) params.kpi = currentKpi;
     if (stageFilter) params.pipelineStage = stageFilter;
     if (outcomeFilter) params.lastCallOutcome = outcomeFilter;
@@ -200,12 +217,16 @@ function AdminLeadsContent() {
     if (telecallerFilter) params.assignedTelecallerId = telecallerFilter;
     if (sourceFilter) params.leadSource = sourceFilter;
 
-    // Fast 0ms cache display: If cached leads exist, render table immediately without waiting
+    // Fast 0ms cache display: If cached leads exist and bypassCache is false, render table immediately
     const cacheKey = getCacheKey('/leads', params);
-    const cached = getMemoryCache<Lead[]>(cacheKey);
-    if (cached && cached.length > 0) {
-      setLeads(cached);
-      setLoading(false);
+    if (!bypassCache) {
+      const cached = getMemoryCache<Lead[]>(cacheKey);
+      if (cached && cached.length > 0) {
+        setLeads(cached);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
     } else {
       setLoading(true);
     }
@@ -355,9 +376,11 @@ function AdminLeadsContent() {
     try {
       const res = await api.delete(`/leads/${deleteTarget.id}`);
       if (res.success) {
+        removeCachedLead(deleteTarget.id);
         setLeads((prev) => prev.filter((l) => l.id !== deleteTarget.id));
         setSelectedLeadIds((prev) => prev.filter((id) => id !== deleteTarget.id));
         setDeleteTarget(null);
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -376,9 +399,11 @@ function AdminLeadsContent() {
         leadIds: selectedLeadIds,
       });
       if (res.success) {
+        selectedLeadIds.forEach((id) => removeCachedLead(id));
         setLeads((prev) => prev.filter((l) => !selectedLeadIds.includes(l.id)));
         setSelectedLeadIds([]);
         setShowBulkDeleteConfirm(false);
+        invalidateCache('/leads');
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
@@ -1470,7 +1495,9 @@ function AdminLeadsContent() {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSuccess={(newLead) => {
-          setLeads((prev) => [newLead, ...prev]);
+          setLeads((prev) => [newLead, ...prev.filter((l) => l.id !== newLead.id)]);
+          invalidateCache('/leads');
+          fetchLeads(true);
         }}
       />
     </AppLayout>

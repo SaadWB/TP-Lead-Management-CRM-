@@ -35,6 +35,7 @@ import {
   Clock,
   CheckCircle2,
   Calendar,
+  Plus,
 } from 'lucide-react';
 import { formatDate, formatDateTime, getPriorityColor, getOutcomeColor, getStageColor } from '@/lib/utils';
 import { WhatsAppButton } from '@/components/leads/WhatsAppButton';
@@ -44,6 +45,10 @@ import { Button } from '@/components/ui/Button';
 const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
   ssr: false,
 });
+const CreateLeadModal = dynamic(
+  () => import('@/components/leads/CreateLeadModal').then((m) => m.CreateLeadModal),
+  { ssr: false }
+);
 
 export default function AdminWebsiteLeadsPage() {
   const { user } = useAuth();
@@ -63,6 +68,7 @@ export default function AdminWebsiteLeadsPage() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [selectedLeadIdForDrawer, setSelectedLeadIdForDrawer] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
   const [pipelineOptions, setPipelineOptions] = useState<string[]>(PIPELINE_STAGE_LIST);
   const [outcomeOptions, setOutcomeOptions] = useState<string[]>([
     'No Answer',
@@ -397,6 +403,7 @@ export default function AdminWebsiteLeadsPage() {
     <AppLayout
       title="Website Leads"
       subtitle="Direct inquiries, RFP requests, and consultation forms generated from website landing pages."
+      onOpenCreateLead={() => setIsCreateOpen(true)}
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
       searchPlaceholder="Filter website inquiries by name, company, email, phone..."
@@ -424,6 +431,14 @@ export default function AdminWebsiteLeadsPage() {
           </div>
 
           <div className="flex items-center gap-2.5">
+            <Button
+              size="sm"
+              onClick={() => setIsCreateOpen(true)}
+              className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white font-bold shadow-soft-sm transition-all cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Lead</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -1068,6 +1083,20 @@ export default function AdminWebsiteLeadsPage() {
             }}
           />
         )}
+
+        {/* Create Lead Modal */}
+        <CreateLeadModal
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          defaultLeadSource="Website"
+          onSuccess={(newLead) => {
+            mutateLeads((prev) => (prev ? [newLead, ...prev.filter((l) => l.id !== newLead.id)] : [newLead]));
+            invalidateCache('/leads');
+            refreshLeads();
+            setToastMessage(`Website lead "${newLead.companyName}" added successfully`);
+            setTimeout(() => setToastMessage(null), 4000);
+          }}
+        />
       </div>
     </AppLayout>
   );
