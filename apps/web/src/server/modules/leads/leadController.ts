@@ -604,8 +604,16 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
     }
 
     // Won / Converted
-    if (targetPipeline === 'Closed' && targetOutcome === 'Converted') {
+    if (
+      (targetPipeline === 'Closed' && targetOutcome === 'Converted') ||
+      targetPipeline === 'Closed Won' ||
+      targetOutcome === 'Won' ||
+      targetOutcome === 'Converted'
+    ) {
+      updatePayload.pipelineStage = 'Closed Won';
+      updatePayload.salesStage = 'CONVERTED';
       updatePayload.convertedAt = new Date().toISOString();
+      updatePayload.nextFollowUpDate = null;
       if (data.dealValue) updatePayload.dealValue = data.dealValue;
     }
 
@@ -703,6 +711,8 @@ export async function updateSalesStage(req: Request, res: Response, next: NextFu
 
     if (newStage === 'CONVERTED') {
       updatePayload.convertedAt = new Date().toISOString();
+      updatePayload.pipelineStage = 'Closed Won'; // Move to Closed Won so it never stays in any running pipeline stage
+      updatePayload.nextFollowUpDate = null;
       if (data.dealValue) updatePayload.dealValue = data.dealValue;
     }
 

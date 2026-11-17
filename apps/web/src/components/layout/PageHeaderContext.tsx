@@ -28,6 +28,9 @@ export interface HeaderContextType {
   openMobileSidebar: () => void;
   closeMobileSidebar: () => void;
   toggleMobileSidebar: () => void;
+  globalLeadDrawerId: string | null;
+  openGlobalLeadDrawer: (id: string) => void;
+  closeGlobalLeadDrawer: () => void;
 }
 
 const HeaderContext = createContext<HeaderContextType | undefined>(undefined);
@@ -37,6 +40,11 @@ export function PageHeaderProvider({ children }: { children: ReactNode }) {
   const openMobileSidebar = useCallback(() => setIsMobileSidebarOpen(true), []);
   const closeMobileSidebar = useCallback(() => setIsMobileSidebarOpen(false), []);
   const toggleMobileSidebar = useCallback(() => setIsMobileSidebarOpen((prev) => !prev), []);
+
+  // Global Lead Drawer state accessible from anywhere (e.g. Universal TopBar Search)
+  const [globalLeadDrawerId, setGlobalLeadDrawerId] = useState<string | null>(null);
+  const openGlobalLeadDrawer = useCallback((id: string) => setGlobalLeadDrawerId(id), []);
+  const closeGlobalLeadDrawer = useCallback(() => setGlobalLeadDrawerId(null), []);
 
   const [headerState, setHeaderState] = useState<{
     title: string;
@@ -129,8 +137,22 @@ export function PageHeaderProvider({ children }: { children: ReactNode }) {
       openMobileSidebar,
       closeMobileSidebar,
       toggleMobileSidebar,
+      globalLeadDrawerId,
+      openGlobalLeadDrawer,
+      closeGlobalLeadDrawer,
     }),
-    [header, setHeader, updateCallbacks, isMobileSidebarOpen, openMobileSidebar, closeMobileSidebar, toggleMobileSidebar]
+    [
+      header,
+      setHeader,
+      updateCallbacks,
+      isMobileSidebarOpen,
+      openMobileSidebar,
+      closeMobileSidebar,
+      toggleMobileSidebar,
+      globalLeadDrawerId,
+      openGlobalLeadDrawer,
+      closeGlobalLeadDrawer,
+    ]
   );
 
   return <HeaderContext.Provider value={value}>{children}</HeaderContext.Provider>;

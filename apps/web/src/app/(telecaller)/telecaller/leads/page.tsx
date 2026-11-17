@@ -13,6 +13,7 @@ import {
   PIPELINE_STAGE_LIST,
   TELECALLER_CALL_OUTCOMES,
   Priority,
+  isLeadClosedWon,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { useSWRData, invalidateCache, updateCachedLead } from '@/lib/apiCache';
@@ -171,7 +172,9 @@ export default function TelecallerMyLeadsPage() {
   // Custom options state
   const [customPriorities, setCustomPriorities] = useState<string[]>([]);
   const [customOutcomes, setCustomOutcomes] = useState<string[]>([]);
-  const [pipelineOptions, setPipelineOptions] = useState<string[]>(PIPELINE_STAGE_LIST);
+  const [pipelineOptions, setPipelineOptions] = useState<string[]>(() =>
+    Array.from(new Set([...PIPELINE_STAGE_LIST, 'Closed Won']))
+  );
   const [addOptionModal, setAddOptionModal] = useState<{
     isOpen: boolean;
     type: 'PRIORITY' | 'CALL_OUTCOME';
@@ -316,7 +319,7 @@ export default function TelecallerMyLeadsPage() {
             .filter((s) => s.isActive)
             .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
             .map((s) => s.name);
-          const combined = Array.from(new Set([...activeStages, ...PIPELINE_STAGE_LIST]));
+          const combined = Array.from(new Set([...activeStages, ...PIPELINE_STAGE_LIST, 'Closed Won']));
           setPipelineOptions(combined);
         }
       }
@@ -345,14 +348,24 @@ export default function TelecallerMyLeadsPage() {
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
       // 1. Pipeline filter
+      const won = isLeadClosedWon(lead);
       const normLeadPipeline = normalizePipelineStage(lead.pipelineStage);
-      if (pipelineFilter === 'ALL') {
-        // Closed pipeline leads must never appear in All Leads section.
-        // They should only be accessible through the dedicated top "Closed" filter.
-        if (lead.pipelineStage === 'Closed' || normLeadPipeline === 'Closed') {
+
+      if (pipelineFilter === 'Closed Won') {
+        if (!won && normLeadPipeline !== 'Closed Won' && lead.pipelineStage !== 'Closed Won') {
+          return false;
+        }
+      } else if (pipelineFilter === 'ALL') {
+        // Closed and Closed Won leads must never appear in running All Leads section.
+        // They should only be accessible through dedicated Closed / Closed Won filters.
+        if (won || lead.pipelineStage === 'Closed' || normLeadPipeline === 'Closed' || normLeadPipeline === 'Closed Won') {
           return false;
         }
       } else {
+        // Closed Won leads should NEVER show in any running pipeline!
+        if (won) {
+          return false;
+        }
         if (normLeadPipeline !== pipelineFilter && lead.pipelineStage !== pipelineFilter) {
           if (!recentlyUpdatedIds.has(lead.id)) {
             return false;
@@ -445,15 +458,18 @@ export default function TelecallerMyLeadsPage() {
 
   // Stage count aggregation for filter chips
   const stageCounts = useMemo(() => {
-    // Exclude closed leads from ALL tab count
+    // Exclude closed and closed won leads from ALL tab count
     const nonClosedCount = leads.filter(
-      (l) => l.pipelineStage !== 'Closed' && normalizePipelineStage(l.pipelineStage) !== 'Closed'
+      (l) => !isLeadClosedWon(l) && l.pipelineStage !== 'Closed' && normalizePipelineStage(l.pipelineStage) !== 'Closed'
     ).length;
     const counts: Record<string, number> = { ALL: nonClosedCount };
     pipelineOptions.forEach((st) => {
       counts[st] = 0;
     });
+    counts['Closed Won'] = leads.filter(isLeadClosedWon).length;
+
     leads.forEach((l) => {
+      if (isLeadClosedWon(l)) return; // Don't count into running pipeline stages!
       const norm = normalizePipelineStage(l.pipelineStage);
       if (counts[norm] !== undefined) {
         counts[norm]++;
@@ -473,13 +489,13 @@ export default function TelecallerMyLeadsPage() {
     return sortedLeads.slice(start, start + pageSize);
   }, [sortedLeads, currentPage, pageSize]);
 
-  // Sorting header toggle
+  // Sorting header toggle - default to ascending order according to date
   function handleHeaderSort(field: 'createdAt' | 'updatedAt' | 'nextFollowUpDate' | 'companyName') {
     if (sortBy === field) {
       setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortBy(field);
-      setSortOrder('desc'); // Newest first by default
+      setSortOrder('asc'); // Ascending order by default per Requirement 1
     }
   }
 
@@ -1345,8 +1361,10 @@ export default function TelecallerMyLeadsPage() {
                     </div>
                   </th>
 
-                  {/* Phone */}
-                  <th className="p-3">Phone</th>
+                  {/* Sticky Column 3: Phone (Fixed like company column per Requirement 4) */}
+                  <th className="sticky left-[308px] z-30 bg-slate-900 p-3 border-r border-slate-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
+                    Phone
+                  </th>
 
                   {/* Priority */}
                   <th className="p-3">Priority</th>
@@ -1405,9 +1423,9 @@ export default function TelecallerMyLeadsPage() {
                 {swrLoading && leads.length === 0 ? (
                   Array.from({ length: 8 }).map((_, i) => (
                     <tr key={i} className="animate-pulse">
-                      <td className="p-3 text-center"><div className="h-4 bg-slate-200 rounded w-6 mx-auto" /></td>
-                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-40 mb-1" /><div className="h-3 bg-slate-100 rounded w-24" /></td>
-                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-28" /></td>
+                      <td className="sticky left-0 z-10 bg-white p-3 text-center border-r border-slate-100"><div className="h-4 bg-slate-200 rounded w-6 mx-auto" /></td>
+                      <td className="sticky left-[48px] z-10 bg-white p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 rounded w-40 mb-1" /><div className="h-3 bg-slate-100 rounded w-24" /></td>
+                      <td className="sticky left-[308px] z-10 bg-white p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 rounded w-28" /></td>
                       <td className="p-3"><div className="h-6 bg-slate-200 rounded w-16" /></td>
                       <td className="p-3"><div className="h-7 bg-slate-200 rounded w-28" /></td>
                       <td className="p-3"><div className="h-7 bg-slate-200 rounded w-32" /></td>
@@ -1483,38 +1501,16 @@ export default function TelecallerMyLeadsPage() {
                           </div>
                         </td>
 
-                        {/* Phone with Click-to-Call & WhatsApp */}
-                        <td className="p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={`tel:${lead.phone}`}
-                              className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5"
-                              title={`Dial ${lead.phone}`}
-                            >
-                              <Phone className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{lead.phone || 'No Phone'}</span>
-                            </a>
-                            {lead.phone && (
-                              <>
-                                <WhatsAppButton
-                                  phone={lead.phone}
-                                  leadId={lead.id}
-                                  leadName={lead.contactPerson || lead.companyName}
-                                  size="sm"
-                                  showText={false}
-                                />
-                                <button
-                                  onClick={() => {
-                                    setActiveCallLead(lead);
-                                  }}
-                                  className="p-1 rounded hover:bg-emerald-50 text-emerald-600 cursor-pointer"
-                                  title="Log Call Outcome"
-                                >
-                                  <Phone className="h-3.5 w-3.5" />
-                                </button>
-                              </>
-                            )}
-                          </div>
+                        {/* Sticky Column 3: Phone (Fixed like company column, showing ONLY number per Requirement 3 & 4) */}
+                        <td className="sticky left-[308px] z-10 bg-white group-hover:bg-slate-50/90 p-3 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]" onClick={(e) => e.stopPropagation()}>
+                          <a
+                            href={lead.phone ? `tel:${lead.phone}` : undefined}
+                            className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 text-xs font-mono"
+                            title={lead.phone ? `Dial ${lead.phone}` : undefined}
+                          >
+                            <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
+                            <span className="truncate">{lead.phone || 'No Phone'}</span>
+                          </a>
                         </td>
 
                         {/* Priority Dropdown */}
@@ -1665,7 +1661,7 @@ export default function TelecallerMyLeadsPage() {
                               <>
                                 <a
                                   href={`tel:${lead.phone}`}
-                                  className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                                  className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
                                   title={`Call ${lead.phone}`}
                                 >
                                   <Phone className="h-3.5 w-3.5" />
@@ -1677,6 +1673,13 @@ export default function TelecallerMyLeadsPage() {
                                   size="sm"
                                   showText={false}
                                 />
+                                <button
+                                  onClick={() => setActiveCallLead(lead)}
+                                  className="p-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors cursor-pointer"
+                                  title="Log Call Outcome"
+                                >
+                                  <Clock className="h-3.5 w-3.5" />
+                                </button>
                               </>
                             )}
                             <button

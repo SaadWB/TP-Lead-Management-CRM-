@@ -12,6 +12,7 @@ import {
   PIPELINE_STAGE_LIST,
   TELECALLER_CALL_OUTCOMES,
   Priority,
+  isLeadClosedWon,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { useSWRData, updateCachedLead } from '@/lib/apiCache';
@@ -193,9 +194,11 @@ export default function TelecallerTodayPage() {
   const allInRangeFollowUps = useMemo(() => {
     return leads
       .filter((lead) => {
-        // Exclude closed or uncontactable leads
+        // Exclude closed, closed won, or uncontactable leads
         if (
+          isLeadClosedWon(lead) ||
           lead.pipelineStage === 'Closed' ||
+          lead.pipelineStage === 'Closed Won' ||
           lead.lastCallOutcome === 'Not Interested' ||
           lead.lastCallOutcome === 'Wrong Number'
         ) {
@@ -983,17 +986,18 @@ export default function TelecallerTodayPage() {
                     #
                   </th>
                   <th className="sticky left-[48px] z-30 bg-slate-900 w-64 min-w-[240px] max-w-[280px] p-3 border-r border-slate-800">
-                    Company
+                    Company & Contact
                   </th>
-                  <th className="w-40 min-w-[150px] p-3">Contact Person</th>
-                  <th className="w-36 min-w-[140px] p-3">Phone</th>
+                  <th className="sticky left-[308px] z-30 bg-slate-900 w-40 min-w-[160px] p-3 border-r border-slate-800 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.3)]">
+                    Phone
+                  </th>
                   <th className="w-32 min-w-[120px] p-3">Priority</th>
                   <th className="w-48 min-w-[180px] p-3">Pipeline</th>
                   <th className="w-56 min-w-[220px] p-3">Last Call Outcome</th>
                   <th className="w-52 min-w-[200px] p-3">Next Action</th>
                   <th className="w-52 min-w-[200px] p-3">Follow-up Date & Time</th>
                   <th className="w-64 min-w-[240px] p-3">Notes</th>
-                  <th className="w-48 min-w-[190px] p-3 text-center">Actions</th>
+                  <th className="w-52 min-w-[210px] p-3 text-center">Actions</th>
                 </tr>
               </thead>
 
@@ -1001,10 +1005,9 @@ export default function TelecallerTodayPage() {
                 {loading && leads.length === 0 ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={`skel-${i}`} className="animate-pulse">
-                      <td className="p-3 text-center"><div className="h-4 bg-slate-200 rounded w-6 mx-auto" /></td>
-                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-32 mb-1" /><div className="h-3 bg-slate-100 rounded w-20" /></td>
-                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-28" /></td>
-                      <td className="p-3"><div className="h-4 bg-slate-200 rounded w-24" /></td>
+                      <td className="sticky left-0 z-10 bg-white p-3 text-center border-r border-slate-100"><div className="h-4 bg-slate-200 rounded w-6 mx-auto" /></td>
+                      <td className="sticky left-[48px] z-10 bg-white p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 rounded w-36 mb-1" /><div className="h-3 bg-slate-100 rounded w-20" /></td>
+                      <td className="sticky left-[308px] z-10 bg-white p-3 border-r border-slate-100"><div className="h-4 bg-slate-200 rounded w-28" /></td>
                       <td className="p-3"><div className="h-7 bg-slate-200 rounded w-24" /></td>
                       <td className="p-3"><div className="h-7 bg-slate-200 rounded w-32" /></td>
                       <td className="p-3"><div className="h-7 bg-slate-200 rounded w-36" /></td>
@@ -1016,7 +1019,7 @@ export default function TelecallerTodayPage() {
                   ))
                 ) : displayLeads.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="p-12 text-center text-slate-400">
+                    <td colSpan={10} className="p-12 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <CheckCircle2 className="h-8 w-8 text-emerald-400" />
                         <span className="font-bold text-sm text-slate-700">No follow-ups in this range!</span>
@@ -1060,7 +1063,7 @@ export default function TelecallerTodayPage() {
                           {rowNumber}
                         </td>
 
-                        {/* Column 2: Company */}
+                        {/* Column 2: Company & Contact */}
                         <td
                           className={`sticky left-[48px] z-10 w-64 min-w-[240px] max-w-[280px] p-3 border-r border-slate-100 ${
                             isOverdue
@@ -1075,11 +1078,17 @@ export default function TelecallerTodayPage() {
                             >
                               {lead.companyName}
                             </span>
-                            {lead.serviceProduct && (
-                              <span className="text-[11px] text-slate-500 truncate" title={lead.serviceProduct}>
-                                {lead.serviceProduct}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 truncate mt-0.5">
+                              <span className="font-semibold text-slate-700">{lead.contactPerson || 'No contact'}</span>
+                              {lead.serviceProduct && (
+                                <>
+                                  <span className="text-slate-300">•</span>
+                                  <span className="text-slate-400 truncate max-w-[110px]" title={lead.serviceProduct}>
+                                    {lead.serviceProduct}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                             {isOverdue && (
                               <span className="inline-block mt-1 w-max text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 border border-rose-200">
                                 Overdue
@@ -1088,30 +1097,23 @@ export default function TelecallerTodayPage() {
                           </div>
                         </td>
 
-                        {/* Contact Person */}
-                        <td className="w-40 min-w-[150px] p-3 text-slate-700 font-medium truncate">
-                          {lead.contactPerson || '-'}
-                        </td>
-
-                        {/* Phone with Click-to-Call & WhatsApp */}
-                        <td className="w-40 min-w-[160px] p-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-2">
-                            <a
-                              href={`tel:${lead.phone}`}
-                              className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5"
-                              title={`Call ${lead.phone}`}
-                            >
-                              <Phone className="h-3 w-3 shrink-0" />
-                              <span>{lead.phone}</span>
-                            </a>
-                            <WhatsAppButton
-                              phone={lead.phone}
-                              leadId={lead.id}
-                              leadName={lead.contactPerson || lead.companyName}
-                              size="sm"
-                              showText={false}
-                            />
-                          </div>
+                        {/* Sticky Column 3: Phone (Fixed like company column, showing ONLY number per Requirement 3 & 4) */}
+                        <td
+                          className={`sticky left-[308px] z-10 w-40 min-w-[160px] p-3 whitespace-nowrap border-r border-slate-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] ${
+                            isOverdue
+                              ? 'bg-rose-50/70'
+                              : 'bg-white group-hover:bg-slate-50/90'
+                          }`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <a
+                            href={lead.phone ? `tel:${lead.phone}` : undefined}
+                            className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 text-xs font-mono"
+                            title={lead.phone ? `Dial ${lead.phone}` : undefined}
+                          >
+                            <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
+                            <span className="truncate">{lead.phone || 'No Phone'}</span>
+                          </a>
                         </td>
 
                         {/* Priority Dropdown */}

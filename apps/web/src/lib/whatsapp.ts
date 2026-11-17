@@ -42,8 +42,8 @@ export function formatWhatsAppNumber(phone: string | null | undefined): WhatsApp
 /**
  * Creates the full wa.me link with pre-filled message
  */
-export function getWhatsAppUrl(formattedNumber: string, callerName?: string): string {
-  const defaultText = `Hello, this is ${callerName || 'our team'} from TenderProcure. As discussed, sharing the details with you.`;
+export function getWhatsAppUrl(formattedNumber: string, callerName?: string, customMessage?: string): string {
+  const defaultText = customMessage || `Hello, this is ${callerName || 'our team'} from TenderProcure. As discussed, sharing the details with you.`;
   return `https://wa.me/${formattedNumber}?text=${encodeURIComponent(defaultText)}`;
 }
 
@@ -52,6 +52,7 @@ export interface OpenWhatsAppOptions {
   leadId?: string;
   callerName?: string;
   telecallerName?: string;
+  message?: string;
   onInvalid?: (err: string) => void;
 }
 
@@ -66,17 +67,20 @@ export async function openWhatsAppChat(
   let phone = '';
   let leadId: string | undefined;
   let callerName: string | undefined;
+  let customMessage: string | undefined;
   let onInvalid: ((err: string) => void) | undefined;
 
   if (typeof phoneOrOptions === 'string') {
     phone = phoneOrOptions;
     leadId = secondaryOptions?.leadId;
     callerName = secondaryOptions?.callerName || secondaryOptions?.telecallerName;
+    customMessage = secondaryOptions?.message;
     onInvalid = secondaryOptions?.onInvalid;
   } else if (phoneOrOptions && typeof phoneOrOptions === 'object') {
     phone = phoneOrOptions.phone || '';
     leadId = phoneOrOptions.leadId;
     callerName = phoneOrOptions.callerName || phoneOrOptions.telecallerName;
+    customMessage = phoneOrOptions.message;
     onInvalid = phoneOrOptions.onInvalid;
   }
 
@@ -90,7 +94,7 @@ export async function openWhatsAppChat(
     return false;
   }
 
-  const url = getWhatsAppUrl(result.formatted, callerName);
+  const url = getWhatsAppUrl(result.formatted, callerName, customMessage);
   window.open(url, '_blank', 'noopener,noreferrer');
 
   // Log "WhatsApp opened" to lead history asynchronously if leadId is provided

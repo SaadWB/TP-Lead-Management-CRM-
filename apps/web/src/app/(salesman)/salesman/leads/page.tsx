@@ -48,6 +48,15 @@ export default function SalesmanLeadsPage() {
     );
   });
 
+  // Sort leads ascending according to date per Requirement 1
+  const sortedLeads = React.useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.nextFollowUpDate || a.createdAt).getTime();
+      const dateB = new Date(b.nextFollowUpDate || b.createdAt).getTime();
+      return dateA - dateB;
+    });
+  }, [filtered]);
+
   return (
     <AppLayout
       title="My Sales Pipeline Opportunities"
@@ -76,7 +85,7 @@ export default function SalesmanLeadsPage() {
               </select>
             </div>
             <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">
-              Showing {filtered.length} {filtered.length === 1 ? 'lead' : 'leads'}
+              Showing {sortedLeads.length} {sortedLeads.length === 1 ? 'lead' : 'leads'}
             </span>
           </div>
 
@@ -99,12 +108,12 @@ export default function SalesmanLeadsPage() {
                 <div className="h-8 bg-slate-50 rounded" />
               </div>
             ))
-          ) : filtered.length === 0 ? (
+          ) : sortedLeads.length === 0 ? (
             <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
               No assigned leads in this filter
             </div>
           ) : (
-            filtered.map((lead) => {
+            sortedLeads.map((lead) => {
               const priority = getPriorityColor(lead.priority);
               const currentSalesStage = (lead.salesStage as SalesStage) || 'ASSIGNED';
               const stageColor = getStageColor(currentSalesStage);
@@ -293,14 +302,14 @@ export default function SalesmanLeadsPage() {
                         <td className="p-3.5 text-right"><div className="h-7 bg-slate-200 rounded w-16 ml-auto" /></td>
                       </tr>
                     ))
-                  ) : filtered.length === 0 ? (
+                  ) : sortedLeads.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="p-8 text-center text-slate-400">
                         No assigned leads in this filter
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((lead) => {
+                    sortedLeads.map((lead) => {
                       const priority = getPriorityColor(lead.priority);
                       const currentSalesStage = (lead.salesStage as SalesStage) || 'ASSIGNED';
                       const stageColor = getStageColor(currentSalesStage);

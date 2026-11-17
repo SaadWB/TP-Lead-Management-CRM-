@@ -11,9 +11,10 @@ export declare const PIPELINE_STAGES: {
     readonly FOLLOW_UP: "Follow-up";
     readonly DEMO: "Demo";
     readonly CLOSED: "Closed";
+    readonly CLOSED_WON: "Closed Won";
 };
 export type PipelineStage = (typeof PIPELINE_STAGES)[keyof typeof PIPELINE_STAGES] | string;
-export declare const PIPELINE_STAGE_LIST: ("New Lead" | "Attempting Contact" | "Connected" | "Follow-up" | "Demo" | "Closed")[];
+export declare const PIPELINE_STAGE_LIST: ("New Lead" | "Attempting Contact" | "Connected" | "Follow-up" | "Demo" | "Closed" | "Closed Won")[];
 export declare const CALL_OUTCOMES: {
     readonly NO_ANSWER: "No Answer";
     readonly BUSY: "Busy";
@@ -75,6 +76,19 @@ export declare const TELECALLER_KANBAN_COLUMNS: {
 export declare function getSuggestedPipelineForOutcome(outcome: string | null | undefined): string;
 export declare function normalizeCallOutcome(raw: string | null | undefined): string;
 export declare function normalizePipelineStage(raw: string | null | undefined): string;
+/**
+ * Checks if a lead is strictly Closed Won / Converted across sales and telecalling pipelines.
+ */
+export declare function isLeadClosedWon(lead: {
+    pipelineStage?: string | null;
+    salesStage?: string | null;
+    convertedAt?: string | null | Date;
+    lastCallOutcome?: string | null;
+} | null | undefined): boolean;
+/**
+ * Checks if a given stage is an active running pipeline stage.
+ */
+export declare function isRunningPipelineStage(stage: string | null | undefined): boolean;
 export declare const TASK_TYPES: {
     readonly CALL: "CALL";
     readonly FOLLOW_UP: "FOLLOW_UP";

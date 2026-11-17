@@ -16,6 +16,7 @@ import {
   SALES_STAGE_OPTIONS,
   User,
   normalizePipelineStage,
+  isLeadClosedWon,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { formatDate, getPriorityColor, getStageColor, getOutcomeColor } from '@/lib/utils';
@@ -77,6 +78,7 @@ function AdminLeadsContent() {
     'Follow-up',
     'Demo',
     'Closed',
+    'Closed Won',
   ]);
   const [callOutcomeOptions, setCallOutcomeOptions] = useState<string[]>([
     'No Answer',
@@ -388,6 +390,18 @@ function AdminLeadsContent() {
 
   const filteredLeads = leads.filter((lead) => {
     if (!lead) return false;
+    const won = isLeadClosedWon(lead);
+    if (stageFilter) {
+      if (stageFilter === 'Closed Won') {
+        if (!won && lead.pipelineStage !== 'Closed Won') return false;
+      } else {
+        // Any running pipeline stage must never show Closed Won leads!
+        if (won) return false;
+        if (lead.pipelineStage !== stageFilter && normalizePipelineStage(lead.pipelineStage) !== stageFilter) {
+          return false;
+        }
+      }
+    }
     if (outcomeFilter && lead.lastCallOutcome !== outcomeFilter) return false;
     if (!searchTerm) return true;
     const q = searchTerm.toLowerCase();
@@ -399,11 +413,20 @@ function AdminLeadsContent() {
     );
   });
 
+  // Sort leads ascending according to date per Requirement 1
+  const sortedLeads = React.useMemo(() => {
+    return [...filteredLeads].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateA - dateB; // Ascending order
+    });
+  }, [filteredLeads]);
+
   function toggleSelectAll() {
-    if (selectedLeadIds.length === filteredLeads.length) {
+    if (selectedLeadIds.length === sortedLeads.length) {
       setSelectedLeadIds([]);
     } else {
-      setSelectedLeadIds(filteredLeads.map((l) => l.id));
+      setSelectedLeadIds(sortedLeads.map((l) => l.id));
     }
   }
 
@@ -618,7 +641,7 @@ function AdminLeadsContent() {
 
         {/* Leads Count & Table */}
         <div className="flex items-center justify-between text-xs font-bold text-slate-600 px-1">
-          <span>Showing {filteredLeads.length} leads</span>
+          <span>Showing {sortedLeads.length} leads</span>
         </div>
 
         {/* Mobile Cards View (< md) */}
@@ -627,12 +650,12 @@ function AdminLeadsContent() {
             <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
               Loading leads...
             </div>
-          ) : filteredLeads.length === 0 ? (
+          ) : sortedLeads.length === 0 ? (
             <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
               No leads found matching current query.
             </div>
           ) : (
-            filteredLeads.map((lead, index) => {
+            sortedLeads.map((lead, index) => {
               const priority = getPriorityColor(lead.priority);
               const stage = getStageColor(lead.pipelineStage);
               const outcome = getOutcomeColor(lead.lastCallOutcome);
@@ -991,14 +1014,14 @@ function AdminLeadsContent() {
                         <td style={{ width: 110 }} className="p-3"><div className="w-16 h-6 bg-slate-200 rounded mx-auto" /></td>
                       </tr>
                     ))
-                  ) : filteredLeads.length === 0 ? (
+                  ) : sortedLeads.length === 0 ? (
                     <tr>
                       <td colSpan={13} className="p-8 text-center text-slate-400">
                         No leads found matching current query.
                       </td>
                     </tr>
                   ) : (
-                    filteredLeads.map((lead, index) => {
+                    sortedLeads.map((lead, index) => {
                       const priority = getPriorityColor(lead.priority);
                       const stage = getStageColor(lead.pipelineStage);
                       const outcome = getOutcomeColor(lead.lastCallOutcome);

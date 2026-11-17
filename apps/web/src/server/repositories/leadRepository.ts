@@ -250,7 +250,29 @@ export class LeadRepository {
     }
 
     if (options.pipelineStage) {
-      where.pipelineStage = options.pipelineStage;
+      const normStage = options.pipelineStage.trim();
+      if (normStage === 'Closed Won' || normStage === 'CONVERTED') {
+        const closedWonConditions = [
+          { pipelineStage: { in: ['Closed Won', 'CONVERTED'] } },
+          { salesStage: 'CONVERTED' },
+          { convertedAt: { not: null } },
+        ];
+        if (where.OR) {
+          where.AND = [{ OR: where.OR }, { OR: closedWonConditions }];
+          delete where.OR;
+        } else {
+          where.OR = closedWonConditions;
+        }
+      } else {
+        where.pipelineStage = options.pipelineStage;
+        // Closed Won leads should NEVER show up in any running pipeline stage!
+        where.AND = where.AND || [];
+        where.AND.push({
+          pipelineStage: { notIn: ['Closed Won', 'CONVERTED'] },
+          salesStage: { not: 'CONVERTED' },
+          convertedAt: null,
+        });
+      }
     }
     if (options.lastCallOutcome) {
       where.lastCallOutcome = options.lastCallOutcome;

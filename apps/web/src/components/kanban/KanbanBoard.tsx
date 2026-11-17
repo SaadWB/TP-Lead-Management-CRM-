@@ -13,7 +13,7 @@ import {
   DragEndEvent,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { Lead, TELECALLER_KANBAN_COLUMNS } from '@crm/shared';
+import { Lead, TELECALLER_KANBAN_COLUMNS, isLeadClosedWon } from '@crm/shared';
 import { KanbanColumn } from './KanbanColumn';
 import { KanbanCard } from './KanbanCard';
 import { HandoverModal } from './HandoverModal';
@@ -162,7 +162,23 @@ export function KanbanBoard({ leads, onLeadsChange, onCardClick, customColumns }
                 !c.title.toLowerCase().includes('special inquiry')
             ),
           ].map((column) => {
-            const columnLeads = leads.filter((l) => l.pipelineStage === column.id);
+            const isClosedWonCol = column.id === 'Closed Won';
+            const columnLeads = leads
+              .filter((l) => {
+                const won = isLeadClosedWon(l);
+                if (isClosedWonCol) {
+                  return won || l.pipelineStage === 'Closed Won';
+                }
+                // Closed Won leads should NEVER show in any running pipeline stage!
+                if (won) return false;
+                return l.pipelineStage === column.id;
+              })
+              .sort((a, b) => {
+                // Ascending order according to date
+                const dateA = new Date(a.nextFollowUpDate || a.createdAt).getTime();
+                const dateB = new Date(b.nextFollowUpDate || b.createdAt).getTime();
+                return dateA - dateB;
+              });
             return (
               <KanbanColumn
                 key={column.id}

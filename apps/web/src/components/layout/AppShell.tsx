@@ -1,6 +1,7 @@
 'use client';
 
 import React, { ReactNode, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
 import { api } from '@/lib/apiClient';
@@ -9,6 +10,11 @@ import { TopBar } from './TopBar';
 import { MobileBottomNav } from './MobileBottomNav';
 import { useHeaderContext } from './PageHeaderContext';
 import { cn } from '@/lib/utils';
+
+const LeadDrawer = dynamic(
+  () => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer),
+  { ssr: false }
+);
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -92,6 +98,16 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Mobile Bottom Navigation for Telecaller */}
       <MobileBottomNav />
+
+      {/* Global Lead Drawer mounted for Universal TopBar search and global navigation */}
+      {headerContext?.globalLeadDrawerId && (
+        <LeadDrawer
+          leadId={headerContext.globalLeadDrawerId}
+          isOpen={!!headerContext.globalLeadDrawerId}
+          onClose={headerContext.closeGlobalLeadDrawer}
+          onLeadUpdated={() => {}}
+        />
+      )}
     </div>
   );
 }

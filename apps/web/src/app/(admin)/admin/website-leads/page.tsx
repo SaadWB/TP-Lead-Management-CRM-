@@ -57,7 +57,7 @@ export default function AdminWebsiteLeadsPage() {
 
   // Sorting
   const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'companyName' | 'priority'>('createdAt');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Selection
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
@@ -354,7 +354,7 @@ export default function AdminWebsiteLeadsPage() {
       setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortBy(field);
-      setSortOrder('desc');
+      setSortOrder('asc'); // Default ascending order per Requirement 1
     }
   }
 

@@ -13,6 +13,7 @@ export const PIPELINE_STAGES = {
   FOLLOW_UP: 'Follow-up',
   DEMO: 'Demo',
   CLOSED: 'Closed',
+  CLOSED_WON: 'Closed Won',
 } as const;
 
 export type PipelineStage = (typeof PIPELINE_STAGES)[keyof typeof PIPELINE_STAGES] | string;
@@ -105,7 +106,8 @@ export const TELECALLER_KANBAN_COLUMNS: { id: string; title: string; color: stri
   { id: 'Connected', title: 'Connected', color: 'sky', description: 'Spoke to prospect, need or next step not clear yet' },
   { id: 'Follow-up', title: 'Follow-up', color: 'purple', description: 'Need to contact again for call, feedback, details, or decision' },
   { id: 'Demo', title: 'Demo', color: 'indigo', description: 'Demo process started (scheduled, confirmation, or post-demo)' },
-  { id: 'Closed', title: 'Closed', color: 'slate', description: 'Active process ended (Converted, Not Interested, Invalid, Nurture)' },
+  { id: 'Closed', title: 'Closed', color: 'slate', description: 'Active process ended (Not Interested, Invalid, Nurture)' },
+  { id: 'Closed Won', title: 'Closed Won', color: 'emerald', description: 'Converted deal / Won contract' },
 ];
 
 export function getSuggestedPipelineForOutcome(outcome: string | null | undefined): string {
@@ -160,13 +162,50 @@ export function normalizeCallOutcome(raw: string | null | undefined): string {
 export function normalizePipelineStage(raw: string | null | undefined): string {
   if (!raw) return 'New Lead';
   const val = raw.trim();
-  if (val === 'Connected – Discussed' || val.toLowerCase() === 'connected') return 'Connected';
-  if (val.toLowerCase() === 'new' || val.toLowerCase() === 'new lead') return 'New Lead';
-  if (val.toLowerCase() === 'attempting contact') return 'Attempting Contact';
-  if (val.toLowerCase() === 'follow-up' || val.toLowerCase() === 'follow up') return 'Follow-up';
-  if (val.toLowerCase() === 'demo') return 'Demo';
-  if (val.toLowerCase() === 'closed') return 'Closed';
+  const lower = val.toLowerCase();
+  if (lower === 'closed won' || lower === 'converted' || lower === 'won') return 'Closed Won';
+  if (val === 'Connected – Discussed' || lower === 'connected') return 'Connected';
+  if (lower === 'new' || lower === 'new lead') return 'New Lead';
+  if (lower === 'attempting contact') return 'Attempting Contact';
+  if (lower === 'follow-up' || lower === 'follow up') return 'Follow-up';
+  if (lower === 'demo') return 'Demo';
+  if (lower === 'closed') return 'Closed';
   return val;
+}
+
+/**
+ * Checks if a lead is strictly Closed Won / Converted across sales and telecalling pipelines.
+ */
+export function isLeadClosedWon(lead: {
+  pipelineStage?: string | null;
+  salesStage?: string | null;
+  convertedAt?: string | null | Date;
+  lastCallOutcome?: string | null;
+} | null | undefined): boolean {
+  if (!lead) return false;
+  if (lead.pipelineStage === 'Closed Won' || lead.pipelineStage === 'CONVERTED') return true;
+  if (lead.salesStage === 'CONVERTED') return true;
+  if (Boolean(lead.convertedAt)) return true;
+  if (
+    lead.pipelineStage === 'Closed' &&
+    lead.lastCallOutcome &&
+    (lead.lastCallOutcome.toLowerCase().includes('won') || lead.lastCallOutcome.toLowerCase().includes('converted'))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Checks if a given stage is an active running pipeline stage.
+ */
+export function isRunningPipelineStage(stage: string | null | undefined): boolean {
+  if (!stage) return false;
+  const s = stage.trim().toLowerCase();
+  if (s === 'all' || s === 'closed' || s === 'closed won' || s === 'converted' || s === 'lost') {
+    return false;
+  }
+  return true;
 }
 
 export const TASK_TYPES = {
