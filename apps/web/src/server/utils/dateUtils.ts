@@ -24,7 +24,7 @@ export function parseFlexibleDate(val: any): string | null {
           const pad = (n: number) => (n < 10 ? '0' + n : String(n));
           return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
         }
-      } catch {}
+      } catch { }
     }
     return null;
   }
@@ -51,7 +51,7 @@ export function parseFlexibleDate(val: any): string | null {
           const pad = (n: number) => (n < 10 ? '0' + n : String(n));
           return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
         }
-      } catch {}
+      } catch { }
     }
   }
 
@@ -99,7 +99,7 @@ export function parseFlexibleDate(val: any): string | null {
       const pad = (n: number) => (n < 10 ? '0' + n : String(n));
       return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`;
     }
-  } catch {}
+  } catch { }
 
   return null;
 }
@@ -120,7 +120,7 @@ export function parseSafeDateObject(val: any): Date | null {
     if (!isNaN(direct.getTime())) {
       return direct;
     }
-  } catch {}
+  } catch { }
 
   // Fallback to flexible parsing (e.g. DD/MM/YYYY or Excel numeric dates)
   const isoStr = parseFlexibleDate(val);

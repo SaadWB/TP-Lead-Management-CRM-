@@ -85,9 +85,32 @@ export const createLeadSchema = z.object({
   assignedSalesmanId: z.string().optional().nullable(),
 });
 
-export const updateLeadSchema = createLeadSchema.partial().extend({
+export const updateLeadSchema = z.object({
+  companyName: z.string().min(2, 'Company name is required').optional(),
+  serviceProduct: z.string().min(1, 'Service or product is required').optional(),
+  contactPerson: z.string().optional().nullable(),
+  alternateName: z.string().optional().nullable(),
+  phone: z.string().min(7, 'A valid phone number is required').optional(),
+  email: z.string().email('Invalid email').or(z.literal('')).optional().nullable(),
+  alternatePhone: z.string().optional().nullable(),
+  website: z.string().url('Invalid website URL').or(z.literal('')).optional().nullable(),
+  priority: z.string().optional(),
+  pipelineStage: z.string().optional(),
+  lastCallOutcome: z.string().optional().nullable(),
+  nextFollowUpDate: z.string().optional().nullable(),
+  nextAction: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  leadSource: z.string().optional().nullable(),
+  leadSourceOther: z.string().max(100, 'Other details must be at most 100 characters').optional().nullable(),
+  assignedTelecallerId: z.string().optional().nullable(),
+  assignedSalesmanId: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   state: z.string().optional().nullable(),
+  salesStage: z.string().optional().nullable(),
+  dealValue: z.number().optional().nullable(),
+  lostReason: z.string().optional().nullable(),
+  lostNotes: z.string().optional().nullable(),
+  callAttempts: z.number().optional().nullable(),
 });
 
 export const updateStageSchema = z.object({

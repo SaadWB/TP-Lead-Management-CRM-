@@ -1,12 +1,42 @@
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient; _dbSchemaChecked?: boolean };
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient;
+  _dbSchemaChecked?: boolean;
+  _retryMiddlewareInstalled?: boolean;
+};
 
 export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
+
+if (!globalForPrisma._retryMiddlewareInstalled) {
+  prisma.$use(async (params, next) => {
+    try {
+      return await next(params);
+    } catch (err: any) {
+      const isTransient =
+        err?.code === 'P1017' ||
+        err?.code === 'P1001' ||
+        err?.code === 'P1008' ||
+        err?.code === 'P2024' ||
+        err?.code === 'P2034' ||
+        err?.message?.includes('closed the connection') ||
+        err?.message?.includes('ETIMEDOUT') ||
+        err?.message?.includes('ECONNRESET');
+
+      if (isTransient) {
+        console.warn(`[Prisma Middleware] Auto-retrying ${params.model || 'raw'}.${params.action} after transient DB disconnect...`);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        return await next(params);
+      }
+      throw err;
+    }
+  });
+  globalForPrisma._retryMiddlewareInstalled = true;
+}
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 

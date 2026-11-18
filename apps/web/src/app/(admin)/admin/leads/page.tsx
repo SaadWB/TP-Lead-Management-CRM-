@@ -317,18 +317,25 @@ function AdminLeadsContent() {
 
   // Row-level pipeline stage update
   async function handleSinglePipelineUpdate(leadId: string, pipelineStage: string) {
+    const lead = leads.find((l) => l.id === leadId);
     const stageNorm = normalizePipelineStage(pipelineStage);
     setLeads((prev) =>
       prev.map((l) => (l.id === leadId ? { ...l, pipelineStage: stageNorm as any } : l))
     );
     try {
-      const res = await api.patch<Lead>(`/leads/${leadId}`, { pipelineStage: stageNorm });
+      const res = await api.patch<Lead>(`/leads/${leadId}`, {
+        pipelineStage: stageNorm,
+        lastCallOutcome: lead?.lastCallOutcome || null,
+      });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...res.data } : l)));
         updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
+      if (lead) {
+        setLeads((prev) => prev.map((l) => (l.id === leadId ? lead : l)));
+      }
       alert(err.message || 'Failed to update pipeline stage');
     }
   }
@@ -344,14 +351,22 @@ function AdminLeadsContent() {
       return;
     }
 
+    setLeads((prev) =>
+      prev.map((l) => (l.id === leadId ? { ...l, lastCallOutcome: lastCallOutcome || null } : l))
+    );
+
     try {
-      const res = await api.patch<Lead>(`/leads/${leadId}`, { lastCallOutcome: lastCallOutcome || null });
+      const res = await api.patch<Lead>(`/leads/${leadId}`, {
+        lastCallOutcome: lastCallOutcome || null,
+        pipelineStage: lead.pipelineStage,
+      });
       if (res.success && res.data) {
-        setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...res.data } : l)));
         updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
+      setLeads((prev) => prev.map((l) => (l.id === leadId ? lead : l)));
       alert(err.message || 'Failed to update call outcome');
     }
   }
@@ -372,17 +387,27 @@ function AdminLeadsContent() {
     setOutcomePromptLead(null);
     setOutcomePromptDate('');
 
+    setLeads((prev) =>
+      prev.map((l) =>
+        l.id === lead.id
+          ? { ...l, lastCallOutcome: newOutcome || null, nextFollowUpDate: isoDate }
+          : l
+      )
+    );
+
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, {
         lastCallOutcome: newOutcome,
         nextFollowUpDate: isoDate,
+        pipelineStage: lead.pipelineStage,
       });
       if (res.success && res.data) {
-        setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
+        setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, ...res.data } : l)));
         updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
     } catch (err: any) {
+      setLeads((prev) => prev.map((l) => (l.id === lead.id ? lead : l)));
       alert(err.message || 'Failed to update call outcome');
     }
   }

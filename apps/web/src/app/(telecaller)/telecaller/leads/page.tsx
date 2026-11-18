@@ -575,6 +575,7 @@ export default function TelecallerMyLeadsPage() {
     try {
       const res = await api.post<Lead>(`/leads/${lead.id}/stage`, {
         pipelineStage: newStage,
+        lastCallOutcome: lead.lastCallOutcome || null,
       });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));

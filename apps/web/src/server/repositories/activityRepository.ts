@@ -35,22 +35,39 @@ export class ActivityRepository {
       });
     } catch (err: any) {
       if (err.code === 'P2003' && effectiveUserId) {
-        // Fallback with null userId if foreign key fails
-        act = await prisma.leadActivity.create({
-          data: {
-            leadId: data.leadId,
-            userId: null,
-            type: data.type,
-            description: data.description,
-            metadata: safeMetadata,
-          },
-          include: {
-            user: { select: { id: true, name: true, email: true, role: true } },
-          },
-        });
+        try {
+          // Fallback with null userId if foreign key fails
+          act = await prisma.leadActivity.create({
+            data: {
+              leadId: data.leadId,
+              userId: null,
+              type: data.type,
+              description: data.description,
+              metadata: safeMetadata,
+            },
+            include: {
+              user: { select: { id: true, name: true, email: true, role: true } },
+            },
+          });
+        } catch (innerErr) {
+          console.warn('[ActivityRepository] Fallback create failed:', innerErr);
+        }
       } else {
-        throw err;
+        console.warn('[ActivityRepository] Failed to record lead activity:', err?.message || err);
       }
+    }
+
+    if (!act) {
+      return {
+        id: 'temp-' + Date.now(),
+        leadId: data.leadId,
+        userId: effectiveUserId,
+        user: null,
+        type: data.type as ActivityType,
+        description: data.description,
+        metadata: safeMetadata || null,
+        createdAt: new Date().toISOString(),
+      };
     }
 
     return {

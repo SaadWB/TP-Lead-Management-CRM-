@@ -193,7 +193,10 @@ export function LeadDrawer({
     updateCachedLead(updatedLead);
 
     try {
-      const res = await api.patch<Lead>(`/leads/${lead.id}`, { lastCallOutcome: targetOutcome });
+      const res = await api.patch<Lead>(`/leads/${lead.id}`, {
+        lastCallOutcome: targetOutcome,
+        pipelineStage: lead.pipelineStage,
+      });
       if (res.success && res.data) {
         const merged = { ...updatedLead, ...res.data };
         setLead(merged);
@@ -487,7 +490,10 @@ export function LeadDrawer({
     updateCachedLead(optimisticLead);
 
     try {
-      const res = await api.post<Lead>(`/leads/${lead.id}/stage`, { pipelineStage: newStage });
+      const res = await api.post<Lead>(`/leads/${lead.id}/stage`, {
+        pipelineStage: newStage,
+        lastCallOutcome: lead.lastCallOutcome || null,
+      });
       if (res.success && res.data) {
         const merged = { ...optimisticLead, ...res.data };
         setLead(merged);

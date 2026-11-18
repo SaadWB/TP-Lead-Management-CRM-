@@ -28,7 +28,7 @@ export function errorHandler(
   // 3. Database / Prisma driver errors
   if (err.name?.startsWith('PrismaClient') || (err as any).code?.startsWith('P')) {
     console.error('[DATABASE ERROR]', err);
-    let userMsg = 'A database error occurred. Please verify your data format and try again.';
+    let userMsg = 'A temporary database error occurred. Please try again.';
     const pCode = (err as any).code;
     if (pCode === 'P2002') {
       const target = (err as any).meta?.target;
@@ -37,9 +37,13 @@ export function errorHandler(
       userMsg = 'Database relation error: The referenced record or user was not found.';
     } else if (pCode === 'P2025') {
       userMsg = 'The requested database record was not found.';
+    } else if (pCode === 'P1017' || pCode === 'P1001' || pCode === 'P1008' || pCode === 'P2024' || err.message?.includes('closed the connection')) {
+      userMsg = 'Database connection was temporarily lost. Please try again.';
+    } else if (pCode === 'P2000') {
+      userMsg = 'The text provided is too long for one of the fields.';
     } else if (err.name === 'PrismaClientValidationError') {
       userMsg = 'Invalid data format provided for database operation.';
-    } else if (process.env.NODE_ENV !== 'production') {
+    } else if (err.message && process.env.NODE_ENV !== 'production') {
       userMsg = `Database Error: ${err.message}`;
     }
     sendError(res, userMsg, 500);

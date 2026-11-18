@@ -212,7 +212,7 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
 
     // Mass assignment prevention: only Super Admin can reassign; Super Admin and Telecaller can update priority
     if (req.user!.role !== USER_ROLES.SUPER_ADMIN && req.user!.role !== USER_ROLES.TELECALLER) {
-      if (data.priority) {
+      if (data.priority !== undefined) {
         throw new ForbiddenError('You do not have permission to update lead priority.');
       }
     }
@@ -222,8 +222,13 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
       }
     }
 
-    const patchData: any = { ...(data as any) };
-    if (data.pipelineStage && data.pipelineStage !== lead.pipelineStage) {
+    const patchData: any = {};
+    for (const [key, val] of Object.entries(data)) {
+      if (val !== undefined) {
+        patchData[key] = val;
+      }
+    }
+    if (patchData.pipelineStage && patchData.pipelineStage !== lead.pipelineStage) {
       patchData.lastStatusUpdatedAt = new Date().toISOString();
     }
 
@@ -298,21 +303,25 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
     }
 
     // Track lead source change in lead history
-    if (data.leadSource !== undefined && data.leadSource !== lead.leadSource) {
-      const detail = data.leadSourceOther ? ` (${data.leadSourceOther})` : '';
-      await activityRepository.create({
-        leadId: lead.id,
-        userId: req.user!.id,
-        type: 'NOTE_ADDED',
-        description: `Lead Source set to "${data.leadSource || '-'}"${detail} by ${req.user!.name}`,
-      });
-    } else if (data.assignedTelecallerId === undefined && data.assignedSalesmanId === undefined) {
-      await activityRepository.create({
-        leadId: lead.id,
-        userId: req.user!.id,
-        type: 'NOTE_ADDED',
-        description: `Lead details updated by ${req.user!.name}`,
-      });
+    try {
+      if (data.leadSource !== undefined && data.leadSource !== lead.leadSource) {
+        const detail = data.leadSourceOther ? ` (${data.leadSourceOther})` : '';
+        await activityRepository.create({
+          leadId: lead.id,
+          userId: req.user!.id,
+          type: 'NOTE_ADDED',
+          description: `Lead Source set to "${data.leadSource || '-'}"${detail} by ${req.user!.name}`,
+        });
+      } else if (data.assignedTelecallerId === undefined && data.assignedSalesmanId === undefined) {
+        await activityRepository.create({
+          leadId: lead.id,
+          userId: req.user!.id,
+          type: 'NOTE_ADDED',
+          description: `Lead details updated by ${req.user!.name}`,
+        });
+      }
+    } catch (actErr) {
+      console.warn('[updateLead] Activity log notice:', actErr);
     }
 
     sendSuccess(res, updated, 'Lead updated successfully');
@@ -628,26 +637,32 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
 
     const updated = await leadRepository.update(lead.id, updatePayload);
 
-    // Record stage transition activity
-    const activityDesc = `Pipeline set to "${targetPipeline}"${targetOutcome ? `, Outcome: "${targetOutcome}"` : ''} by ${req.user!.name}.${
-      data.notes ? ` Notes: ${data.notes}` : ''
-    }${data.handoverSummary ? ` (Summary: ${data.handoverSummary})` : ''}${followUpDate ? ` (Follow-up: ${followUpDate})` : ''}`;
+    // Record stage transition activity (safely wrapped so activity failures never block status updates)
+    try {
+      const activityDesc = `Pipeline set to "${targetPipeline}"${targetOutcome ? `, Outcome: "${targetOutcome}"` : ''} by ${req.user!.name}.${
+        data.notes ? ` Notes: ${data.notes}` : ''
+      }${data.handoverSummary ? ` (Summary: ${data.handoverSummary})` : ''}${followUpDate ? ` (Follow-up: ${followUpDate})` : ''}`;
 
-    await activityRepository.create({
-      leadId: lead.id,
-      userId: req.user!.id,
-      type: 'STAGE_CHANGED',
-      description: activityDesc,
-      metadata: {
+      const rawMetadata = {
         oldStage,
         oldOutcome,
         newPipeline: targetPipeline,
         newOutcome: targetOutcome,
-        handoverSummary: data.handoverSummary,
-        followUpDate,
-        notes: data.notes,
-      },
-    });
+        handoverSummary: data.handoverSummary || null,
+        followUpDate: followUpDate || null,
+        notes: data.notes || null,
+      };
+
+      await activityRepository.create({
+        leadId: lead.id,
+        userId: req.user!.id,
+        type: 'STAGE_CHANGED',
+        description: activityDesc,
+        metadata: JSON.parse(JSON.stringify(rawMetadata)),
+      });
+    } catch (actErr) {
+      console.warn('[updateLeadStage] Activity recording notice:', actErr);
+    }
 
     sendSuccess(res, updated, `Pipeline updated to ${targetPipeline}`);
   } catch (error) {

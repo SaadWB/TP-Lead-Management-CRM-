@@ -72,9 +72,32 @@ exports.createLeadSchema = zod_1.z.object({
     assignedTelecallerId: zod_1.z.string().optional().nullable(),
     assignedSalesmanId: zod_1.z.string().optional().nullable(),
 });
-exports.updateLeadSchema = exports.createLeadSchema.partial().extend({
+exports.updateLeadSchema = zod_1.z.object({
+    companyName: zod_1.z.string().min(2, 'Company name is required').optional(),
+    serviceProduct: zod_1.z.string().min(1, 'Service or product is required').optional(),
+    contactPerson: zod_1.z.string().optional().nullable(),
+    alternateName: zod_1.z.string().optional().nullable(),
+    phone: zod_1.z.string().min(7, 'A valid phone number is required').optional(),
+    email: zod_1.z.string().email('Invalid email').or(zod_1.z.literal('')).optional().nullable(),
+    alternatePhone: zod_1.z.string().optional().nullable(),
+    website: zod_1.z.string().url('Invalid website URL').or(zod_1.z.literal('')).optional().nullable(),
+    priority: zod_1.z.string().optional(),
+    pipelineStage: zod_1.z.string().optional(),
+    lastCallOutcome: zod_1.z.string().optional().nullable(),
+    nextFollowUpDate: zod_1.z.string().optional().nullable(),
+    nextAction: zod_1.z.string().optional().nullable(),
+    notes: zod_1.z.string().optional().nullable(),
+    leadSource: zod_1.z.string().optional().nullable(),
+    leadSourceOther: zod_1.z.string().max(100, 'Other details must be at most 100 characters').optional().nullable(),
+    assignedTelecallerId: zod_1.z.string().optional().nullable(),
+    assignedSalesmanId: zod_1.z.string().optional().nullable(),
     city: zod_1.z.string().optional().nullable(),
     state: zod_1.z.string().optional().nullable(),
+    salesStage: zod_1.z.string().optional().nullable(),
+    dealValue: zod_1.z.number().optional().nullable(),
+    lostReason: zod_1.z.string().optional().nullable(),
+    lostNotes: zod_1.z.string().optional().nullable(),
+    callAttempts: zod_1.z.number().optional().nullable(),
 });
 exports.updateStageSchema = zod_1.z.object({
     pipelineStage: zod_1.z.string().optional(),

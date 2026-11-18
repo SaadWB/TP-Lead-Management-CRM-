@@ -492,43 +492,66 @@ export class LeadRepository {
     if (updateData.leadSource !== undefined) data.leadSource = updateData.leadSource ? String(updateData.leadSource).slice(0, 100) : null;
     if (updateData.leadSourceOther !== undefined) data.leadSourceOther = updateData.leadSourceOther ? String(updateData.leadSourceOther).slice(0, 100) : null;
     if (updateData.assignedTelecallerId !== undefined) {
-      data.assignedTelecallerId = updateData.assignedTelecallerId
-        ? (resolveUserAlias(updateData.assignedTelecallerId) || updateData.assignedTelecallerId)
+      const raw = updateData.assignedTelecallerId ? String(updateData.assignedTelecallerId).trim() : '';
+      data.assignedTelecallerId = (raw && raw !== 'none' && raw !== 'unassigned')
+        ? (resolveUserAlias(raw) || raw)
         : null;
     }
     if (updateData.assignedSalesmanId !== undefined) {
-      data.assignedSalesmanId = updateData.assignedSalesmanId
-        ? (resolveUserAlias(updateData.assignedSalesmanId) || updateData.assignedSalesmanId)
+      const raw = updateData.assignedSalesmanId ? String(updateData.assignedSalesmanId).trim() : '';
+      data.assignedSalesmanId = (raw && raw !== 'none' && raw !== 'unassigned')
+        ? (resolveUserAlias(raw) || raw)
         : null;
     }
     if (updateData.convertedAt !== undefined) {
-      data.convertedAt = updateData.convertedAt ? new Date(updateData.convertedAt) : null;
+      data.convertedAt = parseSafeDateObject(updateData.convertedAt);
     }
     if (updateData.dealValue !== undefined) data.dealValue = updateData.dealValue;
     if (updateData.lostReason !== undefined) data.lostReason = updateData.lostReason;
     if (updateData.lostNotes !== undefined) data.lostNotes = updateData.lostNotes;
     if (updateData.archivedAt !== undefined) {
-      data.archivedAt = updateData.archivedAt ? new Date(updateData.archivedAt) : null;
+      data.archivedAt = parseSafeDateObject(updateData.archivedAt);
     }
     if (updateData.isDeleted !== undefined) data.isDeleted = updateData.isDeleted;
     if (updateData.deletedAt !== undefined) {
-      data.deletedAt = updateData.deletedAt ? new Date(updateData.deletedAt) : null;
+      data.deletedAt = parseSafeDateObject(updateData.deletedAt);
     }
     if (updateData.deletedById !== undefined) data.deletedById = updateData.deletedById;
     if (updateData.lastActivityAt !== undefined) {
-      data.lastActivityAt = updateData.lastActivityAt ? new Date(updateData.lastActivityAt) : new Date();
+      data.lastActivityAt = parseSafeDateObject(updateData.lastActivityAt) || new Date();
     }
 
-    try {
-      const updated = await prisma.lead.update({
-        where: { id },
-        data,
-        include: leadIncludeFull,
-      });
-      return mapPrismaLeadToShared(updated);
-    } catch {
-      return null;
+    let lastErr: any = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const updated = await prisma.lead.update({
+          where: { id },
+          data,
+          include: leadIncludeFull,
+        });
+        return mapPrismaLeadToShared(updated);
+      } catch (err: any) {
+        lastErr = err;
+        const isTransient =
+          err.code === 'P1017' ||
+          err.code === 'P1001' ||
+          err.code === 'P1008' ||
+          err.code === 'P2024' ||
+          err.code === 'P2034' ||
+          err.message?.includes('closed the connection') ||
+          err.message?.includes('ETIMEDOUT') ||
+          err.message?.includes('ECONNRESET');
+
+        if (isTransient && attempt === 0) {
+          console.warn(`[leadRepository.update] Transient connection error (${err.code || err.message}), retrying...`);
+          await new Promise((r) => setTimeout(r, 250));
+          continue;
+        }
+        console.error('[leadRepository.update ERROR]', err);
+        break;
+      }
     }
+    return null;
   }
 
   async bulkCreate(leadsData: Array<Omit<Lead, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Lead[]> {

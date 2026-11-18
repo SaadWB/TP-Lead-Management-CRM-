@@ -387,6 +387,7 @@ export default function TelecallerTodayPage() {
     try {
       const res = await api.post<Lead>(`/leads/${lead.id}/stage`, {
         pipelineStage: newStage,
+        lastCallOutcome: lead.lastCallOutcome || null,
       });
       if (res.success && res.data) {
         updateCachedLead(res.data);
