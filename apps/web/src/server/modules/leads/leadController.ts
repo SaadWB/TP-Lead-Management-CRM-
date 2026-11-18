@@ -10,6 +10,7 @@ import {
   PipelineStage,
   USER_ROLES,
   normalizeCallOutcome,
+  normalizePipelineStage,
   getSuggestedPipelineForOutcome,
   TELECALLER_CALL_OUTCOMES,
 } from '@crm/shared';
@@ -230,6 +231,23 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
     }
     if (patchData.pipelineStage && patchData.pipelineStage !== lead.pipelineStage) {
       patchData.lastStatusUpdatedAt = new Date().toISOString();
+      const normStage = normalizePipelineStage(patchData.pipelineStage);
+      if (
+        normStage === 'Closed' ||
+        normStage === 'Closed Won' ||
+        patchData.pipelineStage === 'Closed' ||
+        patchData.pipelineStage === 'Closed Won'
+      ) {
+        patchData.nextFollowUpDate = null;
+        try {
+          await prisma.followUpTask.updateMany({
+            where: { leadId: lead.id, status: 'PENDING' },
+            data: { status: 'COMPLETED', completedAt: new Date() },
+          });
+        } catch (taskErr) {
+          console.warn('[updateLead] Task completion notice:', taskErr);
+        }
+      }
     }
 
     const updated = await leadRepository.update(req.params.id, patchData);
@@ -498,7 +516,22 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       targetPipeline = oldStage;
     }
 
-    // Pipeline or outcome option can be chosen freely without any blocking validation
+    // Check if target pipeline is closing the lead
+    const isClosingPipeline =
+      targetPipeline === 'Closed' ||
+      targetPipeline === 'Closed Won' ||
+      targetPipeline?.toLowerCase() === 'closed' ||
+      targetPipeline?.toLowerCase() === 'closed won' ||
+      targetPipeline?.toLowerCase() === 'lost' ||
+      normalizePipelineStage(targetPipeline) === 'Closed' ||
+      normalizePipelineStage(targetPipeline) === 'Closed Won';
+
+    const isOutcomeChanged =
+      data.lastCallOutcome !== undefined &&
+      data.lastCallOutcome !== null &&
+      targetOutcome !== oldOutcome;
+
+    // Dynamic & Fallback Rules for outcome flags:
     let followUpDate: string | undefined = data.nextFollowUpDate || (data as any).meetingDate || (req.body as any).followUpDate;
     const outcomeOption = targetOutcome
       ? await prisma.callOutcomeOption.findFirst({ where: { name: targetOutcome } })
@@ -509,14 +542,38 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       targetOutcome === 'Call Back Later' ||
       targetOutcome === 'Demo Scheduled';
 
-    if (requiresDateTime) {
-      if (!followUpDate) {
-        throw new BadRequestError(`Date and time are required when selecting "${targetOutcome}".`);
+    const requiresNextFollowUp =
+      outcomeOption?.requiresNextFollowUp ||
+      targetOutcome === 'Demo Interested' ||
+      targetOutcome === 'Details Requested' ||
+      targetOutcome === 'Demo Completed' ||
+      targetOutcome === 'Decision Pending';
+
+    const closesLead =
+      isClosingPipeline ||
+      outcomeOption?.closesLead ||
+      targetOutcome === 'Not Interested' ||
+      targetOutcome === 'Wrong Number';
+
+    // Outcome date validation only applies if outcome is being actively changed and lead is NOT being closed
+    if (!isClosingPipeline && isOutcomeChanged) {
+      if (requiresDateTime) {
+        if (!followUpDate) {
+          throw new BadRequestError(`Date and time are required when selecting "${targetOutcome}".`);
+        }
+        const parsedTime = new Date(followUpDate).getTime();
+        if (isNaN(parsedTime) || parsedTime < Date.now() - 60000) {
+          throw new BadRequestError('Date and time cannot be in the past.');
+        }
+      } else if (requiresNextFollowUp) {
+        if (!followUpDate && !lead.nextFollowUpDate) {
+          throw new BadRequestError(`Next follow-up date is required for "${targetOutcome}".`);
+        }
       }
-      const parsedTime = new Date(followUpDate).getTime();
-      if (isNaN(parsedTime) || parsedTime < Date.now() - 60000) {
-        throw new BadRequestError('Date and time cannot be in the past.');
-      }
+    }
+
+    if (closesLead) {
+      followUpDate = undefined;
     }
 
 
@@ -543,8 +600,16 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       updatePayload.callAttempts = (lead.callAttempts || 0) + 1;
     }
 
-    if (targetPipeline === 'Closed') {
+    if (isClosingPipeline || closesLead || targetPipeline === 'Closed') {
       updatePayload.nextFollowUpDate = null;
+      try {
+        await prisma.followUpTask.updateMany({
+          where: { leadId: lead.id, status: 'PENDING' },
+          data: { status: 'COMPLETED', completedAt: now },
+        });
+      } catch (taskErr) {
+        console.warn('[updateLeadStage] Follow-up task completion notice:', taskErr);
+      }
     } else if (followUpDate) {
       updatePayload.nextFollowUpDate = followUpDate;
     }

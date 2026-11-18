@@ -319,8 +319,17 @@ function AdminLeadsContent() {
   async function handleSinglePipelineUpdate(leadId: string, pipelineStage: string) {
     const lead = leads.find((l) => l.id === leadId);
     const stageNorm = normalizePipelineStage(pipelineStage);
+    const isClosed = stageNorm === 'Closed' || stageNorm === 'Closed Won';
     setLeads((prev) =>
-      prev.map((l) => (l.id === leadId ? { ...l, pipelineStage: stageNorm as any } : l))
+      prev.map((l) =>
+        l.id === leadId
+          ? {
+              ...l,
+              pipelineStage: stageNorm as any,
+              nextFollowUpDate: isClosed ? null : l.nextFollowUpDate,
+            }
+          : l
+      )
     );
     try {
       const res = await api.patch<Lead>(`/leads/${leadId}`, {

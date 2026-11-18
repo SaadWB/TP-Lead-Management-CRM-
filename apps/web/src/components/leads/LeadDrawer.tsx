@@ -484,7 +484,12 @@ export function LeadDrawer({
 
     // Instant optimistic update (0ms UI lag)
     const previousLead = { ...lead };
-    const optimisticLead: Lead = { ...lead, pipelineStage: newStage };
+    const isClosed = newStage === 'Closed' || newStage === 'Closed Won';
+    const optimisticLead: Lead = {
+      ...lead,
+      pipelineStage: newStage,
+      nextFollowUpDate: isClosed ? null : lead.nextFollowUpDate,
+    };
     setLead(optimisticLead);
     onLeadUpdated(optimisticLead);
     updateCachedLead(optimisticLead);

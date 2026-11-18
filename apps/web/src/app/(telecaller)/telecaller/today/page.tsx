@@ -374,8 +374,9 @@ export default function TelecallerTodayPage() {
     if (lead.pipelineStage === newStage) return;
     const previousLead = { ...lead };
 
-    // If moved to Closed, immediately remove from this table
-    if (newStage === 'Closed') {
+    // If moved to Closed or Closed Won, immediately remove from this table
+    const isClosed = newStage === 'Closed' || newStage === 'Closed Won';
+    if (isClosed) {
       setLeads((prev) => prev.filter((l) => l.id !== lead.id));
       triggerUndo(previousLead, `Closed follow-up for ${lead.companyName}`);
     } else {
@@ -391,7 +392,7 @@ export default function TelecallerTodayPage() {
       });
       if (res.success && res.data) {
         updateCachedLead(res.data);
-        if (newStage !== 'Closed') {
+        if (!isClosed) {
           setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
         }
         triggerSaveNotice(`Pipeline: ${newStage}`);

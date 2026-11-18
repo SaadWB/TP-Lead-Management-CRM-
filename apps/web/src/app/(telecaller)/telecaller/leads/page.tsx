@@ -569,7 +569,15 @@ export default function TelecallerMyLeadsPage() {
 
     // Optimistic update
     setLeads((prev) =>
-      prev.map((l) => (l.id === lead.id ? { ...l, pipelineStage: newStage as any } : l))
+      prev.map((l) =>
+        l.id === lead.id
+          ? {
+              ...l,
+              pipelineStage: newStage as any,
+              nextFollowUpDate: newStage === 'Closed' || newStage === 'Closed Won' ? null : l.nextFollowUpDate,
+            }
+          : l
+      )
     );
 
     try {
