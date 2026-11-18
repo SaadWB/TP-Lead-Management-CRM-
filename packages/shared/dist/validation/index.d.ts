@@ -66,7 +66,7 @@ export declare const updateUserSchema: z.ZodObject<{
 }>;
 export declare const createLeadSchema: z.ZodObject<{
     companyName: z.ZodString;
-    serviceProduct: z.ZodString;
+    serviceProduct: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     contactPerson: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     alternateName: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
     phone: z.ZodString;
@@ -88,7 +88,7 @@ export declare const createLeadSchema: z.ZodObject<{
     phone: string;
     companyName: string;
     contactPerson: string | null;
-    serviceProduct: string;
+    serviceProduct: string | null;
     alternateName: string | null;
     priority: string;
     lastCallOutcome?: string | null | undefined;
@@ -105,11 +105,11 @@ export declare const createLeadSchema: z.ZodObject<{
 }, {
     phone: string;
     companyName: string;
-    serviceProduct: string;
     pipelineStage?: string | undefined;
     lastCallOutcome?: string | null | undefined;
     email?: string | null | undefined;
     contactPerson?: string | null | undefined;
+    serviceProduct?: string | null | undefined;
     alternateName?: string | null | undefined;
     alternatePhone?: string | null | undefined;
     website?: string | null | undefined;
@@ -124,7 +124,7 @@ export declare const createLeadSchema: z.ZodObject<{
 }>;
 export declare const updateLeadSchema: z.ZodObject<{
     companyName: z.ZodOptional<z.ZodString>;
-    serviceProduct: z.ZodOptional<z.ZodString>;
+    serviceProduct: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     contactPerson: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     alternateName: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     phone: z.ZodOptional<z.ZodString>;
@@ -156,7 +156,7 @@ export declare const updateLeadSchema: z.ZodObject<{
     phone?: string | undefined;
     companyName?: string | undefined;
     contactPerson?: string | null | undefined;
-    serviceProduct?: string | undefined;
+    serviceProduct?: string | null | undefined;
     alternateName?: string | null | undefined;
     alternatePhone?: string | null | undefined;
     website?: string | null | undefined;
@@ -182,7 +182,7 @@ export declare const updateLeadSchema: z.ZodObject<{
     phone?: string | undefined;
     companyName?: string | undefined;
     contactPerson?: string | null | undefined;
-    serviceProduct?: string | undefined;
+    serviceProduct?: string | null | undefined;
     alternateName?: string | null | undefined;
     alternatePhone?: string | null | undefined;
     website?: string | null | undefined;
@@ -366,9 +366,11 @@ export declare const bulkAssignLeadsSchema: z.ZodObject<{
 }>;
 export declare const importCommitSchema: z.ZodObject<{
     fileName: z.ZodString;
+    baseTimestamp: z.ZodOptional<z.ZodNumber>;
     records: z.ZodArray<z.ZodObject<{
+        rowIndex: z.ZodOptional<z.ZodNumber>;
         companyName: z.ZodString;
-        serviceProduct: z.ZodString;
+        serviceProduct: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
         contactPerson: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
         alternateName: z.ZodDefault<z.ZodNullable<z.ZodOptional<z.ZodString>>>;
         phone: z.ZodString;
@@ -395,7 +397,7 @@ export declare const importCommitSchema: z.ZodObject<{
         phone: string;
         companyName: string;
         contactPerson: string | null;
-        serviceProduct: string;
+        serviceProduct: string | null;
         alternateName: string | null;
         priority: string;
         callAttempts: number;
@@ -413,15 +415,16 @@ export declare const importCommitSchema: z.ZodObject<{
         leadSource?: string | null | undefined;
         leadSourceOther?: string | null | undefined;
         assignedTelecallerId?: string | null | undefined;
+        rowIndex?: number | undefined;
         matchedExistingId?: string | undefined;
     }, {
         phone: string;
         companyName: string;
-        serviceProduct: string;
         pipelineStage?: string | undefined;
         lastCallOutcome?: string | null | undefined;
         email?: string | null | undefined;
         contactPerson?: string | null | undefined;
+        serviceProduct?: string | null | undefined;
         alternateName?: string | null | undefined;
         alternatePhone?: string | null | undefined;
         website?: string | null | undefined;
@@ -436,6 +439,7 @@ export declare const importCommitSchema: z.ZodObject<{
         leadSource?: string | null | undefined;
         leadSourceOther?: string | null | undefined;
         assignedTelecallerId?: string | null | undefined;
+        rowIndex?: number | undefined;
         action?: "IMPORT" | "SKIP" | "UPDATE" | undefined;
         matchedExistingId?: string | undefined;
     }>, "many">;
@@ -448,7 +452,7 @@ export declare const importCommitSchema: z.ZodObject<{
         phone: string;
         companyName: string;
         contactPerson: string | null;
-        serviceProduct: string;
+        serviceProduct: string | null;
         alternateName: string | null;
         priority: string;
         callAttempts: number;
@@ -466,20 +470,22 @@ export declare const importCommitSchema: z.ZodObject<{
         leadSource?: string | null | undefined;
         leadSourceOther?: string | null | undefined;
         assignedTelecallerId?: string | null | undefined;
+        rowIndex?: number | undefined;
         matchedExistingId?: string | undefined;
     }[];
     distributionMethod: "MANUAL" | "EVEN";
+    baseTimestamp?: number | undefined;
     selectedTelecallerIds?: string[] | undefined;
 }, {
     fileName: string;
     records: {
         phone: string;
         companyName: string;
-        serviceProduct: string;
         pipelineStage?: string | undefined;
         lastCallOutcome?: string | null | undefined;
         email?: string | null | undefined;
         contactPerson?: string | null | undefined;
+        serviceProduct?: string | null | undefined;
         alternateName?: string | null | undefined;
         alternatePhone?: string | null | undefined;
         website?: string | null | undefined;
@@ -494,10 +500,12 @@ export declare const importCommitSchema: z.ZodObject<{
         leadSource?: string | null | undefined;
         leadSourceOther?: string | null | undefined;
         assignedTelecallerId?: string | null | undefined;
+        rowIndex?: number | undefined;
         action?: "IMPORT" | "SKIP" | "UPDATE" | undefined;
         matchedExistingId?: string | undefined;
     }[];
     distributionMethod: "MANUAL" | "EVEN";
+    baseTimestamp?: number | undefined;
     selectedTelecallerIds?: string[] | undefined;
 }>;
 export declare const bulkPrioritySchema: z.ZodObject<{

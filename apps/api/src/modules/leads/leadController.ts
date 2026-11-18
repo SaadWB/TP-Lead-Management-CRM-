@@ -128,7 +128,7 @@ export async function createLead(req: Request, res: Response, next: NextFunction
 
     const newLead = await leadRepository.create({
       companyName: data.companyName,
-      serviceProduct: data.serviceProduct,
+      serviceProduct: data.serviceProduct || '',
       contactPerson: data.contactPerson || '',
       alternateName: data.alternateName || null,
       phone: data.phone,

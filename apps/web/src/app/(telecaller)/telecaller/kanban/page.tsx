@@ -159,6 +159,7 @@ export default function TelecallerCallingDashboardPage() {
         {/* Lead Drawer */}
         <LeadDrawer
           leadId={selectedLeadId}
+          initialLead={leads.find((l) => l.id === selectedLeadId) || null}
           isOpen={isDrawerOpen}
           onClose={() => {
             setIsDrawerOpen(false);

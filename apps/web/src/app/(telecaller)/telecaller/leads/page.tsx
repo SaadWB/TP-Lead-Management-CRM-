@@ -465,7 +465,9 @@ export default function TelecallerMyLeadsPage() {
         valB = new Date(b.createdAt).getTime();
       }
 
-      return sortOrder === 'asc' ? valA - valB : valB - valA;
+      const diff = sortOrder === 'asc' ? valA - valB : valB - valA;
+      if (diff !== 0) return diff;
+      return (a.id || '').localeCompare(b.id || '');
     });
     return list;
   }, [filteredLeads, sortBy, sortOrder]);
@@ -1976,6 +1978,7 @@ export default function TelecallerMyLeadsPage() {
         {/* Lead Drawer */}
         <LeadDrawer
           leadId={selectedLeadId}
+          initialLead={leads.find((l) => l.id === selectedLeadId) || null}
           isOpen={isDrawerOpen}
           onClose={() => {
             setIsDrawerOpen(false);

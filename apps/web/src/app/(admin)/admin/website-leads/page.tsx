@@ -298,7 +298,9 @@ export default function AdminWebsiteLeadsPage() {
         valB = new Date(b.createdAt).getTime();
       }
 
-      return sortOrder === 'asc' ? valA - valB : valB - valA;
+      const diff = sortOrder === 'asc' ? valA - valB : valB - valA;
+      if (diff !== 0) return diff;
+      return (a.id || '').localeCompare(b.id || '');
     });
     return list;
   }, [filteredLeads, sortBy, sortOrder]);
@@ -816,15 +818,29 @@ export default function AdminWebsiteLeadsPage() {
               </thead>
 
               <tbody className="divide-y divide-slate-100 bg-white">
-                {leadsLoading ? (
-                  <tr>
-                    <td colSpan={13} className="p-12 text-center text-slate-400">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <RefreshCw className="h-6 w-6 text-sky-500 animate-spin" />
-                        <span className="text-xs font-semibold text-slate-600">Loading website inquiries...</span>
-                      </div>
-                    </td>
-                  </tr>
+                {leadsLoading && sortedLeads.length === 0 ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={`skel-${i}`} className="animate-pulse">
+                      <td className="sticky left-0 z-10 bg-white p-3 text-center border-r border-slate-100">
+                        <div className="w-4 h-4 bg-slate-200 rounded mx-auto" />
+                      </td>
+                      <td className="sticky left-[44px] z-10 bg-white p-3 border-r border-slate-100">
+                        <div className="w-3/4 h-3 bg-slate-200 rounded mb-1.5" />
+                        <div className="w-1/2 h-2.5 bg-slate-200 rounded" />
+                      </td>
+                      <td className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-24 h-3 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-16 h-5 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-24 h-5 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-24 h-5 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-20 h-5 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-20 h-5 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-16 h-4 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-20 h-3 bg-slate-200 rounded" /></td>
+                      <td className="p-3"><div className="w-16 h-5 bg-slate-200 rounded mx-auto" /></td>
+                    </tr>
+                  ))
                 ) : sortedLeads.length === 0 ? (
                   <tr>
                     <td colSpan={13} className="p-16 text-center text-slate-400">
@@ -900,24 +916,11 @@ export default function AdminWebsiteLeadsPage() {
                           </div>
                         </td>
 
-                        {/* Contact Person & Email */}
+                        {/* Contact Person (Email moved exclusively to Company Details Drawer per instructions) */}
                         <td className="py-2 px-2.5">
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-semibold text-slate-800 truncate">
-                              {lead.contactPerson || 'Not Provided'}
-                            </span>
-                            {lead.email && (
-                              <a
-                                href={`mailto:${lead.email}`}
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-[11px] text-slate-500 hover:text-sky-600 truncate flex items-center gap-1 mt-0.5"
-                                title={lead.email}
-                              >
-                                <Mail className="h-3 w-3 shrink-0 text-slate-400" />
-                                <span className="truncate">{lead.email}</span>
-                              </a>
-                            )}
-                          </div>
+                          <span className="font-semibold text-slate-800 truncate block">
+                            {lead.contactPerson || 'Not Provided'}
+                          </span>
                         </td>
 
                         {/* Phone (Stacked primary & alternate + click-to-copy, WhatsApp shifted to Action) */}
@@ -1180,6 +1183,7 @@ export default function AdminWebsiteLeadsPage() {
         {isDrawerOpen && selectedLeadIdForDrawer && (
           <LeadDrawer
             leadId={selectedLeadIdForDrawer}
+            initialLead={websiteLeads?.find((l) => l.id === selectedLeadIdForDrawer) || null}
             isOpen={isDrawerOpen}
             onClose={() => {
               setIsDrawerOpen(false);

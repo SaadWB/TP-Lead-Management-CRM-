@@ -297,18 +297,18 @@ export class LeadRepository {
       where.leadSource = { contains: options.leadSource };
     }
     if (options.excludeWebsiteLeads) {
-      const websiteConditions = [
-        { leadSource: { contains: 'website' } },
-        { leadSource: { contains: 'Website' } },
-        { leadSource: 'Website' },
-        { leadSource: 'website' },
-      ];
-      where.NOT = where.NOT || [];
-      if (Array.isArray(where.NOT)) {
-        where.NOT.push(...websiteConditions);
-      } else {
-        where.NOT = [where.NOT, ...websiteConditions];
-      }
+      where.AND = where.AND || [];
+      where.AND.push({
+        OR: [
+          { leadSource: null },
+          {
+            AND: [
+              { NOT: { leadSource: { contains: 'website' } } },
+              { NOT: { leadSource: { contains: 'Website' } } },
+            ],
+          },
+        ],
+      });
     }
     if (options.assignedTelecallerId) {
       const effId = resolveUserAlias(options.assignedTelecallerId) || options.assignedTelecallerId;
@@ -371,14 +371,14 @@ export class LeadRepository {
     // Sorting - default to createdAt asc so table sequence matches sheet order and doesn't shift on update
     const sortField = options.sortBy || 'createdAt';
     const sortDirection = options.sortOrder === 'desc' ? ('desc' as const) : ('asc' as const);
-    let orderBy: any = { createdAt: sortDirection };
+    let orderBy: any = [{ createdAt: sortDirection }, { id: 'asc' }];
 
-    if (sortField === 'createdAt') orderBy = { createdAt: sortDirection };
-    else if (sortField === 'updatedAt') orderBy = { updatedAt: sortDirection };
-    else if (sortField === 'companyName') orderBy = { companyName: sortDirection };
-    else if (sortField === 'priority') orderBy = { priority: sortDirection };
-    else if (sortField === 'nextFollowUpDate') orderBy = { nextFollowUpDate: sortDirection };
-    else orderBy = { createdAt: sortDirection };
+    if (sortField === 'createdAt') orderBy = [{ createdAt: sortDirection }, { id: 'asc' }];
+    else if (sortField === 'updatedAt') orderBy = [{ updatedAt: sortDirection }, { id: 'asc' }];
+    else if (sortField === 'companyName') orderBy = [{ companyName: sortDirection }, { id: 'asc' }];
+    else if (sortField === 'priority') orderBy = [{ priority: sortDirection }, { id: 'asc' }];
+    else if (sortField === 'nextFollowUpDate') orderBy = [{ nextFollowUpDate: sortDirection }, { id: 'asc' }];
+    else orderBy = [{ createdAt: sortDirection }, { id: 'asc' }];
 
     const total = await prisma.lead.count({ where });
     const page = options.page || 1;

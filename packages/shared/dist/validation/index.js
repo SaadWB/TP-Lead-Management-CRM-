@@ -54,7 +54,7 @@ exports.updateUserSchema = zod_1.z.object({
 // In Single-Lead creation: State and City removed; Lead Source & Lead Source Other added
 exports.createLeadSchema = zod_1.z.object({
     companyName: zod_1.z.string().min(2, 'Company name is required'),
-    serviceProduct: zod_1.z.string().min(1, 'Service or product is required'),
+    serviceProduct: zod_1.z.string().optional().nullable().default(''),
     contactPerson: zod_1.z.string().optional().nullable().default(''),
     alternateName: zod_1.z.string().optional().nullable().default(''),
     phone: zod_1.z.string().min(7, 'A valid phone number is required'),
@@ -74,7 +74,7 @@ exports.createLeadSchema = zod_1.z.object({
 });
 exports.updateLeadSchema = zod_1.z.object({
     companyName: zod_1.z.string().min(2, 'Company name is required').optional(),
-    serviceProduct: zod_1.z.string().min(1, 'Service or product is required').optional(),
+    serviceProduct: zod_1.z.string().optional().nullable(),
     contactPerson: zod_1.z.string().optional().nullable(),
     alternateName: zod_1.z.string().optional().nullable(),
     phone: zod_1.z.string().min(7, 'A valid phone number is required').optional(),
@@ -176,9 +176,11 @@ exports.bulkAssignLeadsSchema = zod_1.z.object({
 });
 exports.importCommitSchema = zod_1.z.object({
     fileName: zod_1.z.string(),
+    baseTimestamp: zod_1.z.number().optional(),
     records: zod_1.z.array(zod_1.z.object({
+        rowIndex: zod_1.z.number().optional(),
         companyName: zod_1.z.string(),
-        serviceProduct: zod_1.z.string(),
+        serviceProduct: zod_1.z.string().optional().nullable().default(''),
         contactPerson: zod_1.z.string().optional().nullable().default(''),
         alternateName: zod_1.z.string().optional().nullable().default(''),
         phone: zod_1.z.string(),

@@ -256,6 +256,7 @@ export default function SalesmanDashboardPage() {
 
       <LeadDrawer
         leadId={selectedLeadId}
+        initialLead={assignedLeads.find((l) => l.id === selectedLeadId) || null}
         isOpen={isDrawerOpen}
         onClose={() => {
           setIsDrawerOpen(false);

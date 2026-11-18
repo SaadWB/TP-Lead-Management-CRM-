@@ -63,12 +63,13 @@ export default function SalesmanLeadsPage() {
     );
   });
 
-  // Sort leads ascending according to date per Requirement 1
+  // Sort leads ascending according to date per Requirement 1 & 4
   const sortedLeads = React.useMemo(() => {
     return [...filtered].sort((a, b) => {
       const dateA = new Date(a.nextFollowUpDate || a.createdAt).getTime();
       const dateB = new Date(b.nextFollowUpDate || b.createdAt).getTime();
-      return dateA - dateB;
+      if (dateA !== dateB) return dateA - dateB;
+      return (a.id || '').localeCompare(b.id || '');
     });
   }, [filtered]);
 
@@ -425,11 +426,10 @@ export default function SalesmanLeadsPage() {
                           </td>
                           <td className="py-2 px-2.5">
                             <span
-                              className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${
-                                lead.lastCallOutcome
+                              className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${lead.lastCallOutcome
                                   ? `${ocMeta.bg} ${ocMeta.text} ${ocMeta.border}`
                                   : 'bg-slate-100 text-slate-700 border-slate-200'
-                              }`}
+                                }`}
                             >
                               {lead.lastCallOutcome || lead.pipelineStage}
                             </span>
@@ -578,6 +578,7 @@ export default function SalesmanLeadsPage() {
 
       <LeadDrawer
         leadId={selectedLeadId}
+        initialLead={leads.find((l) => l.id === selectedLeadId) || null}
         isOpen={isDrawerOpen}
         onClose={() => {
           setIsDrawerOpen(false);

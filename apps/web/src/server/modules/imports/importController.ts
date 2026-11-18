@@ -336,6 +336,7 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
 
     const data = importCommitSchema.parse(req.body);
     const { fileName, records, distributionMethod, selectedTelecallerIds } = data;
+    const clientBaseTimestamp = (data as any)?.baseTimestamp || (req.body as any)?.baseTimestamp;
 
     // Filter telecallers
     let telecallerPool: string[] = [];
@@ -378,12 +379,13 @@ export async function commitImport(req: Request, res: Response, next: NextFuncti
 
     // 2. Process records maintaining exact sequence as provided in the uploaded sheet
     const newlyCreatedLeadEntries: { leadId: string; assignedId: string | null }[] = [];
-    const baseTimestamp = Date.now();
+    const baseTimestamp = clientBaseTimestamp || Date.now();
 
     for (let idx = 0; idx < preparedTasks.length; idx++) {
       const { record, assignedId } = preparedTasks[idx];
       // Deterministic increasing timestamp ensuring exact row order from the sheet is preserved
-      const recordCreatedAt = new Date(baseTimestamp + idx * 50);
+      const rowOrderNum = typeof (record as any).rowIndex === 'number' && (record as any).rowIndex > 0 ? (record as any).rowIndex : idx + 1;
+      const recordCreatedAt = new Date(baseTimestamp + rowOrderNum * 1000);
 
       if (record.action === 'SKIP') {
         skippedCount++;

@@ -156,8 +156,8 @@ function AdminLeadsContent() {
     function handleInvalidation(e: Event) {
       const customEvent = e as CustomEvent<{ prefix?: string }>;
       const prefix = customEvent.detail?.prefix;
-      if (!prefix || prefix.startsWith('/leads') || prefix.startsWith('/reports')) {
-        fetchLeads(true);
+      if (!prefix || prefix.startsWith('/leads')) {
+        fetchLeads(false, true);
       }
     }
     function handleLeadCreated(e: Event) {
@@ -173,7 +173,7 @@ function AdminLeadsContent() {
       }
     }
     function handleFocus() {
-      fetchLeads(true);
+      fetchLeads(false, true);
     }
 
     window.addEventListener('crm:cache-invalidated', handleInvalidation);
@@ -230,7 +230,7 @@ function AdminLeadsContent() {
     }
   }
 
-  async function fetchLeads(bypassCache = false) {
+  async function fetchLeads(bypassCache = false, isSilent = false) {
     const params: any = { limit: 2000 };
     if (currentKpi) params.kpi = currentKpi;
     if (stageFilter) params.pipelineStage = stageFilter;
@@ -240,17 +240,17 @@ function AdminLeadsContent() {
     if (telecallerFilter) params.assignedTelecallerId = telecallerFilter;
     if (sourceFilter) params.leadSource = sourceFilter;
 
-    // Fast 0ms cache display: If cached leads exist and bypassCache is false, render table immediately
+    // Fast 0ms cache display: If cached leads exist, render table immediately
     const cacheKey = getCacheKey('/leads', params);
     if (!bypassCache) {
       const cached = getMemoryCache<Lead[]>(cacheKey);
       if (cached && cached.length > 0) {
         setLeads(cached);
         setLoading(false);
-      } else {
+      } else if (!isSilent && leads.length === 0) {
         setLoading(true);
       }
-    } else {
+    } else if (!isSilent && leads.length === 0) {
       setLoading(true);
     }
 
@@ -512,6 +512,10 @@ function AdminLeadsContent() {
 
   const filteredLeads = leads.filter((lead) => {
     if (!lead) return false;
+    // Website source leads only show in website leads module, not in global leads table
+    const src = (lead.leadSource || '').toLowerCase();
+    if (src.includes('website')) return false;
+
     const won = isLeadClosedWon(lead);
     if (stageFilter) {
       if (stageFilter === 'Closed Won') {
@@ -537,12 +541,13 @@ function AdminLeadsContent() {
     );
   });
 
-  // Sort leads ascending according to date per Requirement 1
+  // Sort leads ascending according to date per Requirement 1 & 4
   const sortedLeads = React.useMemo(() => {
     return [...filteredLeads].sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
-      return dateA - dateB; // Ascending order
+      if (dateA !== dateB) return dateA - dateB; // Ascending order
+      return (a.id || '').localeCompare(b.id || '');
     });
   }, [filteredLeads]);
 
@@ -778,9 +783,12 @@ function AdminLeadsContent() {
 
         {/* Mobile Cards View (< md) */}
         <div className="md:hidden space-y-3">
-          {loading ? (
+          {loading && sortedLeads.length === 0 ? (
             <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
-              Loading leads...
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="w-6 h-6 border-2 border-sky-600 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-semibold text-slate-500">Loading leads...</span>
+              </div>
             </div>
           ) : sortedLeads.length === 0 ? (
             <div className="p-8 text-center text-slate-400 bg-white rounded-xl border border-slate-200">
@@ -1121,7 +1129,7 @@ function AdminLeadsContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {loading ? (
+                  {loading && sortedLeads.length === 0 ? (
                     [1, 2, 3, 4, 5, 6].map((i) => (
                       <tr key={i} className="animate-pulse">
                         <td style={{ width: 48 }} className="sticky left-0 z-10 bg-white p-3 text-center border-r border-slate-200/60">
@@ -1733,6 +1741,7 @@ function AdminLeadsContent() {
 
       <LeadDrawer
         leadId={selectedLeadId}
+        initialLead={leads.find((l) => l.id === selectedLeadId) || null}
         isOpen={isDrawerOpen}
         onClose={() => {
           setIsDrawerOpen(false);

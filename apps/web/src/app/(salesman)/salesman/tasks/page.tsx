@@ -23,7 +23,13 @@ export default function SalesmanTasksPage() {
     try {
       const res = await api.get<FollowUpTask[]>('/tasks');
       if (res.success && res.data) {
-        setTasks(res.data);
+        const sorted = [...res.data].sort((a, b) => {
+          const timeA = new Date(a.dueDate || a.createdAt).getTime();
+          const timeB = new Date(b.dueDate || b.createdAt).getTime();
+          if (timeA !== timeB) return timeA - timeB;
+          return (a.id || '').localeCompare(b.id || '');
+        });
+        setTasks(sorted);
       }
     } catch (err) {
       console.error(err);

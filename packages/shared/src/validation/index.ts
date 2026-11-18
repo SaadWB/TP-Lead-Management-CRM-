@@ -66,7 +66,7 @@ export const updateUserSchema = z.object({
 // In Single-Lead creation: State and City removed; Lead Source & Lead Source Other added
 export const createLeadSchema = z.object({
   companyName: z.string().min(2, 'Company name is required'),
-  serviceProduct: z.string().min(1, 'Service or product is required'),
+  serviceProduct: z.string().optional().nullable().default(''),
   contactPerson: z.string().optional().nullable().default(''),
   alternateName: z.string().optional().nullable().default(''),
   phone: z.string().min(7, 'A valid phone number is required'),
@@ -87,7 +87,7 @@ export const createLeadSchema = z.object({
 
 export const updateLeadSchema = z.object({
   companyName: z.string().min(2, 'Company name is required').optional(),
-  serviceProduct: z.string().min(1, 'Service or product is required').optional(),
+  serviceProduct: z.string().optional().nullable(),
   contactPerson: z.string().optional().nullable(),
   alternateName: z.string().optional().nullable(),
   phone: z.string().min(7, 'A valid phone number is required').optional(),
@@ -197,10 +197,12 @@ export const bulkAssignLeadsSchema = z.object({
 
 export const importCommitSchema = z.object({
   fileName: z.string(),
+  baseTimestamp: z.number().optional(),
   records: z.array(
     z.object({
+      rowIndex: z.number().optional(),
       companyName: z.string(),
-      serviceProduct: z.string(),
+      serviceProduct: z.string().optional().nullable().default(''),
       contactPerson: z.string().optional().nullable().default(''),
       alternateName: z.string().optional().nullable().default(''),
       phone: z.string(),

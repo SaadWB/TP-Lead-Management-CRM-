@@ -1555,6 +1555,7 @@ export default function TelecallerTodayPage() {
         {/* Slide-over Lead Detail Drawer */}
         <LeadDrawer
           leadId={drawerLeadId}
+          initialLead={leads.find((l) => l.id === drawerLeadId) || null}
           isOpen={isDrawerOpen}
           onClose={() => {
             setIsDrawerOpen(false);

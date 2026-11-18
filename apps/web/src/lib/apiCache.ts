@@ -20,8 +20,17 @@ export function getCacheKey(endpoint: string, params?: Record<string, any>): str
   return `${endpoint}?${new URLSearchParams(sorted as any).toString()}`;
 }
 
+const SESSION_CACHE_PREFIX = 'crm_c:';
+
 export function setMemoryCache<T>(key: string, data: T): void {
   memoryCache.set(key, { data, timestamp: Date.now() });
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem(SESSION_CACHE_PREFIX + key, JSON.stringify({ data, timestamp: Date.now() }));
+    } catch {
+      // ignore storage quota errors
+    }
+  }
   const set = listeners.get(key);
   if (set) {
     set.forEach((fn) => fn(data));
@@ -30,20 +39,45 @@ export function setMemoryCache<T>(key: string, data: T): void {
 
 export const mutateCache = setMemoryCache;
 
-export function getMemoryCache<T>(key: string, maxAgeMs = 15000): T | undefined {
+export function getMemoryCache<T>(key: string, maxAgeMs = 600000): T | undefined {
   const entry = memoryCache.get(key);
-  if (!entry) return undefined;
-  if (Date.now() - entry.timestamp > maxAgeMs) {
-    memoryCache.delete(key);
-    return undefined;
+  if (entry) {
+    if (Date.now() - entry.timestamp > maxAgeMs) {
+      memoryCache.delete(key);
+      return undefined;
+    }
+    return entry.data;
   }
-  return entry.data;
+  // Fallback to session storage for instant 0ms restoration across page transitions
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = sessionStorage.getItem(SESSION_CACHE_PREFIX + key);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Date.now() - parsed.timestamp <= maxAgeMs) {
+          memoryCache.set(key, parsed);
+          return parsed.data;
+        } else {
+          sessionStorage.removeItem(SESSION_CACHE_PREFIX + key);
+        }
+      }
+    } catch {
+      // ignore JSON parse or storage errors
+    }
+  }
+  return undefined;
 }
 
 export function invalidateCache(prefix?: string): void {
   if (!prefix) {
     memoryCache.clear();
     if (typeof window !== 'undefined') {
+      try {
+        const keys = Object.keys(sessionStorage);
+        keys.forEach((k) => {
+          if (k.startsWith(SESSION_CACHE_PREFIX)) sessionStorage.removeItem(k);
+        });
+      } catch {}
       window.dispatchEvent(new CustomEvent('crm:cache-invalidated', { detail: { prefix: '' } }));
     }
     return;
@@ -56,6 +90,13 @@ export function invalidateCache(prefix?: string): void {
   });
   toDelete.forEach((k) => memoryCache.delete(k));
   if (typeof window !== 'undefined') {
+    try {
+      const targetPref = SESSION_CACHE_PREFIX + prefix;
+      const keys = Object.keys(sessionStorage);
+      keys.forEach((k) => {
+        if (k.startsWith(targetPref)) sessionStorage.removeItem(k);
+      });
+    } catch {}
     window.dispatchEvent(new CustomEvent('crm:cache-invalidated', { detail: { prefix } }));
   }
 }
@@ -118,6 +159,11 @@ export function updateCachedLead(updatedLead: any): void {
         nextList[idx] = { ...nextList[idx], ...updatedLead };
         entry.data = nextList;
         entry.timestamp = Date.now();
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem(SESSION_CACHE_PREFIX + key, JSON.stringify(entry));
+          } catch {}
+        }
         const set = listeners.get(key);
         if (set) {
           set.forEach((fn) => fn(nextList));

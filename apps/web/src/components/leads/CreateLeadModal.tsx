@@ -81,8 +81,8 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource 
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!companyName.trim() || !phone.trim() || !serviceProduct.trim()) {
-      setError('Please fill in Company Name, Service / Product, and Phone Number');
+    if (!companyName.trim() || !phone.trim()) {
+      setError('Please fill in Company Name and Phone Number');
       return;
     }
     setLoading(true);
@@ -94,7 +94,7 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource 
 
       const res = await api.post<Lead>('/leads', {
         companyName: companyName.trim(),
-        serviceProduct: serviceProduct.trim(),
+        serviceProduct: serviceProduct.trim() || undefined,
         contactPerson: contactPerson.trim() || undefined,
         alternateName: alternateName.trim() || undefined,
         phone: phone.trim(),
@@ -210,11 +210,10 @@ export function CreateLeadModal({ isOpen, onClose, onSuccess, defaultLeadSource 
         {/* 7. Service/Product & 8. Website */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
-            label="Service / Product Required"
-            required
+            label="Service / Product"
             value={serviceProduct}
             onChange={(e) => setServiceProduct(e.target.value)}
-            placeholder="e.g. Defense Tender Auto-Tracker"
+            placeholder="e.g. Defense Tender Auto-Tracker (Optional)"
           />
           <Input
             label="Website URL"

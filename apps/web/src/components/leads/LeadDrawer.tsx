@@ -43,6 +43,7 @@ import { WhatsAppButton } from './WhatsAppButton';
 
 interface LeadDrawerProps {
   leadId: string | null;
+  initialLead?: Lead | null;
   isOpen: boolean;
   onClose: () => void;
   onLeadUpdated: (lead: Lead) => void;
@@ -50,6 +51,7 @@ interface LeadDrawerProps {
 
 export function LeadDrawer({
   leadId,
+  initialLead,
   isOpen,
   onClose,
   onLeadUpdated,
@@ -407,7 +409,11 @@ export function LeadDrawer({
       setIsEditingInfo(false);
       return;
     }
-    if (leadId) {
+    // Instant 0ms display: prioritize initialLead passed directly from table row
+    if (initialLead) {
+      setLead(initialLead);
+      setLoading(false);
+    } else if (leadId) {
       // Check cache first for instant 0ms sidebar display without loading spinner
       const cached = findLeadInCache(leadId);
       if (cached) {
@@ -417,11 +423,13 @@ export function LeadDrawer({
         setLead(null);
         setLoading(true);
       }
-      setIsEditingContact(false);
-      setIsEditingInfo(false);
-      loadLead(leadId, !cached);
     }
-  }, [leadId, isOpen]);
+    setIsEditingContact(false);
+    setIsEditingInfo(false);
+    if (leadId) {
+      loadLead(leadId, !initialLead && !findLeadInCache(leadId));
+    }
+  }, [leadId, isOpen, initialLead]);
 
   async function loadLead(id: string, showLoader = false) {
     if (showLoader) setLoading(true);

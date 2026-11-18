@@ -202,6 +202,7 @@ export function ImportWizard() {
 
         return {
           ...row.mapped,
+          rowIndex: row.rowIndex,
           lastContactDate: parseFlexibleDate(row.mapped?.lastContactDate),
           nextFollowUpDate: parseFlexibleDate(row.mapped?.nextFollowUpDate),
           action,
@@ -211,6 +212,7 @@ export function ImportWizard() {
 
       const CHUNK_SIZE = 100;
       const totalRecords = preparedRecords.length;
+      const importSessionTimestamp = Date.now();
       setImportProgress({ current: 0, total: totalRecords, percentage: 0 });
 
       let combinedProcessed = 0;
@@ -223,6 +225,7 @@ export function ImportWizard() {
         const chunk = preparedRecords.slice(i, i + CHUNK_SIZE);
         const res = await api.post<any>('/imports/commit', {
           fileName: file?.name || 'leads_import.xlsx',
+          baseTimestamp: importSessionTimestamp,
           records: chunk,
           distributionMethod,
           selectedTelecallerIds,
