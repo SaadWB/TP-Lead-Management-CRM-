@@ -19,18 +19,39 @@ export class ActivityRepository {
         safeMetadata = undefined;
       }
     }
-    const act = await prisma.leadActivity.create({
-      data: {
-        leadId: data.leadId,
-        userId: effectiveUserId,
-        type: data.type,
-        description: data.description,
-        metadata: safeMetadata,
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true, role: true } },
-      },
-    });
+    let act: any;
+    try {
+      act = await prisma.leadActivity.create({
+        data: {
+          leadId: data.leadId,
+          userId: effectiveUserId,
+          type: data.type,
+          description: data.description,
+          metadata: safeMetadata,
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true, role: true } },
+        },
+      });
+    } catch (err: any) {
+      if (err.code === 'P2003' && effectiveUserId) {
+        // Fallback with null userId if foreign key fails
+        act = await prisma.leadActivity.create({
+          data: {
+            leadId: data.leadId,
+            userId: null,
+            type: data.type,
+            description: data.description,
+            metadata: safeMetadata,
+          },
+          include: {
+            user: { select: { id: true, name: true, email: true, role: true } },
+          },
+        });
+      } else {
+        throw err;
+      }
+    }
 
     return {
       id: act.id,

@@ -15,21 +15,45 @@ export class AssignmentHistoryRepository {
     const newUserId = resolveUserAlias(data.newUserId) || data.newUserId;
     const previousUserId = data.previousUserId ? (resolveUserAlias(data.previousUserId) || data.previousUserId) : null;
 
-    const record = await prisma.leadAssignmentHistory.create({
-      data: {
-        leadId: data.leadId,
-        assignedById,
-        previousUserId,
-        newUserId,
-        roleType: data.roleType as any,
-        handoverSummary: data.handoverSummary || null,
-      },
-      include: {
-        assignedBy: { select: { id: true, name: true, email: true } },
-        previousUser: { select: { id: true, name: true, email: true } },
-        newUser: { select: { id: true, name: true, email: true } },
-      },
-    });
+    let record: any;
+    try {
+      record = await prisma.leadAssignmentHistory.create({
+        data: {
+          leadId: data.leadId,
+          assignedById,
+          previousUserId,
+          newUserId,
+          roleType: data.roleType as any,
+          handoverSummary: data.handoverSummary || null,
+        },
+        include: {
+          assignedBy: { select: { id: true, name: true, email: true } },
+          previousUser: { select: { id: true, name: true, email: true } },
+          newUser: { select: { id: true, name: true, email: true } },
+        },
+      });
+    } catch (err: any) {
+      if (err.code === 'P2003') {
+        // Fallback with previousUserId as null if previousUser failed foreign key
+        record = await prisma.leadAssignmentHistory.create({
+          data: {
+            leadId: data.leadId,
+            assignedById,
+            previousUserId: null,
+            newUserId,
+            roleType: data.roleType as any,
+            handoverSummary: data.handoverSummary || null,
+          },
+          include: {
+            assignedBy: { select: { id: true, name: true, email: true } },
+            previousUser: { select: { id: true, name: true, email: true } },
+            newUser: { select: { id: true, name: true, email: true } },
+          },
+        });
+      } else {
+        throw err;
+      }
+    }
 
     return {
       id: record.id,

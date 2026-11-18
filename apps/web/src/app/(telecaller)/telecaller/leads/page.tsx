@@ -193,6 +193,16 @@ export default function TelecallerMyLeadsPage() {
   const [promptInputDate, setPromptInputDate] = useState<string>('');
   const [promptInputReason, setPromptInputReason] = useState<string>('');
   const [promptInputNextAction, setPromptInputNextAction] = useState<string>('');
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+
+  const copyPhoneToClipboard = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedPhone(text);
+    setTimeout(() => setCopiedPhone(null), 2000);
+  };
 
   // User & URL query parameters sync
   const { user } = useAuth();
@@ -583,11 +593,42 @@ export default function TelecallerMyLeadsPage() {
   }
 
   // Inline Outcome Change
-  // Inline Outcome Change - immediate direct save without blocking modals
   async function handleOutcomeChange(lead: Lead, newOutcome: string) {
     if (!newOutcome || lead.lastCallOutcome === newOutcome) return;
-    const suggestedPipeline = getSuggestedPipelineForOutcome(newOutcome);
-    await executeOutcomeUpdate(lead, newOutcome, suggestedPipeline);
+    const currentPipeline = lead.pipelineStage;
+
+    // Prompt rules:
+    // 1. Date & Time required for Call Back Later and Demo Scheduled
+    if (newOutcome === 'Call Back Later' || newOutcome === 'Demo Scheduled') {
+      setPromptTarget({
+        lead,
+        newOutcome,
+        suggestedPipeline: currentPipeline,
+        type: 'DATE_TIME',
+      });
+      setPromptInputDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
+      setPromptInputNextAction(lead.nextAction || (newOutcome === 'Demo Scheduled' ? 'Conduct software demo' : 'Call back prospect'));
+      return;
+    }
+
+    // 2. Follow-up date required for follow-up outcomes
+    if (
+      ['Demo Interested', 'Details Requested', 'Demo Completed', 'Decision Pending'].includes(newOutcome)
+    ) {
+      if (!lead.nextFollowUpDate) {
+        setPromptTarget({
+          lead,
+          newOutcome,
+          suggestedPipeline: currentPipeline,
+          type: 'FOLLOW_UP_DATE',
+        });
+        setPromptInputDate('');
+        setPromptInputNextAction(lead.nextAction || `Follow up after ${newOutcome}`);
+        return;
+      }
+    }
+
+    await executeOutcomeUpdate(lead, newOutcome, currentPipeline);
   }
 
   // Execute Outcome & Pipeline update
@@ -740,7 +781,7 @@ export default function TelecallerMyLeadsPage() {
       setPromptInputDate('');
       setPromptInputNextAction('');
 
-      await executeOutcomeUpdate(lead, newOutcome, suggestedPipeline, {
+      await executeOutcomeUpdate(lead, newOutcome, lead.pipelineStage, {
         nextFollowUpDate: isoDate,
         nextAction: nextAct,
       });
@@ -1211,8 +1252,8 @@ export default function TelecallerMyLeadsPage() {
 
                   {/* Phone Row with Click-to-Call + WhatsApp */}
                   <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 truncate min-w-0">
-                      <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <div className="flex items-center gap-2 text-sm font-bold text-slate-800 truncate min-w-0">
+                      <Phone className="h-4 w-4 text-emerald-600 shrink-0" />
                       <span className="truncate">{lead.phone}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -1535,26 +1576,24 @@ export default function TelecallerMyLeadsPage() {
                             <div className="flex items-center gap-1.5 min-w-0">
                               <a
                                 href={lead.phone ? `tel:${lead.phone}` : undefined}
-                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1 text-xs font-mono truncate"
+                                className="text-emerald-700 font-bold hover:underline flex items-center gap-1.5 text-[13px] tracking-wide font-mono truncate"
                                 title={lead.phone ? `Call ${lead.phone}` : undefined}
                               >
-                                <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
+                                <Phone className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                                 <span className="truncate">{lead.phone || 'No Phone'}</span>
                               </a>
                               {lead.phone && (
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (navigator?.clipboard) {
-                                      navigator.clipboard.writeText(lead.phone);
-                                      alert(`Copied ${lead.phone}`);
-                                    }
-                                  }}
-                                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0"
+                                  onClick={(e) => copyPhoneToClipboard(lead.phone, e)}
+                                  className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors shrink-0 cursor-pointer"
                                   title="Copy phone number"
                                 >
-                                  <Copy className="h-3 w-3" />
+                                  {copiedPhone === lead.phone ? (
+                                    <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5" />
+                                  )}
                                 </button>
                               )}
                             </div>
@@ -1564,25 +1603,23 @@ export default function TelecallerMyLeadsPage() {
                               <div className="flex items-center gap-1.5 min-w-0 border-t border-slate-100 pt-0.5">
                                 <a
                                   href={`tel:${lead.alternatePhone}`}
-                                  className="text-purple-700 font-medium hover:underline flex items-center gap-1 text-[11px] font-mono truncate"
+                                  className="text-purple-700 font-semibold hover:underline flex items-center gap-1 text-xs font-mono truncate"
                                   title={`Call alternate: ${lead.alternatePhone}`}
                                 >
-                                  <Phone className="h-2.5 w-2.5 text-purple-600 shrink-0" />
+                                  <Phone className="h-3 w-3 text-purple-600 shrink-0" />
                                   <span className="truncate">{lead.alternatePhone}</span>
                                 </a>
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (navigator?.clipboard) {
-                                      navigator.clipboard.writeText(lead.alternatePhone!);
-                                      alert(`Copied ${lead.alternatePhone}`);
-                                    }
-                                  }}
-                                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0"
+                                  onClick={(e) => copyPhoneToClipboard(lead.alternatePhone!, e)}
+                                  className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors shrink-0 cursor-pointer"
                                   title="Copy alternate phone"
                                 >
-                                  <Copy className="h-3 w-3" />
+                                  {copiedPhone === lead.alternatePhone ? (
+                                    <Check className="h-3 w-3 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
                                 </button>
                               </div>
                             )}

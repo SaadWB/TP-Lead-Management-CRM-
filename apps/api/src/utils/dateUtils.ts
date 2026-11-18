@@ -106,10 +106,23 @@ export function parseFlexibleDate(val: any): string | null {
 
 /**
  * Returns a guaranteed valid JavaScript Date object, or null.
+ * Preserves exact time for ISO / datetime-local strings.
  * Never returns an Invalid Date (which crashes Prisma client validation).
  */
 export function parseSafeDateObject(val: any): Date | null {
-  if (val === null || val === undefined) return null;
+  if (val === null || val === undefined || val === '') return null;
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? null : val;
+  }
+  // Try direct date parsing first to preserve hours/minutes/seconds
+  try {
+    const direct = new Date(val);
+    if (!isNaN(direct.getTime())) {
+      return direct;
+    }
+  } catch {}
+
+  // Fallback to flexible parsing (e.g. DD/MM/YYYY or Excel numeric dates)
   const isoStr = parseFlexibleDate(val);
   if (!isoStr) return null;
   const d = new Date(isoStr);

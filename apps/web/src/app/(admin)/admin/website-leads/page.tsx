@@ -96,6 +96,16 @@ export default function AdminWebsiteLeadsPage() {
   const [bulkTelecallerId, setBulkTelecallerId] = useState<string>('');
   const [isBulkAssigning, setIsBulkAssigning] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+
+  const copyPhoneToClipboard = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedPhone(text);
+    setTimeout(() => setCopiedPhone(null), 2000);
+  };
 
   // SWR Hooks
   const queryParams = useMemo(() => ({ leadSource: 'Website', limit: 1000 }), []);
@@ -916,26 +926,24 @@ export default function AdminWebsiteLeadsPage() {
                             <div className="flex items-center gap-1.5">
                               <a
                                 href={lead.phone ? `tel:${lead.phone}` : undefined}
-                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1 text-xs font-mono"
+                                className="text-emerald-700 font-bold hover:underline flex items-center gap-1 text-[13px] tracking-wide font-mono"
                                 title={`Dial ${lead.phone}`}
                               >
-                                <Phone className="h-3 w-3 shrink-0" />
+                                <Phone className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                                 <span>{lead.phone || 'No Phone'}</span>
                               </a>
                               {lead.phone && (
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (navigator?.clipboard) {
-                                      navigator.clipboard.writeText(lead.phone);
-                                      alert(`Copied ${lead.phone}`);
-                                    }
-                                  }}
-                                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0 cursor-pointer"
+                                  onClick={(e) => copyPhoneToClipboard(lead.phone, e)}
+                                  className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors shrink-0 cursor-pointer"
                                   title="Copy phone number"
                                 >
-                                  <Copy className="h-3 w-3" />
+                                  {copiedPhone === lead.phone ? (
+                                    <span className="text-xs text-emerald-600 font-bold">✓</span>
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5" />
+                                  )}
                                 </button>
                               )}
                             </div>
@@ -943,25 +951,23 @@ export default function AdminWebsiteLeadsPage() {
                               <div className="flex items-center gap-1.5 border-t border-slate-100 pt-0.5">
                                 <a
                                   href={`tel:${lead.alternatePhone}`}
-                                  className="text-purple-700 font-medium hover:underline flex items-center gap-1 text-[11px] font-mono"
+                                  className="text-purple-700 font-semibold hover:underline flex items-center gap-1 text-xs font-mono"
                                   title={`Dial alternate: ${lead.alternatePhone}`}
                                 >
-                                  <Phone className="h-2.5 w-2.5 shrink-0" />
+                                  <Phone className="h-3 w-3 text-purple-600 shrink-0" />
                                   <span>{lead.alternatePhone}</span>
                                 </a>
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (navigator?.clipboard) {
-                                      navigator.clipboard.writeText(lead.alternatePhone!);
-                                      alert(`Copied ${lead.alternatePhone}`);
-                                    }
-                                  }}
-                                  className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0 cursor-pointer"
+                                  onClick={(e) => copyPhoneToClipboard(lead.alternatePhone!, e)}
+                                  className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors shrink-0 cursor-pointer"
                                   title="Copy alternate phone"
                                 >
-                                  <Copy className="h-3 w-3" />
+                                  {copiedPhone === lead.alternatePhone ? (
+                                    <span className="text-xs text-emerald-600 font-bold">✓</span>
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
                                 </button>
                               </div>
                             )}

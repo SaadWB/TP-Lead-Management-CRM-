@@ -80,6 +80,16 @@ export function LeadDrawer({
   // Full company info edit state (editable for both Admin & Telecaller)
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [savingInfo, setSavingInfo] = useState(false);
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+
+  const copyPhoneToClipboard = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedPhone(text);
+    setTimeout(() => setCopiedPhone(null), 2000);
+  };
   const [infoForm, setInfoForm] = useState({
     companyName: '',
     contactPerson: '',
@@ -1030,27 +1040,25 @@ export function LeadDrawer({
                             <div className="flex-1 min-w-0">
                               <span className="text-[11px] text-slate-400 block font-medium">Primary Phone</span>
                               <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className="text-xs font-bold text-slate-800 font-mono">{lead.phone}</span>
+                                <span className="text-sm font-bold text-slate-800 font-mono tracking-wide">{lead.phone}</span>
                                 <button
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (navigator?.clipboard) {
-                                      navigator.clipboard.writeText(lead.phone);
-                                      alert(`Copied ${lead.phone} to clipboard`);
-                                    }
-                                  }}
+                                  onClick={(e) => copyPhoneToClipboard(lead.phone, e)}
                                   className="p-1 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded cursor-pointer transition-colors"
                                   title="Copy Primary Phone on click"
                                 >
-                                  <Copy className="h-3 w-3" />
+                                  {copiedPhone === lead.phone ? (
+                                    <span className="text-xs text-emerald-600 font-bold">✓</span>
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5" />
+                                  )}
                                 </button>
                                 <a
                                   href={`tel:${lead.phone}`}
                                   className="p-1 text-sky-600 hover:bg-sky-50 rounded cursor-pointer"
                                   title="Call Primary Phone"
                                 >
-                                  <PhoneCall className="h-3 w-3" />
+                                  <PhoneCall className="h-3.5 w-3.5" />
                                 </a>
                                 <a
                                   href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}`}
@@ -1059,7 +1067,7 @@ export function LeadDrawer({
                                   className="p-1 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer"
                                   title="WhatsApp"
                                 >
-                                  <MessageSquare className="h-3 w-3" />
+                                  <MessageSquare className="h-3.5 w-3.5" />
                                 </a>
                               </div>
                             </div>
@@ -1083,20 +1091,18 @@ export function LeadDrawer({
                               <span className="text-[11px] text-slate-400 block font-medium">Alternate Phone</span>
                               {lead.alternatePhone ? (
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                  <span className="text-xs font-bold text-slate-800 font-mono">{lead.alternatePhone}</span>
+                                  <span className="text-sm font-semibold text-slate-800 font-mono tracking-wide">{lead.alternatePhone}</span>
                                   <button
                                     type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (navigator?.clipboard) {
-                                        navigator.clipboard.writeText(lead.alternatePhone!);
-                                        alert(`Copied ${lead.alternatePhone} to clipboard`);
-                                      }
-                                    }}
+                                    onClick={(e) => copyPhoneToClipboard(lead.alternatePhone!, e)}
                                     className="p-1 text-slate-400 hover:text-sky-600 hover:bg-sky-50 rounded cursor-pointer transition-colors"
                                     title="Copy Alternate Phone on click"
                                   >
-                                    <Copy className="h-3 w-3" />
+                                    {copiedPhone === lead.alternatePhone ? (
+                                      <span className="text-xs text-emerald-600 font-bold">✓</span>
+                                    ) : (
+                                      <Copy className="h-3.5 w-3.5" />
+                                    )}
                                   </button>
                                   <a
                                     href={`tel:${lead.alternatePhone}`}

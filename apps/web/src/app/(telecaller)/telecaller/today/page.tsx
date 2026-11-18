@@ -401,11 +401,43 @@ export default function TelecallerTodayPage() {
     }
   }
 
-  // Inline Outcome Change (Dropdown) - Direct instant update without blocking prompts
+  // Inline Outcome Change (Dropdown)
   async function handleOutcomeChange(lead: Lead, newOutcome: string) {
     if (!newOutcome || lead.lastCallOutcome === newOutcome) return;
-    const suggestedPipeline = getSuggestedPipelineForOutcome(newOutcome);
-    await executeOutcomeUpdate(lead, newOutcome, suggestedPipeline);
+    const currentPipeline = lead.pipelineStage;
+
+    // Prompt rules:
+    // 1. Date & Time required for Call Back Later and Demo Scheduled
+    if (newOutcome === 'Call Back Later' || newOutcome === 'Demo Scheduled') {
+      setPromptTarget({
+        lead,
+        newOutcome,
+        suggestedPipeline: currentPipeline,
+        type: 'DATE_TIME',
+      });
+      setPromptInputDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
+      setPromptInputNextAction(lead.nextAction || (newOutcome === 'Demo Scheduled' ? 'Conduct software demo' : 'Call back prospect'));
+      return;
+    }
+
+    // 2. Follow-up date required for follow-up outcomes
+    if (
+      ['Demo Interested', 'Details Requested', 'Demo Completed', 'Decision Pending'].includes(newOutcome)
+    ) {
+      if (!lead.nextFollowUpDate) {
+        setPromptTarget({
+          lead,
+          newOutcome,
+          suggestedPipeline: currentPipeline,
+          type: 'FOLLOW_UP_DATE',
+        });
+        setPromptInputDate('');
+        setPromptInputNextAction(lead.nextAction || `Follow up after ${newOutcome}`);
+        return;
+      }
+    }
+
+    await executeOutcomeUpdate(lead, newOutcome, currentPipeline);
   }
 
   // Execute Outcome Update
@@ -549,7 +581,7 @@ export default function TelecallerTodayPage() {
       setPromptInputDate('');
       setPromptInputNextAction('');
 
-      await executeOutcomeUpdate(lead, newOutcome, suggestedPipeline, {
+      await executeOutcomeUpdate(lead, newOutcome, lead.pipelineStage, {
         nextFollowUpDate: isoDate,
         nextAction: nextAct,
       });
@@ -1138,10 +1170,10 @@ export default function TelecallerTodayPage() {
                             <div className="flex items-center justify-between gap-1 group/p1">
                               <a
                                 href={lead.phone ? `tel:${lead.phone}` : undefined}
-                                className="text-emerald-700 font-semibold hover:underline flex items-center gap-1.5 text-xs font-mono truncate"
+                                className="text-emerald-700 font-bold hover:underline flex items-center gap-1.5 text-[13px] tracking-wide font-mono truncate"
                                 title={lead.phone ? `Dial ${lead.phone}` : undefined}
                               >
-                                <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
+                                <Phone className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                                 <span className="truncate">{lead.phone || 'No Phone'}</span>
                               </a>
                               {lead.phone && (
@@ -1151,9 +1183,9 @@ export default function TelecallerTodayPage() {
                                   title="Copy phone"
                                 >
                                   {copiedPhone === lead.phone ? (
-                                    <span className="text-[10px] text-emerald-600 font-bold">✓</span>
+                                    <span className="text-xs text-emerald-600 font-bold">✓</span>
                                   ) : (
-                                    <Copy className="h-3 w-3" />
+                                    <Copy className="h-3.5 w-3.5" />
                                   )}
                                 </button>
                               )}
@@ -1162,10 +1194,10 @@ export default function TelecallerTodayPage() {
                               <div className="flex items-center justify-between gap-1 group/p2 pt-0.5 border-t border-slate-100">
                                 <a
                                   href={`tel:${lead.alternatePhone}`}
-                                  className="text-slate-600 font-medium hover:underline flex items-center gap-1.5 text-[11px] font-mono truncate"
+                                  className="text-slate-700 font-semibold hover:underline flex items-center gap-1.5 text-xs font-mono truncate"
                                   title={`Alt: ${lead.alternatePhone}`}
                                 >
-                                  <Phone className="h-2.5 w-2.5 text-slate-400 shrink-0" />
+                                  <Phone className="h-3 w-3 text-slate-500 shrink-0" />
                                   <span className="truncate">{lead.alternatePhone}</span>
                                 </a>
                                 <button
@@ -1174,7 +1206,7 @@ export default function TelecallerTodayPage() {
                                   title="Copy alternate phone"
                                 >
                                   {copiedPhone === lead.alternatePhone ? (
-                                    <span className="text-[10px] text-emerald-600 font-bold">✓</span>
+                                    <span className="text-xs text-emerald-600 font-bold">✓</span>
                                   ) : (
                                     <Copy className="h-3 w-3" />
                                   )}

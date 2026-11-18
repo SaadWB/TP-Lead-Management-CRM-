@@ -113,6 +113,21 @@ function AdminLeadsContent() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Outcome Prompt Modal State
+  const [outcomePromptLead, setOutcomePromptLead] = useState<{ lead: Lead; newOutcome: string } | null>(null);
+  const [outcomePromptDate, setOutcomePromptDate] = useState<string>('');
+
+  // Single-click copy state
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+  const copyPhoneToClipboard = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+    setCopiedPhone(text);
+    setTimeout(() => setCopiedPhone(null), 2000);
+  };
+
   // Pagination (Default 150+ rows per page)
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(150);
@@ -320,10 +335,50 @@ function AdminLeadsContent() {
 
   // Row-level call outcome update
   async function handleSingleOutcomeUpdate(leadId: string, lastCallOutcome: string) {
+    const lead = leads.find((l) => l.id === leadId);
+    if (!lead) return;
+
+    if (lastCallOutcome === 'Call Back Later' || lastCallOutcome === 'Demo Scheduled') {
+      setOutcomePromptLead({ lead, newOutcome: lastCallOutcome });
+      setOutcomePromptDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
+      return;
+    }
+
     try {
       const res = await api.patch<Lead>(`/leads/${leadId}`, { lastCallOutcome: lastCallOutcome || null });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === leadId ? res.data! : l)));
+        updateCachedLead(res.data);
+        invalidateCache('/reports/dashboard');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to update call outcome');
+    }
+  }
+
+  async function handleConfirmOutcomePrompt() {
+    if (!outcomePromptLead) return;
+    const { lead, newOutcome } = outcomePromptLead;
+    if (!outcomePromptDate) {
+      alert('Please select a valid date and time.');
+      return;
+    }
+    const selectedTime = new Date(outcomePromptDate).getTime();
+    if (isNaN(selectedTime) || selectedTime < Date.now() - 60000) {
+      alert('Past dates are not allowed. Please choose a future date & time.');
+      return;
+    }
+    const isoDate = new Date(outcomePromptDate).toISOString();
+    setOutcomePromptLead(null);
+    setOutcomePromptDate('');
+
+    try {
+      const res = await api.patch<Lead>(`/leads/${lead.id}`, {
+        lastCallOutcome: newOutcome,
+        nextFollowUpDate: isoDate,
+      });
+      if (res.success && res.data) {
+        setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
         updateCachedLead(res.data);
         invalidateCache('/reports/dashboard');
       }
@@ -1152,57 +1207,53 @@ function AdminLeadsContent() {
                           >
                             <div className="flex flex-col gap-1 min-w-0">
                               {/* Primary Phone */}
-                              <div className="flex items-center gap-1 min-w-0">
+                              <div className="flex items-center gap-1.5 min-w-0">
                                 <a
                                   href={`tel:${lead.phone}`}
-                                  className="text-emerald-700 font-semibold hover:underline flex items-center gap-1 min-w-0 truncate text-[11px]"
+                                  className="text-emerald-700 font-bold hover:underline flex items-center gap-1 min-w-0 truncate text-[13px] tracking-wide font-mono"
                                   title={`Call ${lead.phone}`}
                                 >
-                                  <Phone className="h-3 w-3 shrink-0" />
+                                  <Phone className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                                   <span className="truncate">{lead.phone}</span>
                                 </a>
                                 {lead.phone && (
                                   <button
                                     type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (navigator?.clipboard) {
-                                        navigator.clipboard.writeText(lead.phone);
-                                        alert(`Copied ${lead.phone}`);
-                                      }
-                                    }}
-                                    className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0 cursor-pointer"
+                                    onClick={(e) => copyPhoneToClipboard(lead.phone, e)}
+                                    className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors shrink-0 cursor-pointer"
                                     title="Click to copy primary phone"
                                   >
-                                    <Copy className="h-3 w-3" />
+                                    {copiedPhone === lead.phone ? (
+                                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="h-3.5 w-3.5" />
+                                    )}
                                   </button>
                                 )}
                               </div>
 
                               {/* Alternate Phone if present (Stacked upar niche) */}
                               {lead.alternatePhone && (
-                                <div className="flex items-center gap-1 min-w-0 border-t border-slate-100 pt-0.5">
+                                <div className="flex items-center gap-1.5 min-w-0 border-t border-slate-100 pt-0.5">
                                   <a
                                     href={`tel:${lead.alternatePhone}`}
-                                    className="text-purple-700 font-medium hover:underline flex items-center gap-1 min-w-0 truncate text-[11px]"
+                                    className="text-purple-700 font-semibold hover:underline flex items-center gap-1 min-w-0 truncate text-xs font-mono"
                                     title={`Call alternate: ${lead.alternatePhone}`}
                                   >
-                                    <Phone className="h-2.5 w-2.5 shrink-0" />
+                                    <Phone className="h-3 w-3 shrink-0 text-purple-600" />
                                     <span className="truncate">{lead.alternatePhone}</span>
                                   </a>
                                   <button
                                     type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (navigator?.clipboard) {
-                                        navigator.clipboard.writeText(lead.alternatePhone!);
-                                        alert(`Copied ${lead.alternatePhone}`);
-                                      }
-                                    }}
-                                    className="p-0.5 text-slate-400 hover:text-sky-600 rounded transition-colors shrink-0 cursor-pointer"
+                                    onClick={(e) => copyPhoneToClipboard(lead.alternatePhone!, e)}
+                                    className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors shrink-0 cursor-pointer"
                                     title="Click to copy alternate phone"
                                   >
-                                    <Copy className="h-3 w-3" />
+                                    {copiedPhone === lead.alternatePhone ? (
+                                      <Check className="h-3 w-3 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="h-3 w-3" />
+                                    )}
                                   </button>
                                 </div>
                               )}
@@ -1592,6 +1643,54 @@ function AdminLeadsContent() {
                 loading={bulkDeleting}
               >
                 Yes, Delete {selectedLeadIds.length} Leads
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Date & Time Prompt Modal for Call Back Later / Demo Scheduled */}
+      {outcomePromptLead && (
+        <Modal
+          isOpen={true}
+          onClose={() => setOutcomePromptLead(null)}
+          title={`${outcomePromptLead.newOutcome} Details`}
+          description={`Set follow-up date and time for ${outcomePromptLead.lead.companyName}`}
+          maxWidth="md"
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-slate-600">
+              A follow-up date and time is required when selecting{' '}
+              <strong className="text-slate-900">{outcomePromptLead.newOutcome}</strong>.
+            </p>
+            <div>
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                Date & Time (Cannot be in the past) *
+              </label>
+              <input
+                type="datetime-local"
+                required
+                min={new Date().toISOString().slice(0, 16)}
+                value={outcomePromptDate}
+                onChange={(e) => setOutcomePromptDate(e.target.value)}
+                className="w-full text-xs border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setOutcomePromptLead(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleConfirmOutcomePrompt}
+              >
+                Confirm & Save
               </Button>
             </div>
           </div>

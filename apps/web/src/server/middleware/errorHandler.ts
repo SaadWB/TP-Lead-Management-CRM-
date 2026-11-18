@@ -28,13 +28,21 @@ export function errorHandler(
   // 3. Database / Prisma driver errors
   if (err.name?.startsWith('PrismaClient') || (err as any).code?.startsWith('P')) {
     console.error('[DATABASE ERROR]', err);
-    sendError(
-      res,
-      process.env.NODE_ENV === 'production'
-        ? 'A database error occurred. Please verify your data format and try again.'
-        : `Database Error: ${err.message}`,
-      500
-    );
+    let userMsg = 'A database error occurred. Please verify your data format and try again.';
+    const pCode = (err as any).code;
+    if (pCode === 'P2002') {
+      const target = (err as any).meta?.target;
+      userMsg = `Duplicate entry error: ${target ? `Field '${target}' already exists.` : 'A record with these details already exists.'}`;
+    } else if (pCode === 'P2003') {
+      userMsg = 'Database relation error: The referenced record or user was not found.';
+    } else if (pCode === 'P2025') {
+      userMsg = 'The requested database record was not found.';
+    } else if (err.name === 'PrismaClientValidationError') {
+      userMsg = 'Invalid data format provided for database operation.';
+    } else if (process.env.NODE_ENV !== 'production') {
+      userMsg = `Database Error: ${err.message}`;
+    }
+    sendError(res, userMsg, 500);
     return;
   }
 

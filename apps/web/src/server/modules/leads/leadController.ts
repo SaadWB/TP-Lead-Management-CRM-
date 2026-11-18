@@ -482,10 +482,10 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       targetOutcome = normalizeCallOutcome(targetOutcome);
     }
 
-    // If outcome is provided but not pipeline, suggest default pipeline
-    if (targetOutcome && !targetPipeline) {
-      targetPipeline = getSuggestedPipelineForOutcome(targetOutcome);
-    } else if (!targetPipeline && !targetOutcome) {
+    // Pipeline status must stay as selected/current; do not automatically overwrite when selecting call outcome
+    if (data.pipelineStage) {
+      targetPipeline = data.pipelineStage;
+    } else {
       targetPipeline = oldStage;
     }
 
@@ -495,17 +495,19 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       ? await prisma.callOutcomeOption.findFirst({ where: { name: targetOutcome } })
       : null;
 
-    if (outcomeOption?.suggestedPipelineStage && !data.pipelineStage) {
-      targetPipeline = outcomeOption.suggestedPipelineStage;
-    }
+    const requiresDateTime =
+      outcomeOption?.requiresDateTime ||
+      targetOutcome === 'Call Back Later' ||
+      targetOutcome === 'Demo Scheduled';
 
-    const closesLead =
-      outcomeOption?.closesLead ||
-      targetOutcome === 'Not Interested' ||
-      targetOutcome === 'Wrong Number';
-
-    if (closesLead) {
-      targetPipeline = outcomeOption?.suggestedPipelineStage || 'Closed';
+    if (requiresDateTime) {
+      if (!followUpDate) {
+        throw new BadRequestError(`Date and time are required when selecting "${targetOutcome}".`);
+      }
+      const parsedTime = new Date(followUpDate).getTime();
+      if (isNaN(parsedTime) || parsedTime < Date.now() - 60000) {
+        throw new BadRequestError('Date and time cannot be in the past.');
+      }
     }
 
 

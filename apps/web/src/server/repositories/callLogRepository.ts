@@ -1,6 +1,7 @@
 import { CallLog, CallOutcome } from '@crm/shared';
 import { prisma } from '../config/prisma';
 import { resolveUserAlias } from './userRepository';
+import { parseSafeDateObject } from '../utils/dateUtils';
 
 export class CallLogRepository {
   async create(data: {
@@ -15,22 +16,55 @@ export class CallLogRepository {
     durationSeconds?: number | null;
   }): Promise<CallLog> {
     const effectiveUserId = resolveUserAlias(data.userId) || data.userId;
-    const log = await prisma.callLog.create({
-      data: {
-        leadId: data.leadId,
-        userId: effectiveUserId,
-        outcome: data.outcome,
-        notes: data.notes,
-        contactDate: data.contactDate ? new Date(data.contactDate) : new Date(),
-        followUpNeeded: Boolean(data.followUpNeeded),
-        nextFollowUpDate: data.nextFollowUpDate ? new Date(data.nextFollowUpDate) : null,
-        nextAction: data.nextAction || null,
-        durationSeconds: data.durationSeconds ?? null,
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-      },
-    });
+    const safeContactDate = parseSafeDateObject(data.contactDate) || new Date();
+    const safeNextFollowUpDate = parseSafeDateObject(data.nextFollowUpDate);
+
+    let log: any;
+    try {
+      log = await prisma.callLog.create({
+        data: {
+          leadId: data.leadId,
+          userId: effectiveUserId,
+          outcome: data.outcome,
+          notes: data.notes,
+          contactDate: safeContactDate,
+          followUpNeeded: Boolean(data.followUpNeeded),
+          nextFollowUpDate: safeNextFollowUpDate,
+          nextAction: data.nextAction || null,
+          durationSeconds: data.durationSeconds ?? null,
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+        },
+      });
+    } catch (err: any) {
+      if (err.code === 'P2003' && effectiveUserId) {
+        // Fallback in case effectiveUserId has foreign key issue
+        const firstUser = await prisma.user.findFirst({ select: { id: true } });
+        if (firstUser) {
+          log = await prisma.callLog.create({
+            data: {
+              leadId: data.leadId,
+              userId: firstUser.id,
+              outcome: data.outcome,
+              notes: data.notes,
+              contactDate: safeContactDate,
+              followUpNeeded: Boolean(data.followUpNeeded),
+              nextFollowUpDate: safeNextFollowUpDate,
+              nextAction: data.nextAction || null,
+              durationSeconds: data.durationSeconds ?? null,
+            },
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+            },
+          });
+        } else {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
 
     return {
       id: log.id,

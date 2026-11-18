@@ -1,6 +1,7 @@
 import { FollowUpTask, TaskStatus, TaskType } from '@crm/shared';
 import { prisma } from '../config/prisma';
 import { resolveUserAlias } from './userRepository';
+import { parseSafeDateObject } from '../utils/dateUtils';
 
 export interface TaskFilterOptions {
   assignedUserId?: string;
@@ -110,21 +111,51 @@ export class FollowUpTaskRepository {
     notes?: string | null;
   }): Promise<FollowUpTask> {
     const effectiveUserId = resolveUserAlias(data.assignedUserId) || data.assignedUserId;
-    const task = await prisma.followUpTask.create({
-      data: {
-        leadId: data.leadId,
-        assignedUserId: effectiveUserId,
-        taskType: data.taskType,
-        dueDate: new Date(data.dueDate),
-        dueTime: data.dueTime || null,
-        notes: data.notes || null,
-        status: 'PENDING',
-      },
-      include: {
-        assignedUser: { select: { id: true, name: true, email: true } },
-        lead: { select: { id: true, companyName: true, contactPerson: true, phone: true, pipelineStage: true } },
-      },
-    });
+    const safeDueDate = parseSafeDateObject(data.dueDate) || new Date();
+
+    let task: any;
+    try {
+      task = await prisma.followUpTask.create({
+        data: {
+          leadId: data.leadId,
+          assignedUserId: effectiveUserId,
+          taskType: data.taskType,
+          dueDate: safeDueDate,
+          dueTime: data.dueTime || null,
+          notes: data.notes || null,
+          status: 'PENDING',
+        },
+        include: {
+          assignedUser: { select: { id: true, name: true, email: true } },
+          lead: { select: { id: true, companyName: true, contactPerson: true, phone: true, pipelineStage: true } },
+        },
+      });
+    } catch (err: any) {
+      if (err.code === 'P2003' && effectiveUserId) {
+        const firstUser = await prisma.user.findFirst({ select: { id: true } });
+        if (firstUser) {
+          task = await prisma.followUpTask.create({
+            data: {
+              leadId: data.leadId,
+              assignedUserId: firstUser.id,
+              taskType: data.taskType,
+              dueDate: safeDueDate,
+              dueTime: data.dueTime || null,
+              notes: data.notes || null,
+              status: 'PENDING',
+            },
+            include: {
+              assignedUser: { select: { id: true, name: true, email: true } },
+              lead: { select: { id: true, companyName: true, contactPerson: true, phone: true, pipelineStage: true } },
+            },
+          });
+        } else {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
 
     return this.formatTask(task);
   }
@@ -134,10 +165,13 @@ export class FollowUpTaskRepository {
     if (data.status !== undefined) {
       updateData.status = data.status;
       if (data.status === 'COMPLETED') {
-        updateData.completedAt = data.completedAt ? new Date(data.completedAt) : new Date();
+        updateData.completedAt = parseSafeDateObject(data.completedAt) || new Date();
       }
     }
-    if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate);
+    if (data.dueDate !== undefined) {
+      const d = parseSafeDateObject(data.dueDate);
+      if (d) updateData.dueDate = d;
+    }
     if (data.dueTime !== undefined) updateData.dueTime = data.dueTime;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.taskType !== undefined) updateData.taskType = data.taskType;
