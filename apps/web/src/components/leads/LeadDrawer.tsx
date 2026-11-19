@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Phone,
@@ -337,6 +337,11 @@ export function LeadDrawer({
   // Save all Company Info & Primary Contact inputs (both Admin and Telecaller)
   async function handleSaveCompanyInfo() {
     if (!lead) return;
+    let formattedWebsite = infoForm.website.trim() || null;
+    if (formattedWebsite && !formattedWebsite.startsWith('http://') && !formattedWebsite.startsWith('https://')) {
+      formattedWebsite = `https://${formattedWebsite}`;
+    }
+
     const patchPayload: any = {
       companyName: infoForm.companyName.trim() || lead.companyName,
       contactPerson: infoForm.contactPerson.trim() || null,
@@ -344,7 +349,7 @@ export function LeadDrawer({
       phone: infoForm.phone.trim() || lead.phone,
       alternatePhone: infoForm.alternatePhone.trim() || null,
       email: infoForm.email.trim() || null,
-      website: infoForm.website.trim() || null,
+      website: formattedWebsite,
       serviceProduct: infoForm.serviceProduct.trim() || lead.serviceProduct,
       city: infoForm.city.trim() || null,
       state: infoForm.state.trim() || null,
@@ -383,9 +388,11 @@ export function LeadDrawer({
     }
   }
 
-  // Populate infoForm whenever lead changes
+  const currentLeadIdRef = useRef<string | null>(null);
+
+  // Populate infoForm whenever lead changes, preserving user input during active edit
   useEffect(() => {
-    if (lead) {
+    if (lead && !isEditingInfo) {
       setInfoForm({
         companyName: lead.companyName || '',
         contactPerson: lead.contactPerson || '',
@@ -407,8 +414,25 @@ export function LeadDrawer({
       setLead(null);
       setIsEditingContact(false);
       setIsEditingInfo(false);
+      currentLeadIdRef.current = null;
       return;
     }
+
+    // If the drawer is already open for this exact leadId, do NOT reset edit states or re-fetch!
+    if (currentLeadIdRef.current === leadId && leadId) {
+      // If we didn't have lead yet but initialLead arrived, populate it without touching edit mode
+      if (!lead && initialLead) {
+        setLead(initialLead);
+        setLoading(false);
+      }
+      return;
+    }
+
+    // When opening or switching to a different lead, initialize
+    currentLeadIdRef.current = leadId || null;
+    setIsEditingContact(false);
+    setIsEditingInfo(false);
+
     // Instant 0ms display: prioritize initialLead passed directly from table row
     if (initialLead) {
       setLead(initialLead);
@@ -424,8 +448,7 @@ export function LeadDrawer({
         setLoading(true);
       }
     }
-    setIsEditingContact(false);
-    setIsEditingInfo(false);
+
     if (leadId) {
       loadLead(leadId, !initialLead && !findLeadInCache(leadId));
     }
@@ -875,16 +898,16 @@ export function LeadDrawer({
                               type="button"
                               onClick={() => {
                                 setInfoForm({
-                                  companyName: lead.companyName || '',
-                                  contactPerson: lead.contactPerson || '',
-                                  alternateName: lead.alternateName || '',
-                                  phone: lead.phone || '',
-                                  alternatePhone: lead.alternatePhone || '',
-                                  email: lead.email || '',
-                                  website: lead.website || '',
-                                  serviceProduct: lead.serviceProduct || '',
-                                  city: lead.city || '',
-                                  state: lead.state || '',
+                                  companyName: lead?.companyName || '',
+                                  contactPerson: lead?.contactPerson || '',
+                                  alternateName: lead?.alternateName || '',
+                                  phone: lead?.phone || '',
+                                  alternatePhone: lead?.alternatePhone || '',
+                                  email: lead?.email || '',
+                                  website: lead?.website || '',
+                                  serviceProduct: lead?.serviceProduct || '',
+                                  city: lead?.city || '',
+                                  state: lead?.state || '',
                                 });
                                 setIsEditingInfo(true);
                               }}
