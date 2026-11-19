@@ -8,6 +8,7 @@ import { Input } from '../ui/Input';
 import { Lead, SalesStage, SALES_STAGE_OPTIONS, LOST_REASONS } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Calendar, Clock, AlertCircle, Award, CheckCircle2 } from 'lucide-react';
+import { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
 
 interface UpdateSalesStageModalProps {
   isOpen: boolean;
@@ -35,7 +36,7 @@ export function UpdateSalesStageModal({
   useEffect(() => {
     if (lead) {
       setSalesStage(initialStage || (lead.salesStage as SalesStage) || 'ASSIGNED');
-      setFollowUpDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
+      setFollowUpDate(lead.nextFollowUpDate ? toDatetimeLocalValue(lead.nextFollowUpDate) : '');
       setNotes('');
       setError('');
     }
@@ -44,7 +45,7 @@ export function UpdateSalesStageModal({
   if (!lead) return null;
 
   const isScheduleRequired = salesStage === 'DEMO_SCHEDULED' || salesStage === 'FOLLOW_UP_REQUIRED';
-  const nowString = new Date().toISOString().slice(0, 16);
+  const nowString = getMinDatetimeLocal();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -71,7 +72,7 @@ export function UpdateSalesStageModal({
       };
 
       if (isScheduleRequired) {
-        payload.followUpDate = followUpDate;
+        payload.followUpDate = toIsoFromDatetimeLocal(followUpDate);
       }
 
       if (salesStage === 'CONVERTED') {

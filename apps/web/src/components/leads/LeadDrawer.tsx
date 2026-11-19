@@ -38,6 +38,7 @@ import { TaskModal } from './TaskModal';
 import { HandoverModal } from '../kanban/HandoverModal';
 import { UpdateSalesStageModal } from './UpdateSalesStageModal';
 import { ScheduleFollowUpModal } from '../kanban/ScheduleFollowUpModal';
+import { FollowUpDatePicker } from './FollowUpDatePicker';
 import { useAuth } from '@/lib/authContext';
 import { WhatsAppButton } from './WhatsAppButton';
 
@@ -868,18 +869,25 @@ export function LeadDrawer({
 
                       {/* Next Follow-up Commitment */}
                       <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider mb-1.5">
                           Next Follow-up
                         </span>
-                        <div className="mt-1.5">
-                          {lead.nextFollowUpDate ? (
-                            <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 block truncate">
-                              {formatDateTime(lead.nextFollowUpDate)}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">No follow-up set</span>
-                          )}
-                        </div>
+                        <FollowUpDatePicker
+                          value={lead.nextFollowUpDate}
+                          onChange={async (iso) => {
+                            try {
+                              const res = await api.patch<Lead>(`/leads/${lead.id}`, { nextFollowUpDate: iso });
+                              if (res.success && res.data) {
+                                const merged = { ...lead, ...res.data };
+                                setLead(merged);
+                                onLeadUpdated(merged);
+                                updateCachedLead(merged);
+                              }
+                            } catch (err: any) {
+                              alert(err.message || 'Failed to update follow-up date');
+                            }
+                          }}
+                        />
                       </div>
                     </div>
 

@@ -5,10 +5,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from './dateUtils';
+
 export function formatDate(dateString?: string | null): string {
   if (!dateString) return '—';
   try {
+    // Prevent UTC midnight off-by-one error for date-only strings (e.g. YYYY-MM-DD)
+    if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString.trim())) {
+      const [y, m, d] = dateString.trim().split('-').map(Number);
+      const localD = new Date(y, m - 1, d);
+      return localD.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
     const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '—';
     return d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -22,7 +35,17 @@ export function formatDate(dateString?: string | null): string {
 export function formatDateTime(dateString?: string | null): string {
   if (!dateString) return '—';
   try {
+    if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateString.trim())) {
+      const [y, m, d] = dateString.trim().split('-').map(Number);
+      const localD = new Date(y, m - 1, d);
+      return localD.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
     const d = new Date(dateString);
+    if (isNaN(d.getTime())) return '—';
     return d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',

@@ -11,7 +11,7 @@ import { api } from '@/lib/apiClient';
 import { useSWRData, updateCachedLead } from '@/lib/apiCache';
 import { Award, RefreshCw, Edit3, Phone, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import { WhatsAppButton } from '@/components/leads/WhatsAppButton';
-import { formatDate, getPriorityColor, getPriorityLabel, getStageColor, getOutcomeColor } from '@/lib/utils';
+import { formatDate, formatDateTime, getPriorityColor, getPriorityLabel, getStageColor, getOutcomeColor } from '@/lib/utils';
 
 const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
   ssr: false,
@@ -251,7 +251,7 @@ export default function SalesmanLeadsPage() {
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2 flex-wrap">
                     {lead.nextFollowUpDate ? (
                       <span className="text-[11px] font-bold text-cyan-700">
-                        Due: {formatDate(lead.nextFollowUpDate)}
+                        Due: {formatDateTime(lead.nextFollowUpDate)}
                       </span>
                     ) : (
                       <span className="text-[11px] text-slate-400">
@@ -468,7 +468,7 @@ export default function SalesmanLeadsPage() {
                           <td className="py-2 px-2.5 text-slate-500 font-mono text-[11px]">
                             {lead.nextFollowUpDate ? (
                               <span className="text-cyan-700 font-bold block">
-                                Due: {formatDate(lead.nextFollowUpDate)}
+                                Due: {formatDateTime(lead.nextFollowUpDate)}
                               </span>
                             ) : null}
                             <span>{formatDate(lead.lastContactDate)}</span>

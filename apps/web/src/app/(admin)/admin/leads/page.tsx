@@ -19,7 +19,8 @@ import {
   isLeadClosedWon,
 } from '@crm/shared';
 import { api } from '@/lib/apiClient';
-import { formatDate, getPriorityColor, getStageColor, getOutcomeColor, getPriorityLabel } from '@/lib/utils';
+import { formatDate, formatDateTime, getPriorityColor, getStageColor, getOutcomeColor, getPriorityLabel, toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
+import { FollowUpDatePicker } from '@/components/leads/FollowUpDatePicker';
 import { invalidateCache, getMemoryCache, setMemoryCache, getCacheKey, updateCachedLead, removeCachedLead } from '@/lib/apiCache';
 import {
   Users,
@@ -356,7 +357,7 @@ function AdminLeadsContent() {
 
     if (lastCallOutcome === 'Call Back Later' || lastCallOutcome === 'Demo Scheduled') {
       setOutcomePromptLead({ lead, newOutcome: lastCallOutcome });
-      setOutcomePromptDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
+      setOutcomePromptDate(lead.nextFollowUpDate ? toDatetimeLocalValue(lead.nextFollowUpDate) : '');
       return;
     }
 
@@ -392,7 +393,7 @@ function AdminLeadsContent() {
       alert('Past dates are not allowed. Please choose a future date & time.');
       return;
     }
-    const isoDate = new Date(outcomePromptDate).toISOString();
+    const isoDate = toIsoFromDatetimeLocal(outcomePromptDate);
     setOutcomePromptLead(null);
     setOutcomePromptDate('');
 
@@ -1075,7 +1076,7 @@ function AdminLeadsContent() {
 
                     {/* 6. Next Follow-up */}
                     <th
-                      style={{ width: 160, minWidth: 160, maxWidth: 160 }}
+                      style={{ width: 180, minWidth: 180, maxWidth: 180 }}
                       className="p-3 text-left font-bold text-slate-700 border-b border-slate-200 overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
                       title="Next Scheduled Follow-up Date"
                     >
@@ -1348,17 +1349,26 @@ function AdminLeadsContent() {
 
                           {/* 6. Next Follow-up */}
                           <td
-                            style={{ width: 160, minWidth: 160, maxWidth: 160 }}
-                            className="p-3 overflow-hidden text-ellipsis whitespace-nowrap min-w-0 text-slate-700 font-mono text-[11px]"
-                            title={lead.nextFollowUpDate ? `Next Follow-up: ${formatDate(lead.nextFollowUpDate)}` : 'No follow-up scheduled'}
+                            style={{ width: 180, minWidth: 180, maxWidth: 180 }}
+                            className="p-3 whitespace-nowrap min-w-0"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            {lead.nextFollowUpDate ? (
-                              <span className="inline-block max-w-full truncate px-2 py-0.5 rounded text-[11px] font-medium bg-slate-50 border border-slate-200">
-                                {formatDate(lead.nextFollowUpDate)}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 font-normal italic text-xs font-sans">—</span>
-                            )}
+                            <FollowUpDatePicker
+                              value={lead.nextFollowUpDate}
+                              onChange={async (iso) => {
+                                try {
+                                  const res = await api.patch<Lead>(`/leads/${lead.id}`, { nextFollowUpDate: iso });
+                                  if (res.success && res.data) {
+                                    setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, ...res.data } : l)));
+                                    updateCachedLead(res.data);
+                                    invalidateCache('/reports/dashboard');
+                                  }
+                                } catch (err: any) {
+                                  alert(err.message || 'Failed to update follow-up date');
+                                }
+                              }}
+                              compact
+                            />
                           </td>
 
                           {/* 7. Telecaller */}
@@ -1712,7 +1722,7 @@ function AdminLeadsContent() {
               <input
                 type="datetime-local"
                 required
-                min={new Date().toISOString().slice(0, 16)}
+                min={getMinDatetimeLocal()}
                 value={outcomePromptDate}
                 onChange={(e) => setOutcomePromptDate(e.target.value)}
                 className="w-full text-xs border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500"

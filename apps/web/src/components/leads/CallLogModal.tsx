@@ -11,6 +11,7 @@ import { PhoneCall, Calendar, UserCheck, Clock } from 'lucide-react';
 import { useAuth } from '@/lib/authContext';
 import { WhatsAppIcon } from './WhatsAppButton';
 import { openWhatsAppChat } from '@/lib/whatsapp';
+import { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
 
 interface CallLogModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalP
       setError('');
       if (lead) {
         setOutcome((lead.pipelineStage as CallOutcome) || 'New Lead');
+        setNextFollowUpDate(lead.nextFollowUpDate ? toDatetimeLocalValue(lead.nextFollowUpDate) : '');
       }
     }
   }, [isOpen, lead]);
@@ -103,7 +105,7 @@ export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalP
         outcome,
         notes,
         durationSeconds: parseInt(durationSeconds, 10) || 0,
-        nextFollowUpDate: isFollowUpOutcome ? nextFollowUpDate : undefined,
+        nextFollowUpDate: isFollowUpOutcome ? toIsoFromDatetimeLocal(nextFollowUpDate) : undefined,
         assignedSalesmanId: isAssignSalesman ? selectedSalesmanId : undefined,
       };
 
@@ -119,7 +121,7 @@ export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalP
     }
   }
 
-  const nowString = new Date().toISOString().slice(0, 16);
+  const nowString = getMinDatetimeLocal();
 
   return (
     <Modal

@@ -8,6 +8,7 @@ import { Input } from '../ui/Input';
 import { Lead, User } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Send, UserCheck, Calendar } from 'lucide-react';
+import { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
 
 interface HandoverModalProps {
   isOpen: boolean;
@@ -35,8 +36,9 @@ export function HandoverModal({
   useEffect(() => {
     if (isOpen) {
       loadSalesmen();
+      setMeetingDate(lead?.nextFollowUpDate ? toDatetimeLocalValue(lead.nextFollowUpDate) : '');
     }
-  }, [isOpen]);
+  }, [isOpen, lead]);
 
   async function loadSalesmen() {
     try {
@@ -70,7 +72,7 @@ export function HandoverModal({
             : 'Demo',
         assignedSalesmanId: selectedSalesmanId,
         handoverSummary,
-        meetingDate: scheduleMeeting && meetingDate ? meetingDate : undefined,
+        meetingDate: scheduleMeeting && meetingDate ? toIsoFromDatetimeLocal(meetingDate) : undefined,
       });
 
       if (res.success && res.data) {
@@ -150,6 +152,7 @@ export function HandoverModal({
               <Input
                 label="Demo Date & Time"
                 type="datetime-local"
+                min={getMinDatetimeLocal()}
                 required={scheduleMeeting}
                 value={meetingDate}
                 onChange={(e) => setMeetingDate(e.target.value)}

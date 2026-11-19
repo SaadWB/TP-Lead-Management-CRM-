@@ -7,6 +7,7 @@ import { Input } from '../ui/Input';
 import { Lead } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
+import { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
 
 interface ScheduleFollowUpModalProps {
   isOpen: boolean;
@@ -28,9 +29,17 @@ export function ScheduleFollowUpModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  React.useEffect(() => {
+    if (isOpen && lead) {
+      setMeetingDate(lead.nextFollowUpDate ? toDatetimeLocalValue(lead.nextFollowUpDate) : '');
+      setNotes('');
+      setError('');
+    }
+  }, [isOpen, lead]);
+
   if (!lead) return null;
 
-  const nowString = new Date().toISOString().slice(0, 16);
+  const nowString = getMinDatetimeLocal();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,10 +59,11 @@ export function ScheduleFollowUpModal({
 
     setLoading(true);
     try {
+      const iso = toIsoFromDatetimeLocal(meetingDate);
       const res = await api.post<Lead>(`/leads/${lead.id}/stage`, {
         pipelineStage: targetStage,
-        meetingDate,
-        nextFollowUpDate: meetingDate,
+        meetingDate: iso,
+        nextFollowUpDate: iso,
         notes: notes.trim() || undefined,
       });
 

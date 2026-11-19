@@ -1075,7 +1075,7 @@ export default function AdminWebsiteLeadsPage() {
                           {lead.nextFollowUpDate ? (
                             <span className="flex items-center gap-1 font-medium text-sky-700">
                               <Calendar className="h-3 w-3" />
-                              {formatDate(lead.nextFollowUpDate)}
+                              {formatDateTime(lead.nextFollowUpDate)}
                             </span>
                           ) : (
                             <span className="text-slate-400 italic text-[11px]">Not Scheduled</span>

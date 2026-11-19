@@ -34,10 +34,11 @@ import {
   Search,
   Copy,
 } from 'lucide-react';
-import { formatDate, formatDateTime, getPriorityColor, getPriorityLabel } from '@/lib/utils';
+import { formatDate, formatDateTime, getPriorityColor, getPriorityLabel, toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { WhatsAppButton, WhatsAppIcon } from '@/components/leads/WhatsAppButton';
 import { openWhatsAppChat } from '@/lib/whatsapp';
+import { FollowUpDatePicker } from '@/components/leads/FollowUpDatePicker';
 
 // Dynamic imports for heavy modals
 const CallLogModal = dynamic(() => import('@/components/leads/CallLogModal').then((m) => m.CallLogModal), {
@@ -417,7 +418,7 @@ export default function TelecallerTodayPage() {
         suggestedPipeline: currentPipeline,
         type: 'DATE_TIME',
       });
-      setPromptInputDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
+      setPromptInputDate(lead.nextFollowUpDate ? toDatetimeLocalValue(lead.nextFollowUpDate) : '');
       setPromptInputNextAction(lead.nextAction || (newOutcome === 'Demo Scheduled' ? 'Conduct software demo' : 'Call back prospect'));
       return;
     }
@@ -504,20 +505,21 @@ export default function TelecallerTodayPage() {
   }
 
   // Next Follow-up Date change
-  async function handleFollowUpDateChange(lead: Lead, val: string) {
-    if ((lead.nextFollowUpDate || '') === val) return;
+  async function handleFollowUpDateChange(lead: Lead, val: string | null) {
+    const nextDate = val ? (val.endsWith('Z') ? val : toIsoFromDatetimeLocal(val)) : null;
+    if ((lead.nextFollowUpDate || null) === nextDate) return;
     const previousLead = { ...lead };
-    const newDateStr = val ? new Date(val).toISOString().split('T')[0] : null;
+    const newDateStr = nextDate ? nextDate.split('T')[0] : null;
 
     // If rescheduled beyond day 3, remove immediately from view
     if (newDateStr && newDateStr > day3Str) {
       setLeads((prev) => prev.filter((l) => l.id !== lead.id));
-      triggerUndo(previousLead, `Rescheduled ${lead.companyName} to ${formatDate(val)}`);
+      triggerUndo(previousLead, `Rescheduled ${lead.companyName} to ${formatDateTime(nextDate)}`);
     }
 
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, {
-        nextFollowUpDate: val ? new Date(val).toISOString() : null,
+        nextFollowUpDate: nextDate,
       });
       if (res.success && res.data) {
         if (!newDateStr || newDateStr <= day3Str) {
@@ -575,7 +577,7 @@ export default function TelecallerTodayPage() {
         alert('Past dates are not allowed. Please choose a future date & time.');
         return;
       }
-      const isoDate = new Date(promptInputDate).toISOString();
+      const isoDate = toIsoFromDatetimeLocal(promptInputDate);
       const nextAct = promptInputNextAction || lead.nextAction || undefined;
 
       // Close modal immediately and clear inputs to prevent popup freezing or delays
@@ -584,7 +586,7 @@ export default function TelecallerTodayPage() {
       setPromptInputNextAction('');
 
       await executeOutcomeUpdate(lead, newOutcome, lead.pipelineStage, {
-        nextFollowUpDate: isoDate,
+        nextFollowUpDate: isoDate || undefined,
         nextAction: nextAct,
       });
       return;
@@ -740,17 +742,15 @@ export default function TelecallerTodayPage() {
           {/* ALL IN RANGE */}
           <button
             onClick={() => setRangeFilter('ALL')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
-              rangeFilter === 'ALL'
-                ? 'bg-slate-900 text-white border-slate-900 shadow-soft-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
+            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${rangeFilter === 'ALL'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-soft-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
           >
             <span>All in Range</span>
             <span
-              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
-                rangeFilter === 'ALL' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'
-              }`}
+              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${rangeFilter === 'ALL' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'
+                }`}
             >
               {allInRangeFollowUps.length}
             </span>
@@ -759,23 +759,21 @@ export default function TelecallerTodayPage() {
           {/* OVERDUE */}
           <button
             onClick={() => setRangeFilter('OVERDUE')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
-              rangeFilter === 'OVERDUE'
-                ? 'bg-rose-600 text-white border-rose-600 shadow-soft-sm'
-                : overdueLeads.length > 0
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${rangeFilter === 'OVERDUE'
+              ? 'bg-rose-600 text-white border-rose-600 shadow-soft-sm'
+              : overdueLeads.length > 0
                 ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
+              }`}
           >
             <span>Overdue</span>
             <span
-              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
-                rangeFilter === 'OVERDUE'
-                  ? 'bg-rose-800 text-white'
-                  : overdueLeads.length > 0
+              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${rangeFilter === 'OVERDUE'
+                ? 'bg-rose-800 text-white'
+                : overdueLeads.length > 0
                   ? 'bg-rose-200 text-rose-800'
                   : 'bg-slate-100 text-slate-600'
-              }`}
+                }`}
             >
               {overdueLeads.length}
             </span>
@@ -784,17 +782,15 @@ export default function TelecallerTodayPage() {
           {/* TODAY */}
           <button
             onClick={() => setRangeFilter('TODAY')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
-              rangeFilter === 'TODAY'
-                ? 'bg-amber-600 text-white border-amber-600 shadow-soft-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${rangeFilter === 'TODAY'
+              ? 'bg-amber-600 text-white border-amber-600 shadow-soft-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
           >
             <span>Today</span>
             <span
-              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
-                rangeFilter === 'TODAY' ? 'bg-amber-800 text-white' : 'bg-slate-100 text-slate-600'
-              }`}
+              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${rangeFilter === 'TODAY' ? 'bg-amber-800 text-white' : 'bg-slate-100 text-slate-600'
+                }`}
             >
               {todayLeads.length}
             </span>
@@ -803,17 +799,15 @@ export default function TelecallerTodayPage() {
           {/* TOMORROW */}
           <button
             onClick={() => setRangeFilter('TOMORROW')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
-              rangeFilter === 'TOMORROW'
-                ? 'bg-sky-600 text-white border-sky-600 shadow-soft-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${rangeFilter === 'TOMORROW'
+              ? 'bg-sky-600 text-white border-sky-600 shadow-soft-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
           >
             <span>Tomorrow</span>
             <span
-              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
-                rangeFilter === 'TOMORROW' ? 'bg-sky-800 text-white' : 'bg-slate-100 text-slate-600'
-              }`}
+              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${rangeFilter === 'TOMORROW' ? 'bg-sky-800 text-white' : 'bg-slate-100 text-slate-600'
+                }`}
             >
               {tomorrowLeads.length}
             </span>
@@ -822,17 +816,15 @@ export default function TelecallerTodayPage() {
           {/* NEXT 3 DAYS */}
           <button
             onClick={() => setRangeFilter('NEXT_3_DAYS')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
-              rangeFilter === 'NEXT_3_DAYS'
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-soft-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${rangeFilter === 'NEXT_3_DAYS'
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-soft-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
           >
             <span>Next 3 Days</span>
             <span
-              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
-                rangeFilter === 'NEXT_3_DAYS' ? 'bg-indigo-800 text-white' : 'bg-slate-100 text-slate-600'
-              }`}
+              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${rangeFilter === 'NEXT_3_DAYS' ? 'bg-indigo-800 text-white' : 'bg-slate-100 text-slate-600'
+                }`}
             >
               {next3DaysLeads.length}
             </span>
@@ -858,20 +850,18 @@ export default function TelecallerTodayPage() {
               return (
                 <div
                   key={lead.id}
-                  className={`bg-white rounded-xl border shadow-soft-sm p-4 space-y-3 ${
-                    isOverdue
-                      ? 'border-rose-300 ring-1 ring-rose-200'
-                      : isToday
+                  className={`bg-white rounded-xl border shadow-soft-sm p-4 space-y-3 ${isOverdue
+                    ? 'border-rose-300 ring-1 ring-rose-200'
+                    : isToday
                       ? 'border-amber-300 ring-1 ring-amber-100'
                       : 'border-slate-200'
-                  }`}
+                    }`}
                 >
                   {/* Top row: # Serial, Company Name, Contact, Priority */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2 min-w-0">
-                      <span className={`px-2 py-0.5 rounded-md font-black text-xs shrink-0 ${
-                        isOverdue ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded-md font-black text-xs shrink-0 ${isOverdue ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
+                        }`}>
                         #{rowNumber}
                       </span>
                       <div className="min-w-0">
@@ -986,13 +976,10 @@ export default function TelecallerTodayPage() {
                       <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                         Follow-up Due
                       </label>
-                      <input
-                        type="datetime-local"
-                        defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
-                        onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
-                        className={`w-full text-xs border rounded-lg px-2.5 py-2 font-semibold ${
-                          isOverdue ? 'border-rose-300 bg-rose-50 text-rose-800 font-bold' : 'border-slate-200 bg-slate-50'
-                        }`}
+                      <FollowUpDatePicker
+                        value={lead.nextFollowUpDate}
+                        onChange={(val) => handleFollowUpDateChange(lead, val)}
+                        isOverdue={Boolean(isOverdue)}
                       />
                     </div>
                   </div>
@@ -1102,13 +1089,12 @@ export default function TelecallerTodayPage() {
                     return (
                       <tr
                         key={lead.id}
-                        className={`transition-colors group cursor-default ${
-                          isOverdue
-                            ? 'bg-rose-50/30 hover:bg-rose-50/70 border-l-4 border-l-rose-500'
-                            : isToday
+                        className={`transition-colors group cursor-default ${isOverdue
+                          ? 'bg-rose-50/30 hover:bg-rose-50/70 border-l-4 border-l-rose-500'
+                          : isToday
                             ? 'bg-amber-50/20 hover:bg-amber-50/50'
                             : 'hover:bg-slate-50/80'
-                        }`}
+                          }`}
                         onClick={() => {
                           setDrawerLeadId(lead.id);
                           setIsDrawerOpen(true);
@@ -1116,22 +1102,20 @@ export default function TelecallerTodayPage() {
                       >
                         {/* Column 1: # */}
                         <td
-                          className={`sticky left-0 z-10 w-12 min-w-[48px] max-w-[48px] py-2 px-2.5 text-center font-bold border-r border-slate-100 select-none ${
-                            isOverdue
-                              ? 'bg-rose-50/70 text-rose-700'
-                              : 'bg-white group-hover:bg-slate-50/90 text-slate-400'
-                          }`}
+                          className={`sticky left-0 z-10 w-12 min-w-[48px] max-w-[48px] py-2 px-2.5 text-center font-bold border-r border-slate-100 select-none ${isOverdue
+                            ? 'bg-rose-50/70 text-rose-700'
+                            : 'bg-white group-hover:bg-slate-50/90 text-slate-400'
+                            }`}
                         >
                           {rowNumber}
                         </td>
 
                         {/* Column 2: Company & Contact */}
                         <td
-                          className={`sticky left-[48px] z-10 w-64 min-w-[240px] max-w-[280px] py-2 px-2.5 border-r border-slate-100 ${
-                            isOverdue
-                              ? 'bg-rose-50/70'
-                              : 'bg-white group-hover:bg-slate-50/90'
-                          }`}
+                          className={`sticky left-[48px] z-10 w-64 min-w-[240px] max-w-[280px] py-2 px-2.5 border-r border-slate-100 ${isOverdue
+                            ? 'bg-rose-50/70'
+                            : 'bg-white group-hover:bg-slate-50/90'
+                            }`}
                         >
                           <div className="flex flex-col min-w-0">
                             <span
@@ -1161,11 +1145,10 @@ export default function TelecallerTodayPage() {
 
                         {/* Sticky Column 3: Phone (Showing primary + alternate phone stacked vertically with single-click copy button) */}
                         <td
-                          className={`sticky left-[308px] z-10 w-44 min-w-[170px] py-2 px-2.5 border-r border-slate-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] ${
-                            isOverdue
-                              ? 'bg-rose-50/70'
-                              : 'bg-white group-hover:bg-slate-50/90'
-                          }`}
+                          className={`sticky left-[308px] z-10 w-44 min-w-[170px] py-2 px-2.5 border-r border-slate-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] ${isOverdue
+                            ? 'bg-rose-50/70'
+                            : 'bg-white group-hover:bg-slate-50/90'
+                            }`}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex flex-col gap-1">
@@ -1278,29 +1261,13 @@ export default function TelecallerTodayPage() {
                         </td>
 
                         {/* Follow-up Date and Time (Editable) */}
-                        <td className="w-48 min-w-[180px] py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex flex-col gap-0.5">
-                            <input
-                              type="datetime-local"
-                              defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
-                              onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
-                              className={`w-full text-xs border rounded-lg px-2 py-0.5 font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500 ${
-                                isOverdue
-                                  ? 'border-rose-300 bg-rose-50/50 text-rose-800 font-bold'
-                                  : 'border-slate-200 bg-slate-50/80 text-slate-800'
-                              }`}
-                            />
-                            {lead.nextFollowUpDate && (
-                              <span
-                                className={`text-[10px] ${
-                                  isOverdue ? 'text-rose-600 font-bold' : 'text-slate-400'
-                                }`}
-                              >
-                                {isOverdue ? 'Overdue: ' : 'Due: '}
-                                {formatDateTime(lead.nextFollowUpDate)}
-                              </span>
-                            )}
-                          </div>
+                        <td className="w-52 min-w-[210px] py-2 px-2.5" onClick={(e) => e.stopPropagation()}>
+                          <FollowUpDatePicker
+                            value={lead.nextFollowUpDate}
+                            onChange={(val) => handleFollowUpDateChange(lead, val)}
+                            compact
+                            isOverdue={Boolean(isOverdue)}
+                          />
                         </td>
 
                         {/* Notes (Editable) */}
@@ -1483,7 +1450,7 @@ export default function TelecallerTodayPage() {
                     <input
                       type="datetime-local"
                       required
-                      min={new Date().toISOString().slice(0, 16)}
+                      min={getMinDatetimeLocal()}
                       value={promptInputDate}
                       onChange={(e) => setPromptInputDate(e.target.value)}
                       className="w-full text-xs border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500"

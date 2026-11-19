@@ -106,27 +106,104 @@ export function parseFlexibleDate(val: any): string | null {
 
 /**
  * Returns a guaranteed valid JavaScript Date object, or null.
+ * Preserves exact time for ISO / datetime-local strings.
  * Never returns an Invalid Date (which crashes Prisma client validation).
  */
 export function parseSafeDateObject(val: any): Date | null {
-  if (val === null || val === undefined) return null;
+  if (val === null || val === undefined || val === '') return null;
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? null : val;
+  }
+  // Try direct date parsing first to preserve exact time
+  try {
+    const direct = new Date(val);
+    if (!isNaN(direct.getTime())) {
+      return direct;
+    }
+  } catch {}
+
   const isoStr = parseFlexibleDate(val);
   if (!isoStr) return null;
   const d = new Date(isoStr);
   return isNaN(d.getTime()) ? null : d;
 }
 
+/**
+ * Converts any ISO string, Date object, or date string into local HTML5 datetime-local format:
+ * "YYYY-MM-DDTHH:mm"
+ * Preserves the user's LOCAL timezone time so that selected time does NOT shift.
+ */
+export function toDatetimeLocalValue(val?: string | Date | null): string {
+  if (!val || val === '-' || val === '—' || val === 'N/A' || val === 'null' || val === 'undefined') return '';
+
+  // If already in local YYYY-MM-DDTHH:mm format without trailing timezone offset/Z
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(val.trim())) {
+    return val.trim();
+  }
+
+  // If date-only "YYYY-MM-DD"
+  if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(val.trim())) {
+    return `${val.trim()}T10:00`;
+  }
+
+  try {
+    const d = val instanceof Date ? val : new Date(val);
+    if (isNaN(d.getTime())) {
+      const flex = parseFlexibleDate(val);
+      return flex ? `${flex}T10:00` : '';
+    }
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const year = d.getFullYear();
+    const month = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch {
+    return '';
+  }
+}
+
+/** Backward compatibility alias for toDatetimeLocalValue */
+export const formatForDatetimeLocal = toDatetimeLocalValue;
 
 /**
- * Converts any date or ISO string into the format required by HTML5 <input type="datetime-local" />
- * Format: YYYY-MM-DDTHH:mm
+ * Converts a local datetime-local string ("YYYY-MM-DDTHH:mm") into a standardized ISO 8601 UTC string
+ * ("YYYY-MM-DDTHH:mm:00.000Z") for safe transmission to the database/server.
  */
-export function formatForDatetimeLocal(dateStr?: string | null): string {
-  if (!dateStr || dateStr === '-' || dateStr === '—' || dateStr === 'N/A' || dateStr === 'null') return '';
-  const clean = parseFlexibleDate(dateStr);
-  if (!clean) return '';
-  if (typeof dateStr === 'string' && dateStr.includes('T') && dateStr.length >= 16) {
-    return dateStr.slice(0, 16);
+export function toIsoFromDatetimeLocal(localStr?: string | null): string | null {
+  if (!localStr || !localStr.trim()) return null;
+  const s = localStr.trim();
+  try {
+    if (s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s)) {
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d.toISOString();
+    }
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return d.toISOString();
+    }
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+    if (m) {
+      const fallback = new Date(
+        parseInt(m[1], 10),
+        parseInt(m[2], 10) - 1,
+        parseInt(m[3], 10),
+        parseInt(m[4], 10),
+        parseInt(m[5], 10)
+      );
+      return isNaN(fallback.getTime()) ? null : fallback.toISOString();
+    }
+    return null;
+  } catch {
+    return null;
   }
-  return `${clean}T09:00`;
+}
+
+/**
+ * Returns current date and time formatted in user's local timezone for input min attribute:
+ * "YYYY-MM-DDTHH:mm"
+ */
+export function getMinDatetimeLocal(): string {
+  return toDatetimeLocalValue(new Date());
 }

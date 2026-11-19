@@ -40,11 +40,12 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
-import { formatDate, formatDateTime, getPriorityColor, getOutcomeColor, getStageColor, getPriorityLabel } from '@/lib/utils';
+import { formatDate, formatDateTime, getPriorityColor, getOutcomeColor, getStageColor, getPriorityLabel, toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
 import { WhatsAppButton, WhatsAppIcon } from '@/components/leads/WhatsAppButton';
 import { openWhatsAppChat } from '@/lib/whatsapp';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { FollowUpDatePicker } from '@/components/leads/FollowUpDatePicker';
 
 // Dynamic imports for heavy modals
 const LeadDrawer = dynamic(() => import('@/components/leads/LeadDrawer').then((m) => m.LeadDrawer), {
@@ -574,10 +575,10 @@ export default function TelecallerMyLeadsPage() {
       prev.map((l) =>
         l.id === lead.id
           ? {
-              ...l,
-              pipelineStage: newStage as any,
-              nextFollowUpDate: newStage === 'Closed' || newStage === 'Closed Won' ? null : l.nextFollowUpDate,
-            }
+            ...l,
+            pipelineStage: newStage as any,
+            nextFollowUpDate: newStage === 'Closed' || newStage === 'Closed Won' ? null : l.nextFollowUpDate,
+          }
           : l
       )
     );
@@ -617,7 +618,7 @@ export default function TelecallerMyLeadsPage() {
         suggestedPipeline: currentPipeline,
         type: 'DATE_TIME',
       });
-      setPromptInputDate(lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : '');
+      setPromptInputDate(lead.nextFollowUpDate ? toDatetimeLocalValue(lead.nextFollowUpDate) : '');
       setPromptInputNextAction(lead.nextAction || (newOutcome === 'Demo Scheduled' ? 'Conduct software demo' : 'Call back prospect'));
       return;
     }
@@ -657,13 +658,13 @@ export default function TelecallerMyLeadsPage() {
       prev.map((l) =>
         l.id === lead.id
           ? {
-              ...l,
-              lastCallOutcome: newOutcome,
-              pipelineStage: (targetPipeline || l.pipelineStage) as any,
-              ...(extraPayload.nextFollowUpDate !== undefined ? { nextFollowUpDate: extraPayload.nextFollowUpDate } : {}),
-              ...(extraPayload.nextAction !== undefined ? { nextAction: extraPayload.nextAction } : {}),
-              ...(extraPayload.notes !== undefined ? { notes: extraPayload.notes } : {}),
-            }
+            ...l,
+            lastCallOutcome: newOutcome,
+            pipelineStage: (targetPipeline || l.pipelineStage) as any,
+            ...(extraPayload.nextFollowUpDate !== undefined ? { nextFollowUpDate: extraPayload.nextFollowUpDate } : {}),
+            ...(extraPayload.nextAction !== undefined ? { nextAction: extraPayload.nextAction } : {}),
+            ...(extraPayload.notes !== undefined ? { notes: extraPayload.notes } : {}),
+          }
           : l
       )
     );
@@ -711,13 +712,14 @@ export default function TelecallerMyLeadsPage() {
   }
 
   // Inline Next Follow-up Date Change
-  async function handleFollowUpDateChange(lead: Lead, val: string) {
-    if ((lead.nextFollowUpDate || '') === val) return;
+  async function handleFollowUpDateChange(lead: Lead, val: string | null) {
+    const nextDate = val ? (val.endsWith('Z') ? val : toIsoFromDatetimeLocal(val)) : null;
+    if ((lead.nextFollowUpDate || null) === nextDate) return;
     const previousLead = { ...lead };
     setRecentlyUpdatedIds((prev) => new Set([...prev, lead.id]));
     try {
       const res = await api.patch<Lead>(`/leads/${lead.id}`, {
-        nextFollowUpDate: val ? new Date(val).toISOString() : null,
+        nextFollowUpDate: nextDate,
       });
       if (res.success && res.data) {
         setLeads((prev) => prev.map((l) => (l.id === lead.id ? res.data! : l)));
@@ -784,7 +786,7 @@ export default function TelecallerMyLeadsPage() {
         alert('Past dates are not allowed. Please choose a future date & time.');
         return;
       }
-      const isoDate = new Date(promptInputDate).toISOString();
+      const isoDate = toIsoFromDatetimeLocal(promptInputDate);
       const nextAct = promptInputNextAction || lead.nextAction || undefined;
 
       // Close modal immediately and clear inputs to prevent popup freezing or delays
@@ -793,7 +795,7 @@ export default function TelecallerMyLeadsPage() {
       setPromptInputNextAction('');
 
       await executeOutcomeUpdate(lead, newOutcome, lead.pipelineStage, {
-        nextFollowUpDate: isoDate,
+        nextFollowUpDate: isoDate || undefined,
         nextAction: nextAct,
       });
       return;
@@ -939,17 +941,15 @@ export default function TelecallerMyLeadsPage() {
               setPipelineFilter('ALL');
               setCurrentPage(1);
             }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
-              pipelineFilter === 'ALL'
-                ? 'bg-slate-900 text-white border-slate-900 shadow-soft-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${pipelineFilter === 'ALL'
+              ? 'bg-slate-900 text-white border-slate-900 shadow-soft-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+              }`}
           >
             <span>All Leads</span>
             <span
-              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
-                pipelineFilter === 'ALL' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'
-              }`}
+              className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${pipelineFilter === 'ALL' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'
+                }`}
             >
               {stageCounts['ALL'] || 0}
             </span>
@@ -965,17 +965,15 @@ export default function TelecallerMyLeadsPage() {
                   setPipelineFilter(isSelected ? 'ALL' : stageName);
                   setCurrentPage(1);
                 }}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${
-                  isSelected
-                    ? 'bg-sky-600 text-white border-sky-600 shadow-soft-sm'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 border min-h-[38px] ${isSelected
+                  ? 'bg-sky-600 text-white border-sky-600 shadow-soft-sm'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
               >
                 <span>{stageName}</span>
                 <span
-                  className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
-                    isSelected ? 'bg-sky-800 text-white' : 'bg-slate-100 text-slate-600'
-                  }`}
+                  className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${isSelected ? 'bg-sky-800 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}
                 >
                   {count}
                 </span>
@@ -1017,11 +1015,10 @@ export default function TelecallerMyLeadsPage() {
             <div className="relative">
               <button
                 onClick={() => setIsDateMenuOpen(!isDateMenuOpen)}
-                className={`flex items-center gap-1.5 text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors cursor-pointer ${
-                  datePreset !== 'ALL'
-                    ? 'bg-sky-50 text-sky-800 border-sky-300'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                }`}
+                className={`flex items-center gap-1.5 text-xs font-bold rounded-lg px-3 py-1.5 border transition-colors cursor-pointer ${datePreset !== 'ALL'
+                  ? 'bg-sky-50 text-sky-800 border-sky-300'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                  }`}
               >
                 <Calendar className="h-3.5 w-3.5 text-sky-600" />
                 <span>Date Filter:</span>
@@ -1063,11 +1060,10 @@ export default function TelecallerMyLeadsPage() {
                               setIsDateMenuOpen(false);
                             }
                           }}
-                          className={`text-left text-xs px-2.5 py-1.5 rounded-lg font-semibold transition-colors ${
-                            datePreset === preset.id
-                              ? 'bg-sky-600 text-white'
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
-                          }`}
+                          className={`text-left text-xs px-2.5 py-1.5 rounded-lg font-semibold transition-colors ${datePreset === preset.id
+                            ? 'bg-sky-600 text-white'
+                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
+                            }`}
                         >
                           {preset.label}
                         </button>
@@ -1313,11 +1309,10 @@ export default function TelecallerMyLeadsPage() {
                           <select
                             value={lead.lastCallOutcome || ''}
                             onChange={(e) => handleOutcomeChange(lead, e.target.value)}
-                            className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border cursor-pointer ${
-                              lead.lastCallOutcome
-                                ? `${ocMeta.bg} ${ocMeta.text} ${ocMeta.border}`
-                                : 'bg-slate-50 border-slate-200 text-slate-800'
-                            }`}
+                            className={`w-full text-xs font-semibold rounded-lg px-2.5 py-2 border cursor-pointer ${lead.lastCallOutcome
+                              ? `${ocMeta.bg} ${ocMeta.text} ${ocMeta.border}`
+                              : 'bg-slate-50 border-slate-200 text-slate-800'
+                              }`}
                           >
                             <option value="" className="bg-white text-slate-500">-- Select Outcome --</option>
                             {allOutcomes.map((oc) => {
@@ -1354,11 +1349,9 @@ export default function TelecallerMyLeadsPage() {
                         <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
                           Next Follow-up
                         </label>
-                        <input
-                          type="datetime-local"
-                          defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
-                          onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
-                          className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-2 text-slate-800 font-medium"
+                        <FollowUpDatePicker
+                          value={lead.nextFollowUpDate}
+                          onChange={(val) => handleFollowUpDateChange(lead, val)}
                         />
                       </div>
                     </div>
@@ -1536,6 +1529,7 @@ export default function TelecallerMyLeadsPage() {
                     const isOpenLead = lead.pipelineStage !== 'Closed';
                     const isMissingAction = isOpenLead && !lead.nextAction?.trim();
                     const isMissingFollowUp = isOpenLead && !lead.nextFollowUpDate;
+                    const isOverdue = Boolean(lead.nextFollowUpDate && new Date(lead.nextFollowUpDate).getTime() < Date.now());
                     const normalizedStage = normalizePipelineStage(lead.pipelineStage);
 
                     return (
@@ -1683,11 +1677,10 @@ export default function TelecallerMyLeadsPage() {
                               <select
                                 value={lead.lastCallOutcome || ''}
                                 onChange={(e) => handleOutcomeChange(lead, e.target.value)}
-                                className={`w-full text-xs font-semibold rounded-lg px-2 py-1.5 border focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs ${
-                                  lead.lastCallOutcome
-                                    ? `${ocMeta.bg} ${ocMeta.text} ${ocMeta.border}`
-                                    : 'bg-slate-50 border-slate-200 text-slate-800'
-                                }`}
+                                className={`w-full text-xs font-semibold rounded-lg px-2 py-1.5 border focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer shadow-soft-xs ${lead.lastCallOutcome
+                                  ? `${ocMeta.bg} ${ocMeta.text} ${ocMeta.border}`
+                                  : 'bg-slate-50 border-slate-200 text-slate-800'
+                                  }`}
                               >
                                 <option value="" className="bg-white text-slate-500">-- Select Outcome --</option>
                                 {allOutcomes.map((oc) => {
@@ -1723,27 +1716,14 @@ export default function TelecallerMyLeadsPage() {
                         </td>
 
                         {/* Next Follow-up (Editable with Missing warning) */}
-                        <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex flex-col gap-1">
-                            <input
-                              key={`followup_${lead.id}_${lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}`}
-                              type="datetime-local"
-                              defaultValue={lead.nextFollowUpDate ? lead.nextFollowUpDate.slice(0, 16) : ''}
-                              onChange={(e) => handleFollowUpDateChange(lead, e.target.value)}
-                              className="w-full text-xs bg-slate-50/80 hover:bg-white focus:bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-sky-500"
-                            />
-                            {isMissingFollowUp ? (
-                              <span className="text-[10px] font-bold text-rose-600 flex items-center gap-1">
-                                <Clock className="h-3 w-3" /> Missing Follow-up
-                              </span>
-                            ) : (
-                              lead.nextFollowUpDate && (
-                                <span className="text-[10px] text-slate-400">
-                                  Due: {formatDate(lead.nextFollowUpDate)}
-                                </span>
-                              )
-                            )}
-                          </div>
+                        <td className="p-3 min-w-[210px]" onClick={(e) => e.stopPropagation()}>
+                          <FollowUpDatePicker
+                            value={lead.nextFollowUpDate}
+                            onChange={(val) => handleFollowUpDateChange(lead, val)}
+                            compact
+                            isMissing={isMissingFollowUp}
+                            isOverdue={isOverdue}
+                          />
                         </td>
 
                         {/* Last Updated */}
@@ -1848,8 +1828,8 @@ export default function TelecallerMyLeadsPage() {
                 {totalItems === 0
                   ? '0 leads'
                   : pageSize === 0
-                  ? `Showing all ${totalItems} leads`
-                  : `Showing ${(currentPage - 1) * pageSize + 1} - ${Math.min(
+                    ? `Showing all ${totalItems} leads`
+                    : `Showing ${(currentPage - 1) * pageSize + 1} - ${Math.min(
                       currentPage * pageSize,
                       totalItems
                     )} of ${totalItems}`}
@@ -1934,7 +1914,7 @@ export default function TelecallerMyLeadsPage() {
                     <input
                       type="datetime-local"
                       required
-                      min={new Date().toISOString().slice(0, 16)}
+                      min={getMinDatetimeLocal()}
                       value={promptInputDate}
                       onChange={(e) => setPromptInputDate(e.target.value)}
                       className="w-full text-xs border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500"
@@ -2083,11 +2063,10 @@ export default function TelecallerMyLeadsPage() {
                     key={preset.id}
                     type="button"
                     onClick={() => setDatePreset(preset.id)}
-                    className={`px-3 py-2 text-xs font-semibold rounded-xl border text-left min-h-[40px] ${
-                      datePreset === preset.id
-                        ? 'bg-sky-600 text-white border-sky-600'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
+                    className={`px-3 py-2 text-xs font-semibold rounded-xl border text-left min-h-[40px] ${datePreset === preset.id
+                      ? 'bg-sky-600 text-white border-sky-600'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
                   >
                     {preset.label}
                   </button>
