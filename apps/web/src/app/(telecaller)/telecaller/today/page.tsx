@@ -39,6 +39,7 @@ import { Button } from '@/components/ui/Button';
 import { WhatsAppButton, WhatsAppIcon } from '@/components/leads/WhatsAppButton';
 import { openWhatsAppChat } from '@/lib/whatsapp';
 import { FollowUpDatePicker } from '@/components/leads/FollowUpDatePicker';
+import { DateTimePicker } from '@/components/leads/DateTimePicker';
 
 // Dynamic imports for heavy modals
 const CallLogModal = dynamic(() => import('@/components/leads/CallLogModal').then((m) => m.CallLogModal), {
@@ -1443,19 +1444,12 @@ export default function TelecallerTodayPage() {
                     <strong className="text-slate-900">{promptTarget.newOutcome}</strong>. (Pipeline suggested as{' '}
                     <strong className="text-sky-700">{promptTarget.suggestedPipeline}</strong>).
                   </p>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                      Date & Time (Cannot be in the past) *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      required
-                      min={getMinDatetimeLocal()}
-                      value={promptInputDate}
-                      onChange={(e) => setPromptInputDate(e.target.value)}
-                      className="w-full text-xs border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                    />
-                  </div>
+                  <DateTimePicker
+                    label="Date & Time (Cannot be in the past)"
+                    required
+                    value={promptInputDate}
+                    onChange={(val) => setPromptInputDate(val)}
+                  />
                   <div>
                     <label className="text-[11px] font-bold text-slate-700 block mb-1">
                       Next Action Description

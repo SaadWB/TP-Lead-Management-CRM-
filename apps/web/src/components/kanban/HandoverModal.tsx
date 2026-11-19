@@ -9,6 +9,7 @@ import { Lead, User } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Send, UserCheck, Calendar } from 'lucide-react';
 import { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
+import { DateTimePicker } from '../leads/DateTimePicker';
 
 interface HandoverModalProps {
   isOpen: boolean;
@@ -149,13 +150,11 @@ export function HandoverModal({
 
           {scheduleMeeting && (
             <div className="pt-1">
-              <Input
+              <DateTimePicker
                 label="Demo Date & Time"
-                type="datetime-local"
-                min={getMinDatetimeLocal()}
                 required={scheduleMeeting}
                 value={meetingDate}
-                onChange={(e) => setMeetingDate(e.target.value)}
+                onChange={(val) => setMeetingDate(val)}
               />
             </div>
           )}

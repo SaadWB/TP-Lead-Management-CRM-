@@ -5,7 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from './dateUtils';
+export {
+  toDatetimeLocalValue,
+  toIsoFromDatetimeLocal,
+  getMinDatetimeLocal,
+  getTodayLocalDateString,
+  BUSINESS_TIME_SLOTS,
+  splitDatetime,
+  combineDateAndTime,
+} from './dateUtils';
 
 export function formatDate(dateString?: string | null): string {
   if (!dateString) return '—';

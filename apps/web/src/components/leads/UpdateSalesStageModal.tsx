@@ -9,6 +9,7 @@ import { Lead, SalesStage, SALES_STAGE_OPTIONS, LOST_REASONS } from '@crm/shared
 import { api } from '@/lib/apiClient';
 import { Calendar, Clock, AlertCircle, Award, CheckCircle2 } from 'lucide-react';
 import { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
+import { DateTimePicker } from './DateTimePicker';
 
 interface UpdateSalesStageModalProps {
   isOpen: boolean;
@@ -138,22 +139,16 @@ export function UpdateSalesStageModal({
 
         {/* Date and Time picker when DEMO_SCHEDULED or FOLLOW_UP_REQUIRED */}
         {isScheduleRequired && (
-          <div className="space-y-2 p-3 bg-cyan-50/70 border border-cyan-200/80 rounded-xl">
-            <div className="flex items-center gap-2 text-xs font-bold text-cyan-900">
-              <Calendar className="h-4 w-4 text-cyan-700" />
-              <span>Schedule Date & Time <span className="text-rose-500">*</span></span>
-            </div>
+          <div className="p-3.5 bg-cyan-50/70 border border-cyan-200/80 rounded-xl space-y-2">
+            <DateTimePicker
+              label="Schedule Date & Time"
+              required
+              value={followUpDate}
+              onChange={(val) => setFollowUpDate(val)}
+            />
             <p className="text-[11px] text-cyan-800">
               A follow-up task will automatically be created on your dashboard for this exact date and time.
             </p>
-            <input
-              type="datetime-local"
-              required
-              min={nowString}
-              value={followUpDate}
-              onChange={(e) => setFollowUpDate(e.target.value)}
-              className="w-full text-xs bg-white border border-cyan-300 rounded-lg p-2 font-mono text-slate-800 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
-            />
           </div>
         )}
 

@@ -21,6 +21,7 @@ import {
 import { api } from '@/lib/apiClient';
 import { formatDate, formatDateTime, getPriorityColor, getStageColor, getOutcomeColor, getPriorityLabel, toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
 import { FollowUpDatePicker } from '@/components/leads/FollowUpDatePicker';
+import { DateTimePicker } from '@/components/leads/DateTimePicker';
 import { invalidateCache, getMemoryCache, setMemoryCache, getCacheKey, updateCachedLead, removeCachedLead } from '@/lib/apiCache';
 import {
   Users,
@@ -1715,20 +1716,12 @@ function AdminLeadsContent() {
               A follow-up date and time is required when selecting{' '}
               <strong className="text-slate-900">{outcomePromptLead.newOutcome}</strong>.
             </p>
-            <div>
-              <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                Date & Time (Cannot be in the past) *
-              </label>
-              <input
-                type="datetime-local"
-                required
-                min={getMinDatetimeLocal()}
-                value={outcomePromptDate}
-                onChange={(e) => setOutcomePromptDate(e.target.value)}
-                className="w-full text-xs border border-slate-200 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                autoFocus
-              />
-            </div>
+            <DateTimePicker
+              label="Date & Time (Cannot be in the past)"
+              required
+              value={outcomePromptDate}
+              onChange={(val) => setOutcomePromptDate(val)}
+            />
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 variant="secondary"

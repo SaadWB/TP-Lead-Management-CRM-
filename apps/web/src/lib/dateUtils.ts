@@ -207,3 +207,62 @@ export function toIsoFromDatetimeLocal(localStr?: string | null): string | null 
 export function getMinDatetimeLocal(): string {
   return toDatetimeLocalValue(new Date());
 }
+
+/**
+ * Returns today's date in local YYYY-MM-DD format for <input type="date" min="..." />
+ */
+export function getTodayLocalDateString(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+export interface TimeSlotOption {
+  value: string; // "14:30"
+  label: string; // "02:30 PM"
+}
+
+/**
+ * Precomputed 15-minute time slots for business hours (08:00 AM to 09:00 PM).
+ * Prevents any browser autoselection bugs.
+ */
+export const BUSINESS_TIME_SLOTS: TimeSlotOption[] = (() => {
+  const slots: TimeSlotOption[] = [];
+  for (let h = 8; h <= 21; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      if (h === 21 && m > 0) break;
+      const hh = String(h).padStart(2, '0');
+      const mm = String(m).padStart(2, '0');
+      const val = `${hh}:${mm}`;
+      const period = h >= 12 ? 'PM' : 'AM';
+      const displayH = h % 12 === 0 ? 12 : h % 12;
+      const label = `${String(displayH).padStart(2, '0')}:${mm} ${period}`;
+      slots.push({ value: val, label });
+    }
+  }
+  return slots;
+})();
+
+/**
+ * Splits an ISO / local date-time into separate local Date (YYYY-MM-DD) and Time (HH:mm) strings.
+ */
+export function splitDatetime(val?: string | Date | null): { date: string; time: string } {
+  const localStr = toDatetimeLocalValue(val);
+  if (!localStr) {
+    return { date: '', time: '11:00' };
+  }
+  if (localStr.includes('T')) {
+    const [d, t] = localStr.split('T');
+    return { date: d || '', time: t ? t.slice(0, 5) : '11:00' };
+  }
+  return { date: localStr, time: '11:00' };
+}
+
+/**
+ * Combines separate local date (YYYY-MM-DD) and time (HH:mm) into a single local ISO string.
+ */
+export function combineDateAndTime(dateStr?: string | null, timeStr?: string | null): string | null {
+  if (!dateStr || !dateStr.trim()) return null;
+  const t = timeStr && timeStr.trim() ? timeStr.trim().slice(0, 5) : '11:00';
+  return toIsoFromDatetimeLocal(`${dateStr.trim()}T${t}`);
+}

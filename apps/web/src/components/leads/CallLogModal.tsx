@@ -12,6 +12,7 @@ import { useAuth } from '@/lib/authContext';
 import { WhatsAppIcon } from './WhatsAppButton';
 import { openWhatsAppChat } from '@/lib/whatsapp';
 import { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
+import { DateTimePicker } from './DateTimePicker';
 
 interface CallLogModalProps {
   isOpen: boolean;
@@ -205,16 +206,11 @@ export function CallLogModal({ isOpen, onClose, lead, onSuccess }: CallLogModalP
         {/* Required Date & Time Picker for Callback Requested and Demo Requested */}
         {isFollowUpOutcome && (
           <div className="p-3.5 bg-sky-50/70 rounded-xl border border-sky-200/80 space-y-2 animate-fade-in">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-sky-900">
-              <Calendar className="h-4 w-4 text-sky-600" />
-              <span>{outcome === 'Demo Scheduled' ? 'Demo Scheduled Date & Time' : 'Follow-up Date & Time'} (Required)</span>
-            </div>
-            <Input
-              type="datetime-local"
+            <DateTimePicker
+              label={outcome === 'Demo Scheduled' ? 'Demo Scheduled Date & Time' : 'Follow-up Date & Time'}
               required
-              min={nowString}
               value={nextFollowUpDate}
-              onChange={(e) => setNextFollowUpDate(e.target.value)}
+              onChange={(val) => setNextFollowUpDate(val)}
             />
             <p className="text-[11px] text-sky-700">
               This lead will automatically be scheduled in your Follow-ups and Today&apos;s Work queue for this date.

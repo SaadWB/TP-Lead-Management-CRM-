@@ -8,6 +8,7 @@ import { Lead } from '@crm/shared';
 import { api } from '@/lib/apiClient';
 import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { toDatetimeLocalValue, toIsoFromDatetimeLocal, getMinDatetimeLocal } from '@/lib/utils';
+import { DateTimePicker } from '../leads/DateTimePicker';
 
 interface ScheduleFollowUpModalProps {
   isOpen: boolean;
@@ -103,25 +104,15 @@ export function ScheduleFollowUpModal({
           </p>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-            <Calendar className="h-4 w-4 text-sky-600" />
-            Scheduled Date &amp; Time (Required)
-          </label>
-          <Input
-            type="datetime-local"
-            required
-            min={nowString}
-            value={meetingDate}
-            onChange={(e) => {
-              setMeetingDate(e.target.value);
-              setError('');
-            }}
-          />
-          <p className="text-[11px] text-slate-500">
-            Past dates and times are not allowed. The card will appear in Today&apos;s Work / Follow-ups queue on this date.
-          </p>
-        </div>
+        <DateTimePicker
+          label="Scheduled Date & Time"
+          required
+          value={meetingDate}
+          onChange={(val) => {
+            setMeetingDate(val);
+            setError('');
+          }}
+        />
 
         <div className="space-y-1.5">
           <label className="block text-xs font-semibold text-slate-700">Optional Notes / Remarks</label>
