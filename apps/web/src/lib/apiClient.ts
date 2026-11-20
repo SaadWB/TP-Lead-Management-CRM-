@@ -96,6 +96,11 @@ class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Lets the server compute "today", "10 AM", report ranges etc. in the user's timezone
+    if (typeof window !== 'undefined') {
+      headers['X-TZ-Offset'] = String(-new Date().getTimezoneOffset());
+    }
+
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const apiBase = getApiBase();
     const url = `${apiBase}/api/v1${cleanEndpoint}`;

@@ -266,3 +266,60 @@ export function combineDateAndTime(dateStr?: string | null, timeStr?: string | n
   const t = timeStr && timeStr.trim() ? timeStr.trim().slice(0, 5) : '11:00';
   return toIsoFromDatetimeLocal(`${dateStr.trim()}T${t}`);
 }
+
+/* ------------------------------------------------------------------ *
+ * Local-calendar helpers.
+ * NEVER use `date.toISOString().split('T')[0]` for "today": that is the
+ * UTC date, which is still yesterday in India until 05:30 AM, and turns
+ * "1st of this month 00:00 IST" into the last day of the previous month.
+ * ------------------------------------------------------------------ */
+
+/** YYYY-MM-DD of an instant in the browser's local calendar. */
+export function localDateKey(val: Date | string | number = new Date()): string {
+  const d = val instanceof Date ? val : new Date(val);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Adds whole days to a YYYY-MM-DD key (local calendar). */
+export function addDaysToDateKey(key: string, days: number): string {
+  const [y, m, d] = key.split('-').map((p) => parseInt(p, 10));
+  return localDateKey(new Date(y, m - 1, d + days));
+}
+
+/** Local midnight (start) / 23:59:59.999 (end) of a YYYY-MM-DD key, as epoch ms. */
+export function dateKeyBounds(key: string): { startMs: number; endMs: number } {
+  const [y, m, d] = key.split('-').map((p) => parseInt(p, 10));
+  return {
+    startMs: new Date(y, m - 1, d, 0, 0, 0, 0).getTime(),
+    endMs: new Date(y, m - 1, d, 23, 59, 59, 999).getTime(),
+  };
+}
+
+/** Earliest 15-minute business slot that is still in the future (with a small buffer). */
+export function getNextAvailableSlot(bufferMinutes = 15): { date: string; time: string } {
+  const now = new Date(Date.now() + bufferMinutes * 60000);
+  const today = localDateKey(now);
+  const nowHHmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const slot = BUSINESS_TIME_SLOTS.find((s) => s.value >= nowHHmm);
+  if (slot && localDateKey(now) === localDateKey(new Date())) return { date: today, time: slot.value };
+  return { date: addDaysToDateKey(localDateKey(new Date()), 1), time: '11:00' };
+}
+
+/** True when the combined local date + time is already in the past. */
+export function isPastLocalDateTime(dateStr: string, timeStr: string): boolean {
+  if (!dateStr) return false;
+  const [y, m, d] = dateStr.split('-').map((p) => parseInt(p, 10));
+  const [hh, mm] = (timeStr || '00:00').split(':').map((p) => parseInt(p, 10));
+  return new Date(y, m - 1, d, hh || 0, mm || 0).getTime() < Date.now() - 60000;
+}
+
+/** Formats "HH:mm" as "hh:mm AM/PM". */
+export function formatTimeLabel(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map((p) => parseInt(p, 10));
+  if (isNaN(h)) return hhmm;
+  const period = h >= 12 ? 'PM' : 'AM';
+  const displayH = h % 12 === 0 ? 12 : h % 12;
+  return `${String(displayH).padStart(2, '0')}:${String(m || 0).padStart(2, '0')} ${period}`;
+}

@@ -1,13 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Check, X, Loader2, AlertCircle, ChevronDown, Edit2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { Calendar, Clock, Check, X, Loader2, AlertCircle, ChevronDown, AlertTriangle } from 'lucide-react';
 import {
   splitDatetime,
   combineDateAndTime,
   getTodayLocalDateString,
   BUSINESS_TIME_SLOTS,
+  getNextAvailableSlot,
+  isPastLocalDateTime,
+  formatTimeLabel,
 } from '@/lib/dateUtils';
+
+const POPOVER_WIDTH = 288; // w-72
+const VIEWPORT_MARGIN = 8;
 import { formatDateTime, formatDate } from '@/lib/utils';
 
 export interface FollowUpDatePickerProps {
@@ -41,6 +48,9 @@ export function FollowUpDatePicker({
   const [selectedTime, setSelectedTime] = useState<string>(initial.time || '11:00');
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
   // Sync state when prop value changes and popover is closed
   useEffect(() => {
@@ -51,16 +61,68 @@ export function FollowUpDatePicker({
     }
   }, [value, isOpen]);
 
-  // Close popover when clicking outside
+  /*
+   * The popover is rendered in a portal on <body> with fixed positioning.
+   * Inside the table it used to be `absolute` within an `overflow-x-auto max-h-[72vh]`
+   * scroll container, so rows near the bottom/right got their picker clipped or hidden
+   * behind sticky columns. Now it flips above the trigger when there is no room below
+   * and is clamped inside the viewport.
+   */
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const popHeight = popoverRef.current?.offsetHeight || 440;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const spaceBelow = vh - rect.bottom;
+    const spaceAbove = rect.top;
+    let top: number;
+    if (spaceBelow >= popHeight + VIEWPORT_MARGIN || spaceBelow >= spaceAbove) {
+      top = rect.bottom + 4;
+    } else {
+      top = rect.top - popHeight - 4;
+    }
+    top = Math.max(VIEWPORT_MARGIN, Math.min(top, vh - popHeight - VIEWPORT_MARGIN));
+    const width = Math.min(POPOVER_WIDTH, vw - VIEWPORT_MARGIN * 2);
+    const left = Math.max(VIEWPORT_MARGIN, Math.min(rect.left, vw - width - VIEWPORT_MARGIN));
+    setPosition({ top, left });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setPosition(null);
+      return;
+    }
+    updatePosition();
+    // Second pass once the popover has its real height
+    const raf = requestAnimationFrame(updatePosition);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true); // capture: table scroll containers too
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen, updatePosition]);
+
+  // Close popover when clicking outside (trigger and portal both count as inside) or on Escape
   useEffect(() => {
     if (!isOpen) return;
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = event.target as Node;
+      if (containerRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      setIsOpen(false);
+    }
+    function handleKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsOpen(false);
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
   }, [isOpen]);
 
   const todayStr = getTodayLocalDateString();
@@ -74,9 +136,20 @@ export function FollowUpDatePicker({
     setSelectedDate(ymd);
   }
 
+  const isPast = isPastLocalDateTime(selectedDate, selectedTime);
+  const timeOptions = BUSINESS_TIME_SLOTS.some((t) => t.value === selectedTime)
+    ? BUSINESS_TIME_SLOTS
+    : [{ value: selectedTime, label: formatTimeLabel(selectedTime) }, ...BUSINESS_TIME_SLOTS].sort((a, b) =>
+        a.value.localeCompare(b.value)
+      );
+
   async function handleSave() {
     if (!selectedDate) {
       alert('Please select a date.');
+      return;
+    }
+    if (isPast) {
+      alert('This date & time has already passed. Please pick a later time.');
       return;
     }
     setIsSaving(true);
@@ -116,15 +189,17 @@ export function FollowUpDatePicker({
     <div ref={containerRef} className={`relative inline-block w-full ${className}`}>
       {/* Trigger Button */}
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled || isSaving}
         onClick={() => {
           if (!isOpen) {
             const s = splitDatetime(value);
-            // Default to today or tomorrow if empty
+            // Default to the next free business slot (today, or tomorrow 11 AM after hours)
             if (!s.date) {
-              setSelectedDate(todayStr);
-              setSelectedTime('11:00');
+              const slot = getNextAvailableSlot();
+              setSelectedDate(slot.date);
+              setSelectedTime(slot.time);
             } else {
               setSelectedDate(s.date);
               setSelectedTime(s.time || '11:00');
@@ -184,9 +259,24 @@ export function FollowUpDatePicker({
         </div>
       )}
 
-      {/* Floating Popover Picker */}
-      {isOpen && (
-        <div className="absolute z-50 mt-1 left-0 w-72 bg-white rounded-xl shadow-xl border border-slate-200 p-3.5 space-y-3 animate-fade-in text-slate-800">
+      {/* Floating Popover Picker (portal, fixed position, always on top) */}
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={popoverRef}
+          role="dialog"
+          aria-label="Select follow-up date and time"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: position?.top ?? -9999,
+            left: position?.left ?? -9999,
+            width: Math.min(POPOVER_WIDTH, typeof window !== 'undefined' ? window.innerWidth - VIEWPORT_MARGIN * 2 : POPOVER_WIDTH),
+            maxHeight: `calc(100vh - ${VIEWPORT_MARGIN * 2}px)`,
+            visibility: position ? 'visible' : 'hidden',
+          }}
+          className="z-[1000] overflow-y-auto bg-white rounded-xl shadow-2xl border border-slate-200 p-3.5 space-y-3 animate-fade-in text-slate-800 text-left"
+        >
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <Calendar className="h-3.5 w-3.5 text-sky-600" /> Select Date &amp; Time
@@ -293,7 +383,7 @@ export function FollowUpDatePicker({
               onChange={(e) => setSelectedTime(e.target.value)}
               className="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
             >
-              {BUSINESS_TIME_SLOTS.map((slot) => (
+              {timeOptions.map((slot) => (
                 <option key={slot.value} value={slot.value}>
                   {slot.label}
                 </option>
@@ -301,8 +391,15 @@ export function FollowUpDatePicker({
             </select>
           </div>
 
+          {isPast && (
+            <div className="p-2 bg-rose-50 border border-rose-200 rounded-lg text-[11px] text-rose-700 font-semibold flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              <span>This time has already passed.</span>
+            </div>
+          )}
+
           {/* Live Human-readable Preview */}
-          {currentIsoPreview && (
+          {currentIsoPreview && !isPast && (
             <div className="p-2 bg-sky-50/80 border border-sky-100 rounded-lg text-[11px] text-sky-900 font-medium flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5 text-sky-600 shrink-0" />
               <span className="truncate">
@@ -338,7 +435,7 @@ export function FollowUpDatePicker({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={isSaving || !selectedDate}
+                disabled={isSaving || !selectedDate || isPast}
                 className="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-lg shadow-soft-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 {isSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
@@ -346,7 +443,8 @@ export function FollowUpDatePicker({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

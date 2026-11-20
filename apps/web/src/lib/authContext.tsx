@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.push('/admin/dashboard');
         break;
       case 'TELECALLER':
-        router.push('/telecaller/leads');
+        router.push('/telecaller/plan');
         break;
       case 'SALESMAN':
         router.push('/salesman/dashboard');

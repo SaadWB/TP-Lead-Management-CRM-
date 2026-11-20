@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Calendar, Clock, AlertTriangle } from 'lucide-react';
 import {
   splitDatetime,
   combineDateAndTime,
   getTodayLocalDateString,
   BUSINESS_TIME_SLOTS,
+  getNextAvailableSlot,
+  isPastLocalDateTime,
+  formatTimeLabel,
 } from '@/lib/dateUtils';
 import { formatDateTime } from '@/lib/utils';
 
@@ -27,17 +30,41 @@ export function DateTimePicker({
   label = 'Date & Time',
   className = '',
 }: DateTimePickerProps) {
-  const initial = splitDatetime(value);
   const todayStr = minDate || getTodayLocalDateString();
 
-  const [date, setDate] = useState<string>(initial.date || todayStr);
+  // When no value is given, pre-select the next free slot (not a hard-coded 11:00 AM that may
+  // already be in the past) AND report it to the parent. Previously the picker only *showed*
+  // a default: the parent stayed empty, so saving failed with "please select a date & time".
+  const [initial] = useState(() => {
+    const s = splitDatetime(value);
+    return s.date ? s : getNextAvailableSlot();
+  });
+  const [date, setDate] = useState<string>(initial.date);
   const [time, setTime] = useState<string>(initial.time || '11:00');
+  const emittedDefault = useRef(false);
+
+  useEffect(() => {
+    if (emittedDefault.current) return;
+    emittedDefault.current = true;
+    if (!splitDatetime(value).date) {
+      const combined = combineDateAndTime(initial.date, initial.time);
+      if (combined) onChange(combined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const s = splitDatetime(value);
     if (s.date) setDate(s.date);
-    if (s.time) setTime(s.time);
+    if (s.date && s.time) setTime(s.time);
   }, [value]);
+
+  const isPast = isPastLocalDateTime(date, time);
+  const timeOptions = BUSINESS_TIME_SLOTS.some((s) => s.value === time)
+    ? BUSINESS_TIME_SLOTS
+    : [{ value: time, label: formatTimeLabel(time) }, ...BUSINESS_TIME_SLOTS].sort((a, b) =>
+        a.value.localeCompare(b.value)
+      );
 
   function handleDateChange(newDate: string) {
     setDate(newDate);
@@ -102,7 +129,7 @@ export function DateTimePicker({
             onChange={(e) => handleTimeChange(e.target.value)}
             className="w-full text-xs bg-white border border-slate-300 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
           >
-            {BUSINESS_TIME_SLOTS.map((slot) => (
+            {timeOptions.map((slot) => (
               <option key={slot.value} value={slot.value}>
                 {slot.label}
               </option>
@@ -165,8 +192,15 @@ export function DateTimePicker({
         ))}
       </div>
 
+      {isPast && (
+        <div className="p-2 bg-rose-50 border border-rose-200 rounded-xl text-[11px] text-rose-700 font-semibold flex items-center gap-1.5">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span>This time has already passed. Pick a later time or another day.</span>
+        </div>
+      )}
+
       {/* Human-readable confirmation preview */}
-      {currentCombined && (
+      {currentCombined && !isPast && (
         <div className="p-2.5 bg-sky-50/80 border border-sky-200/80 rounded-xl text-xs text-sky-900 font-medium flex items-center gap-2">
           <Clock className="h-4 w-4 text-sky-600 shrink-0" />
           <span>

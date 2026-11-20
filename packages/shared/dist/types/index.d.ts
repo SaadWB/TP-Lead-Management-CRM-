@@ -270,6 +270,60 @@ export interface DashboardMetrics {
     recentActivities: LeadActivity[];
     inactiveLeadsCount?: number;
 }
+/**
+ * Accurate per-day activity numbers for one telecaller (local calendar day).
+ * "Worked" counts are distinct leads, so calling the same lead 3 times counts once.
+ */
+export interface DailyPerformance {
+    date: string;
+    totalCalls: number;
+    leadsWorked: number;
+    newLeadsWorked: number;
+    followUpsDone: number;
+    connected: number;
+    notConnected: number;
+    followUpsScheduled: number;
+    closedToday: number;
+    demosScheduled: number;
+}
+export interface MyDayQueueItem {
+    id: string;
+    companyName: string;
+    contactPerson?: string | null;
+    phone: string;
+    serviceProduct?: string | null;
+    priority: string;
+    pipelineStage: string;
+    lastCallOutcome?: string | null;
+    nextFollowUpDate?: string | null;
+    nextAction?: string | null;
+    leadSource?: string | null;
+    createdAt?: string;
+}
+export interface MyDayReport {
+    today: DailyPerformance;
+    yesterday: DailyPerformance;
+    last7Days: DailyPerformance[];
+    queue: {
+        overdue: number;
+        dueToday: number;
+        dueTomorrow: number;
+        upcoming7Days: number;
+        untouchedNew: number;
+        missingFollowUp: number;
+        hotLeads: number;
+        demosToday: number;
+    };
+    lists: {
+        overdue: MyDayQueueItem[];
+        dueToday: MyDayQueueItem[];
+        demosToday: MyDayQueueItem[];
+        untouchedNew: MyDayQueueItem[];
+        missingFollowUp: MyDayQueueItem[];
+    };
+    generatedAt: string;
+    tzOffsetMinutes: number;
+}
 export interface OutcomeBehaviorFlags {
     requiresDateTime?: boolean;
     requiresNextFollowUp?: boolean;
