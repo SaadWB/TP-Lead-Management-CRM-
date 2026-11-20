@@ -3,7 +3,8 @@ import { logCallSchema, USER_ROLES, normalizeCallOutcome, getSuggestedPipelineFo
 import { leadRepository } from '../../repositories/leadRepository';
 import { callLogRepository } from '../../repositories/callLogRepository';
 import { activityRepository } from '../../repositories/activityRepository';
-import { followUpTaskRepository } from '../../repositories/followUpTaskRepository';
+import { scheduleFollowUpTask } from '../../services/followUpScheduler';
+import { getTzOffsetMinutes, localDateKey, addDaysToKey, localDateTimeToUtc } from '../../utils/timezone';
 import { assignmentHistoryRepository } from '../../repositories/assignmentHistoryRepository';
 import { userRepository } from '../../repositories/userRepository';
 import { notificationService } from '../../services/notificationService';
@@ -60,10 +61,8 @@ export async function logCall(req: Request, res: Response, next: NextFunction): 
       followUpDate = data.nextFollowUpDate;
     } else if (outcome === 'Interested') {
       // Rule 5: Interested lead is automatically added to Follow-ups after 3 days
-      const d = new Date();
-      d.setDate(d.getDate() + 3);
-      d.setHours(10, 0, 0, 0);
-      followUpDate = d.toISOString();
+      const tz = getTzOffsetMinutes(req);
+      followUpDate = localDateTimeToUtc(addDaysToKey(localDateKey(new Date(), tz), 3), '10:00', tz).toISOString();
     } else if (data.nextFollowUpDate) {
       const parsedTime = new Date(data.nextFollowUpDate).getTime();
       if (!isNaN(parsedTime) && parsedTime >= Date.now() - 60000) {
@@ -139,13 +138,13 @@ export async function logCall(req: Request, res: Response, next: NextFunction): 
 
     // 3. Create FollowUpTask if follow-up date was set
     if (followUpDate) {
-      await followUpTaskRepository.create({
+      await scheduleFollowUpTask({
         leadId: lead.id,
         assignedUserId: req.user!.id,
-        taskType: outcome === 'Demo Requested' ? 'DEMO' : 'CALL',
-        dueDate: followUpDate.split('T')[0],
-        dueTime: followUpDate.includes('T') ? followUpDate.split('T')[1].substring(0, 5) : '10:00',
+        followUpIso: followUpDate,
+        taskType: outcome === 'Demo Scheduled' || outcome === 'Demo Interested' ? 'DEMO' : 'CALL',
         notes: data.nextAction || `${outcome} follow-up scheduled`,
+        tzOffsetMinutes: getTzOffsetMinutes(req),
       });
     }
 

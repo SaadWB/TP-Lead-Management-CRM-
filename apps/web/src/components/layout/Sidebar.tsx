@@ -16,6 +16,7 @@ import {
   LogOut,
   ChevronRight,
   CheckSquare,
+  Sunrise,
   Table,
   SlidersHorizontal,
   X,
@@ -54,6 +55,7 @@ export function Sidebar({ onClose, className = '', isMobileDrawer = false }: Sid
   ];
 
   const telecallerNav: NavItem[] = [
+    { title: 'Morning Plan', href: '/telecaller/plan', icon: Sunrise, badge: 'Start here' },
     { title: 'My Leads', href: '/telecaller/leads', icon: Table, badge: 'Table' },
     { title: "Today's Work", href: '/telecaller/today', icon: CheckSquare, badge: 'Follow-ups' },
     { title: 'Calling Dashboard', href: '/telecaller/kanban', icon: Kanban, badge: 'Board' },

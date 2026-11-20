@@ -89,6 +89,21 @@ export declare function isLeadClosedWon(lead: {
  * Checks if a given stage is an active running pipeline stage.
  */
 export declare function isRunningPipelineStage(stage: string | null | undefined): boolean;
+/**
+ * Outcomes where the telecaller could NOT speak with the prospect.
+ * Everything else that is a real call outcome counts as "connected"
+ * (the prospect picked up and a conversation happened, even if negative).
+ */
+export declare const NOT_CONNECTED_OUTCOMES: readonly ["No Answer", "Busy", "Call Cut", "Wrong Number"];
+/** Classifies a call outcome for performance tracking. */
+export declare function getOutcomeConnection(raw: string | null | undefined): 'CONNECTED' | 'NOT_CONNECTED' | 'UNKNOWN';
+/** True when a lead is no longer in the running follow-up queue (closed, won, dead outcome). */
+export declare function isLeadOutOfQueue(lead: {
+    pipelineStage?: string | null;
+    salesStage?: string | null;
+    convertedAt?: string | null | Date;
+    lastCallOutcome?: string | null;
+}): boolean;
 export declare const TASK_TYPES: {
     readonly CALL: "CALL";
     readonly FOLLOW_UP: "FOLLOW_UP";

@@ -12,6 +12,88 @@ interface CacheEntry<T> {
 const memoryCache = new Map<string, CacheEntry<any>>();
 const listeners = new Map<string, Set<(data: any) => void>>();
 
+/*
+ * Lead mutation tracking.
+ * A background re-fetch that STARTED before a lead was edited returns the old row.
+ * Applying it blindly made dropdowns "jump back" to the previous status for a moment
+ * (or permanently, if the response arrived last). We remember when each lead was last
+ * changed locally and which leads have a save in flight, and keep the local version
+ * of those rows when merging server lists.
+ */
+const leadMutationAt = new Map<string, number>();
+const pendingLeadSaves = new Map<string, number>();
+
+/** In-flight GETs per cache key (deduplicates parallel fetches) and latest applied request time. */
+const inflightRequests = new Map<string, { promise: Promise<any>; startedAt: number }>();
+const lastAppliedRequestAt = new Map<string, number>();
+
+export function beginLeadMutation(leadId: string): void {
+  if (!leadId) return;
+  pendingLeadSaves.set(leadId, (pendingLeadSaves.get(leadId) || 0) + 1);
+  leadMutationAt.set(leadId, Date.now());
+}
+
+export function endLeadMutation(leadId: string): void {
+  if (!leadId) return;
+  const n = (pendingLeadSaves.get(leadId) || 1) - 1;
+  if (n <= 0) pendingLeadSaves.delete(leadId);
+  else pendingLeadSaves.set(leadId, n);
+  leadMutationAt.set(leadId, Date.now());
+}
+
+function isLeadArray(data: any): data is any[] {
+  return Array.isArray(data) && (data.length === 0 || (data[0] && typeof data[0] === 'object' && 'companyName' in data[0]));
+}
+
+/** Keeps locally-edited lead rows when a stale server list arrives. */
+function mergeStaleSafe(key: string, fresh: any, requestStartedAt: number): any {
+  if (!isLeadArray(fresh)) return fresh;
+  const existing = memoryCache.get(key)?.data;
+  if (!Array.isArray(existing) || existing.length === 0) return fresh;
+  const localById = new Map<string, any>();
+  existing.forEach((l: any) => l?.id && localById.set(l.id, l));
+  let changed = false;
+  const merged = fresh.map((row: any) => {
+    const id = row?.id;
+    if (!id) return row;
+    const editedAt = leadMutationAt.get(id) || 0;
+    if (pendingLeadSaves.has(id) || editedAt > requestStartedAt) {
+      const local = localById.get(id);
+      if (local) {
+        changed = true;
+        return { ...row, ...local };
+      }
+    }
+    return row;
+  });
+  return changed ? merged : fresh;
+}
+
+/** Runs a GET once per key at a time and ignores responses older than one already applied. */
+export async function fetchIntoCache<T>(key: string, endpoint: string, params?: Record<string, any>): Promise<T | undefined> {
+  const running = inflightRequests.get(key);
+  if (running) return running.promise;
+  const startedAt = Date.now();
+  const promise = (async () => {
+    try {
+      const res = await api.get<T>(endpoint, params);
+      if (!res.success || res.data === undefined) return undefined;
+      if ((lastAppliedRequestAt.get(key) || 0) > startedAt) {
+        // A newer response is already in the cache; never overwrite it with older data
+        return memoryCache.get(key)?.data as T | undefined;
+      }
+      lastAppliedRequestAt.set(key, startedAt);
+      const merged = mergeStaleSafe(key, res.data, startedAt);
+      setMemoryCache(key, merged);
+      return merged as T;
+    } finally {
+      inflightRequests.delete(key);
+    }
+  })();
+  inflightRequests.set(key, { promise, startedAt });
+  return promise;
+}
+
 export function getCacheKey(endpoint: string, params?: Record<string, any>): string {
   if (!params) return endpoint;
   const sorted = Object.entries(params)
@@ -151,6 +233,7 @@ export function removeCachedLead(leadId: string): void {
  */
 export function updateCachedLead(updatedLead: any): void {
   if (!updatedLead || !updatedLead.id) return;
+  leadMutationAt.set(updatedLead.id, Date.now());
   memoryCache.forEach((entry, key) => {
     if (key.startsWith('/leads') && Array.isArray(entry.data)) {
       const idx = entry.data.findIndex((l: any) => l.id === updatedLead.id);
@@ -183,6 +266,14 @@ export function updateCachedLead(updatedLead: any): void {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('crm:lead-updated', { detail: { lead: updatedLead } }));
   }
+}
+
+/**
+ * Optimistic local edit of a lead in every cached list (and the open drawer) without a network call.
+ */
+export function patchCachedLead(leadId: string, patch: Record<string, any>): void {
+  if (!leadId) return;
+  updateCachedLead({ ...patch, id: leadId });
 }
 
 /**
@@ -227,10 +318,9 @@ export function useSWRData<T>(
     }
     setError(null);
     try {
-      const res = await api.get<T>(endpoint, params);
-      if (res.success && res.data !== undefined) {
-        setMemoryCache(cacheKey, res.data);
-        setData(res.data);
+      const result = await fetchIntoCache<T>(cacheKey, endpoint, params);
+      if (result !== undefined) {
+        setData(result);
       }
     } catch (err: any) {
       setError(err);

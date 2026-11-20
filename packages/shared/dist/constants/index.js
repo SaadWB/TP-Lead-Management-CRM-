@@ -1,11 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.IMPORT_TEMPLATE_COLUMNS = exports.DEFAULT_LEAD_SOURCE_LIST = exports.DEFAULT_LEAD_SOURCES = exports.ACTIVITY_TYPES = exports.LOST_REASONS = exports.TASK_STATUSES = exports.TASK_TYPES = exports.TELECALLER_KANBAN_COLUMNS = exports.SALES_STAGE_OPTIONS = exports.SALES_STAGES = exports.PRIORITIES = exports.CALL_OUTCOME_LIST = exports.TELECALLER_CALL_OUTCOMES = exports.CALL_OUTCOMES = exports.PIPELINE_STAGE_LIST = exports.PIPELINE_STAGES = exports.USER_ROLES = void 0;
+exports.IMPORT_TEMPLATE_COLUMNS = exports.DEFAULT_LEAD_SOURCE_LIST = exports.DEFAULT_LEAD_SOURCES = exports.ACTIVITY_TYPES = exports.LOST_REASONS = exports.TASK_STATUSES = exports.TASK_TYPES = exports.NOT_CONNECTED_OUTCOMES = exports.TELECALLER_KANBAN_COLUMNS = exports.SALES_STAGE_OPTIONS = exports.SALES_STAGES = exports.PRIORITIES = exports.CALL_OUTCOME_LIST = exports.TELECALLER_CALL_OUTCOMES = exports.CALL_OUTCOMES = exports.PIPELINE_STAGE_LIST = exports.PIPELINE_STAGES = exports.USER_ROLES = void 0;
 exports.getSuggestedPipelineForOutcome = getSuggestedPipelineForOutcome;
 exports.normalizeCallOutcome = normalizeCallOutcome;
 exports.normalizePipelineStage = normalizePipelineStage;
 exports.isLeadClosedWon = isLeadClosedWon;
 exports.isRunningPipelineStage = isRunningPipelineStage;
+exports.getOutcomeConnection = getOutcomeConnection;
+exports.isLeadOutOfQueue = isLeadOutOfQueue;
 exports.USER_ROLES = {
     SUPER_ADMIN: 'SUPER_ADMIN',
     TELECALLER: 'TELECALLER',
@@ -211,6 +213,33 @@ function isRunningPipelineStage(stage) {
         return false;
     }
     return true;
+}
+/**
+ * Outcomes where the telecaller could NOT speak with the prospect.
+ * Everything else that is a real call outcome counts as "connected"
+ * (the prospect picked up and a conversation happened, even if negative).
+ */
+exports.NOT_CONNECTED_OUTCOMES = ['No Answer', 'Busy', 'Call Cut', 'Wrong Number'];
+/** Classifies a call outcome for performance tracking. */
+function getOutcomeConnection(raw) {
+    if (!raw)
+        return 'UNKNOWN';
+    const norm = normalizeCallOutcome(raw);
+    if (!norm || norm === 'New Lead')
+        return 'UNKNOWN';
+    if (exports.NOT_CONNECTED_OUTCOMES.includes(norm))
+        return 'NOT_CONNECTED';
+    return 'CONNECTED';
+}
+/** True when a lead is no longer in the running follow-up queue (closed, won, dead outcome). */
+function isLeadOutOfQueue(lead) {
+    if (isLeadClosedWon(lead))
+        return true;
+    const stage = normalizePipelineStage(lead.pipelineStage);
+    if (stage === 'Closed' || stage === 'Closed Won')
+        return true;
+    const oc = normalizeCallOutcome(lead.lastCallOutcome);
+    return oc === 'Not Interested' || oc === 'Wrong Number';
 }
 exports.TASK_TYPES = {
     CALL: 'CALL',

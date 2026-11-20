@@ -12,33 +12,89 @@ export const prisma =
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 
+// Reuse ONE client per server instance in every environment (incl. production / serverless warm
+// starts). Creating extra clients opens extra connection pools and exhausts MySQL connections.
+globalForPrisma.prisma = prisma;
+
+const TRANSIENT_CODES = new Set(['P1001', 'P1002', 'P1008', 'P1017', 'P2024', 'P2034']);
+const READ_ACTIONS = new Set([
+  'findUnique',
+  'findUniqueOrThrow',
+  'findFirst',
+  'findFirstOrThrow',
+  'findMany',
+  'count',
+  'aggregate',
+  'groupBy',
+  'queryRaw',
+]);
+
+function isTransientDbError(err: any): boolean {
+  const msg = String(err?.message || '');
+  return (
+    TRANSIENT_CODES.has(err?.code) ||
+    msg.includes('closed the connection') ||
+    msg.includes('Connection lost') ||
+    msg.includes("Can't reach database server") ||
+    msg.includes('Timed out fetching a new connection') ||
+    msg.includes('ETIMEDOUT') ||
+    msg.includes('ECONNRESET') ||
+    msg.includes('EPIPE')
+  );
+}
+
+let reconnecting: Promise<void> | null = null;
+async function resetConnectionPool(): Promise<void> {
+  // MySQL drops idle connections (wait_timeout); a stale pool keeps failing until it is rebuilt.
+  if (!reconnecting) {
+    reconnecting = (async () => {
+      try {
+        await prisma.$disconnect();
+      } catch {
+        /* ignore */
+      }
+      try {
+        await prisma.$connect();
+      } catch {
+        /* next query will retry the connect */
+      }
+    })().finally(() => {
+      reconnecting = null;
+    });
+  }
+  await reconnecting;
+}
+
 if (!globalForPrisma._retryMiddlewareInstalled) {
   prisma.$use(async (params, next) => {
-    try {
-      return await next(params);
-    } catch (err: any) {
-      const isTransient =
-        err?.code === 'P1017' ||
-        err?.code === 'P1001' ||
-        err?.code === 'P1008' ||
-        err?.code === 'P2024' ||
-        err?.code === 'P2034' ||
-        err?.message?.includes('closed the connection') ||
-        err?.message?.includes('ETIMEDOUT') ||
-        err?.message?.includes('ECONNRESET');
-
-      if (isTransient) {
-        console.warn(`[Prisma Middleware] Auto-retrying ${params.model || 'raw'}.${params.action} after transient DB disconnect...`);
-        await new Promise((resolve) => setTimeout(resolve, 250));
+    // Reads are safe to retry several times. Writes are retried once, and only when the
+    // failure happened while acquiring a connection (the statement never reached MySQL).
+    const isRead = READ_ACTIONS.has(params.action);
+    const maxAttempts = isRead ? 3 : 2;
+    let attempt = 0;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      attempt++;
+      try {
         return await next(params);
+      } catch (err: any) {
+        const connectionPhase =
+          err?.code === 'P1001' || err?.code === 'P2024' || err?.code === 'P1017' ||
+          String(err?.message || '').includes("Can't reach database server");
+        const retryable = isTransientDbError(err) && (isRead || connectionPhase);
+        if (!retryable || attempt >= maxAttempts) throw err;
+        console.warn(
+          `[Prisma] Transient DB error on ${params.model || 'raw'}.${params.action} (${err?.code || 'no-code'}), retry ${attempt}/${maxAttempts - 1}`
+        );
+        if (err?.code === 'P1017' || String(err?.message || '').includes('closed the connection')) {
+          await resetConnectionPool();
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200 * attempt + Math.floor(Math.random() * 150)));
       }
-      throw err;
     }
   });
   globalForPrisma._retryMiddlewareInstalled = true;
 }
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 let schemaCheckPromise: Promise<void> | null = null;
 

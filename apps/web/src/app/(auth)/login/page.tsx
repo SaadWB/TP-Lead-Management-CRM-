@@ -22,7 +22,7 @@ export default function LoginPage() {
           router.replace('/admin/dashboard');
           break;
         case 'TELECALLER':
-          router.replace('/telecaller/leads');
+          router.replace('/telecaller/plan');
           break;
         case 'SALESMAN':
           router.replace('/salesman/dashboard');

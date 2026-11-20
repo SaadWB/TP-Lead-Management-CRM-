@@ -286,6 +286,63 @@ export interface DashboardMetrics {
   inactiveLeadsCount?: number;
 }
 
+/**
+ * Accurate per-day activity numbers for one telecaller (local calendar day).
+ * "Worked" counts are distinct leads, so calling the same lead 3 times counts once.
+ */
+export interface DailyPerformance {
+  date: string; // YYYY-MM-DD (user's local day)
+  totalCalls: number; // every recorded outcome / call log event
+  leadsWorked: number; // distinct leads touched today
+  newLeadsWorked: number; // first-ever contact happened today
+  followUpsDone: number; // leads touched today that had been contacted before
+  connected: number; // distinct leads whose latest outcome today = spoke with prospect
+  notConnected: number; // distinct leads whose latest outcome today = no answer / busy / cut / wrong no.
+  followUpsScheduled: number; // distinct leads given a new follow-up date today
+  closedToday: number; // leads closed / lost / won today
+  demosScheduled: number;
+}
+
+export interface MyDayQueueItem {
+  id: string;
+  companyName: string;
+  contactPerson?: string | null;
+  phone: string;
+  serviceProduct?: string | null;
+  priority: string;
+  pipelineStage: string;
+  lastCallOutcome?: string | null;
+  nextFollowUpDate?: string | null;
+  nextAction?: string | null;
+  leadSource?: string | null;
+  createdAt?: string;
+}
+
+export interface MyDayReport {
+  today: DailyPerformance;
+  yesterday: DailyPerformance;
+  last7Days: DailyPerformance[]; // oldest first, includes today
+  queue: {
+    overdue: number;
+    dueToday: number; // still scheduled later today (not yet done)
+    dueTomorrow: number;
+    upcoming7Days: number;
+    untouchedNew: number; // open leads never contacted
+    missingFollowUp: number; // open, contacted leads without any next follow-up date
+    hotLeads: number; // HIGH / URGENT open leads
+    demosToday: number;
+  };
+  lists: {
+    overdue: MyDayQueueItem[];
+    dueToday: MyDayQueueItem[];
+    demosToday: MyDayQueueItem[];
+    untouchedNew: MyDayQueueItem[];
+    missingFollowUp: MyDayQueueItem[];
+  };
+  generatedAt: string;
+  tzOffsetMinutes: number;
+}
+
 export interface OutcomeBehaviorFlags {
   requiresDateTime?: boolean;
   requiresNextFollowUp?: boolean;

@@ -208,6 +208,38 @@ export function isRunningPipelineStage(stage: string | null | undefined): boolea
   return true;
 }
 
+/**
+ * Outcomes where the telecaller could NOT speak with the prospect.
+ * Everything else that is a real call outcome counts as "connected"
+ * (the prospect picked up and a conversation happened, even if negative).
+ */
+export const NOT_CONNECTED_OUTCOMES = ['No Answer', 'Busy', 'Call Cut', 'Wrong Number'] as const;
+
+/** Classifies a call outcome for performance tracking. */
+export function getOutcomeConnection(
+  raw: string | null | undefined
+): 'CONNECTED' | 'NOT_CONNECTED' | 'UNKNOWN' {
+  if (!raw) return 'UNKNOWN';
+  const norm = normalizeCallOutcome(raw);
+  if (!norm || norm === 'New Lead') return 'UNKNOWN';
+  if ((NOT_CONNECTED_OUTCOMES as readonly string[]).includes(norm)) return 'NOT_CONNECTED';
+  return 'CONNECTED';
+}
+
+/** True when a lead is no longer in the running follow-up queue (closed, won, dead outcome). */
+export function isLeadOutOfQueue(lead: {
+  pipelineStage?: string | null;
+  salesStage?: string | null;
+  convertedAt?: string | null | Date;
+  lastCallOutcome?: string | null;
+}): boolean {
+  if (isLeadClosedWon(lead)) return true;
+  const stage = normalizePipelineStage(lead.pipelineStage);
+  if (stage === 'Closed' || stage === 'Closed Won') return true;
+  const oc = normalizeCallOutcome(lead.lastCallOutcome);
+  return oc === 'Not Interested' || oc === 'Wrong Number';
+}
+
 export const TASK_TYPES = {
   CALL: 'CALL',
   FOLLOW_UP: 'FOLLOW_UP',

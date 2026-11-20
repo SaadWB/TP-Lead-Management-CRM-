@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/authContext';
-import { Table, CheckSquare, Kanban, LayoutDashboard } from 'lucide-react';
+import { Table, CheckSquare, Kanban, LayoutDashboard, Sunrise } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function MobileBottomNav() {
@@ -14,6 +14,7 @@ export function MobileBottomNav() {
   if (!user || user.role !== 'TELECALLER') return null;
 
   const items = [
+    { title: 'Plan', href: '/telecaller/plan', icon: Sunrise },
     { title: 'My Leads', href: '/telecaller/leads', icon: Table },
     { title: "Today", href: '/telecaller/today', icon: CheckSquare },
     { title: 'Kanban', href: '/telecaller/kanban', icon: Kanban },
@@ -30,7 +31,7 @@ export function MobileBottomNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              'flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all duration-150 min-h-[48px] min-w-[56px] text-[10px] font-bold active:scale-95',
+              'flex flex-col items-center justify-center py-1.5 px-2 rounded-xl transition-all duration-150 min-h-[48px] min-w-[52px] text-[10px] font-bold active:scale-95',
               isActive
                 ? 'text-sky-600 bg-sky-50'
                 : 'text-slate-500 hover:text-slate-900'
