@@ -17,13 +17,14 @@ import {
 import { leadRepository, LeadFilterOptions } from '../../repositories/leadRepository';
 import { userRepository, areUserIdsEquivalent } from '../../repositories/userRepository';
 import { activityRepository } from '../../repositories/activityRepository';
-import { followUpTaskRepository } from '../../repositories/followUpTaskRepository';
 import { notificationService } from '../../services/notificationService';
 import { assignmentHistoryRepository } from '../../repositories/assignmentHistoryRepository';
 import { prisma } from '../../config/prisma';
 import { auditLogRepository } from '../../repositories/auditLogRepository';
 import { ForbiddenError, NotFoundError, BadRequestError } from '../../utils/errors';
 import { sendSuccess } from '../../utils/response';
+import { getTzOffsetMinutes, localDateKey, addDaysToKey, localDateTimeToUtc } from '../../utils/timezone';
+import { scheduleFollowUpTask } from '../../services/followUpScheduler';
 
 /**
  * Enforces role-based lead isolation.
@@ -70,7 +71,11 @@ export async function listLeads(req: Request, res: Response, next: NextFunction)
       sortBy: req.query.sortBy as any,
       sortOrder: req.query.sortOrder as any,
       page: req.query.page ? parseInt(req.query.page as string, 10) : 1,
-      limit: req.query.limit ? parseInt(req.query.limit as string, 10) : 150,
+      // Hard cap protects the DB from unbounded requests (limit=0 used to mean "everything")
+      limit: Math.min(5000, Math.max(1, req.query.limit ? parseInt(req.query.limit as string, 10) || 150 : 150)),
+      hasFollowUp: req.query.hasFollowUp === 'true',
+      slim: req.query.view === 'table',
+      tzOffsetMinutes: getTzOffsetMinutes(req),
     };
 
     // Strict role-based query enforcement
@@ -251,6 +256,40 @@ export async function updateLead(req: Request, res: Response, next: NextFunction
     }
 
     const updated = await leadRepository.update(req.params.id, patchData);
+
+    // Keep the follow-up task list in sync with the lead's single next follow-up date
+    if (data.nextFollowUpDate !== undefined) {
+      const prevIso = lead.nextFollowUpDate ? new Date(lead.nextFollowUpDate).toISOString() : null;
+      const nextIso = data.nextFollowUpDate ? new Date(data.nextFollowUpDate).toISOString() : null;
+      if (prevIso !== nextIso) {
+        try {
+          if (nextIso) {
+            await scheduleFollowUpTask({
+              leadId: lead.id,
+              assignedUserId: lead.assignedTelecallerId || req.user!.id,
+              followUpIso: nextIso,
+              taskType: 'FOLLOW_UP',
+              notes: data.nextAction || lead.nextAction || 'Follow-up scheduled',
+              tzOffsetMinutes: getTzOffsetMinutes(req),
+            });
+            await activityRepository.create({
+              leadId: lead.id,
+              userId: req.user!.id,
+              type: 'FOLLOW_UP_SCHEDULED',
+              description: `Next follow-up set by ${req.user!.name}`,
+              metadata: { followUpDate: nextIso, previousFollowUpDate: prevIso },
+            });
+          } else {
+            await prisma.followUpTask.updateMany({
+              where: { leadId: lead.id, status: 'PENDING' },
+              data: { status: 'CANCELLED' },
+            });
+          }
+        } catch (taskErr) {
+          console.warn('[updateLead] Follow-up task sync notice:', taskErr);
+        }
+      }
+    }
 
     // Track telecaller assignment change
     if (data.assignedTelecallerId !== undefined && data.assignedTelecallerId !== lead.assignedTelecallerId) {
@@ -629,7 +668,7 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
 
     if (data.notes) {
       updatePayload.notes = lead.notes
-        ? `${lead.notes}\n[${now.toISOString().split('T')[0]}]: ${data.notes}`
+        ? `${lead.notes}\n[${localDateKey(now, getTzOffsetMinutes(req))}]: ${data.notes}`
         : data.notes;
     }
 
@@ -668,22 +707,21 @@ export async function updateLeadStage(req: Request, res: Response, next: NextFun
       updatePayload.salesStage = lead.salesStage || 'ASSIGNED';
     }
 
-    // Schedule task if follow-up date was set (safely wrapped so task failures never block status updates)
-    if (followUpDate) {
+    // Schedule task if follow-up date was set (safely wrapped so task failures never block status updates).
+    // Only one pending task per lead: older pending tasks are superseded.
+    if (followUpDate && !closesLead) {
       try {
-        const dueDatePart = followUpDate.includes('T') ? followUpDate.split('T')[0] : followUpDate;
-        const dueTimePart = followUpDate.includes('T') ? followUpDate.split('T')[1].substring(0, 5) : '10:00';
-        const parsedDue = new Date(dueDatePart);
-        if (!isNaN(parsedDue.getTime())) {
-          await followUpTaskRepository.create({
-            leadId: lead.id,
-            assignedUserId: req.user!.id,
-            taskType: (targetOutcome === 'Demo Scheduled' || targetOutcome === 'Demo Interested' || targetPipeline === 'Demo') ? 'DEMO' : 'CALL',
-            dueDate: dueDatePart,
-            dueTime: dueTimePart,
-            notes: data.notes || `Scheduled follow-up for ${targetOutcome || targetPipeline}`,
-          });
-        }
+        await scheduleFollowUpTask({
+          leadId: lead.id,
+          assignedUserId: req.user!.id,
+          followUpIso: followUpDate,
+          taskType:
+            targetOutcome === 'Demo Scheduled' || targetOutcome === 'Demo Interested' || targetPipeline === 'Demo'
+              ? 'DEMO'
+              : 'CALL',
+          notes: data.notes || `Scheduled follow-up for ${targetOutcome || targetPipeline}`,
+          tzOffsetMinutes: getTzOffsetMinutes(req),
+        });
       } catch (err) {
         console.warn('[updateLeadStage] Follow-up task creation notice:', err);
       }
@@ -784,20 +822,20 @@ export async function updateSalesStage(req: Request, res: Response, next: NextFu
     if (data.followUpDate) {
       updatePayload.nextFollowUpDate = data.followUpDate;
 
-      // Schedule follow-up task for Closer
-      await followUpTaskRepository.create({
+      // Schedule follow-up task for Closer (supersedes older pending tasks, local due time)
+      await scheduleFollowUpTask({
         leadId: lead.id,
         assignedUserId: lead.assignedSalesmanId || req.user!.id,
+        followUpIso: data.followUpDate,
         taskType: newStage === 'DEMO_SCHEDULED' ? 'DEMO' : 'FOLLOW_UP',
-        dueDate: data.followUpDate.split('T')[0],
-        dueTime: data.followUpDate.includes('T') ? data.followUpDate.split('T')[1].substring(0, 5) : '14:00',
         notes: data.notes || `Sales follow-up for stage: ${newStage}`,
+        tzOffsetMinutes: getTzOffsetMinutes(req),
       });
     }
 
     if (data.notes) {
       updatePayload.notes = lead.notes
-        ? `${lead.notes}\n[${new Date().toISOString().split('T')[0]} - ${newStage}]: ${data.notes}`
+        ? `${lead.notes}\n[${localDateKey(new Date(), getTzOffsetMinutes(req))} - ${newStage}]: ${data.notes}`
         : data.notes;
     }
 
@@ -904,40 +942,45 @@ export async function completeFollowUp(req: Request, res: Response, next: NextFu
         throw new BadRequestError('A note is required explaining why the follow-up was not closed.');
       }
 
-      // Automatically added to Follow-ups again after 3 days
-      const nextDate = new Date();
-      nextDate.setDate(nextDate.getDate() + 3);
-      nextDate.setHours(10, 0, 0, 0);
+      // Automatically added to Follow-ups again after 3 days at 10:00 AM in the USER's timezone
+      // (server runs in UTC, so setHours(10) used to produce 3:30 PM IST).
+      // The client may also send an explicit future date.
+      const tz = getTzOffsetMinutes(req);
+      const requested = req.body?.nextFollowUpDate ? new Date(req.body.nextFollowUpDate) : null;
+      const nextDate =
+        requested && !isNaN(requested.getTime()) && requested.getTime() > Date.now()
+          ? requested
+          : localDateTimeToUtc(addDaysToKey(localDateKey(now, tz), 3), '10:00', tz);
       const nextDateIso = nextDate.toISOString();
 
       updatePayload.nextFollowUpDate = nextDateIso;
       updatePayload.nextAction = `Follow-up retry: ${notes.trim()}`;
       if (notes) {
         updatePayload.notes = lead.notes
-          ? `${lead.notes}\n[${now.toISOString().split('T')[0]} - Not Closed]: ${notes.trim()}`
-          : `[${now.toISOString().split('T')[0]} - Not Closed]: ${notes.trim()}`;
+          ? `${lead.notes}\n[${localDateKey(now, tz)} - Not Closed]: ${notes.trim()}`
+          : `[${localDateKey(now, tz)} - Not Closed]: ${notes.trim()}`;
       }
 
-      // Complete current pending tasks and create new task for 3 days later
+      // Complete current pending tasks and create new task for the rescheduled date
       await prisma.followUpTask.updateMany({
         where: { leadId: lead.id, status: 'PENDING' },
         data: { status: 'COMPLETED', completedAt: now },
       });
 
-      await followUpTaskRepository.create({
+      await scheduleFollowUpTask({
         leadId: lead.id,
         assignedUserId: lead.assignedTelecallerId || req.user!.id,
+        followUpIso: nextDateIso,
         taskType: 'FOLLOW_UP',
-        dueDate: nextDateIso.split('T')[0],
-        dueTime: '10:00',
         notes: `Follow-up rescheduled (Not Closed): ${notes.trim()}`,
+        tzOffsetMinutes: tz,
       });
 
       await activityRepository.create({
         leadId: lead.id,
         userId: req.user!.id,
         type: 'NOTE_ADDED',
-        description: `Follow-up completed: Not Closed - "${notes.trim()}". Automatically rescheduled follow-up for 3 days later (${nextDateIso.split('T')[0]}) by ${req.user!.name}.`,
+        description: `Follow-up completed: Not Closed - "${notes.trim()}". Rescheduled follow-up for ${localDateKey(nextDate, tz)} by ${req.user!.name}.`,
         metadata: { action: 'NOT_CLOSED', notes: notes.trim(), nextFollowUpDate: nextDateIso },
       });
     } else {

@@ -1,5 +1,6 @@
 import { Lead, Priority, CallOutcome } from '@crm/shared';
 import { prisma } from '../config/prisma';
+import { localDayRange, localDateKey, isValidDateKey } from '../utils/timezone';
 import { resolveUserAlias, areUserIdsEquivalent } from './userRepository';
 import { parseSafeDateObject } from '../utils/dateUtils';
 
@@ -26,6 +27,11 @@ const leadIncludeFull = {
     },
     orderBy: { createdAt: 'desc' as const },
   },
+};
+
+const leadIncludeSlim = {
+  assignedTelecaller: { select: { id: true, name: true, email: true } },
+  assignedSalesman: { select: { id: true, name: true, email: true } },
 };
 
 const leadIncludeList = {
@@ -181,6 +187,12 @@ export interface LeadFilterOptions {
   limit?: number;
   isDeleted?: boolean;
   excludeWebsiteLeads?: boolean;
+  /** Only leads that have a next follow-up date scheduled */
+  hasFollowUp?: boolean;
+  /** Table views only need the lead row; skip heavy relation lists */
+  slim?: boolean;
+  /** User's UTC offset in minutes (IST = 330) for "today" calculations */
+  tzOffsetMinutes?: number;
 }
 
 export class LeadRepository {
@@ -205,10 +217,9 @@ export class LeadRepository {
       archivedAt: null,
     };
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // "Today" must be the USER's calendar day, not the UTC server day
+    const tz = options.tzOffsetMinutes ?? 330;
+    const { start: todayStart, end: todayEnd } = localDayRange(localDateKey(new Date(), tz), tz);
 
     // Operational KPI Filter Mapping
     if (options.kpi) {
@@ -330,13 +341,21 @@ export class LeadRepository {
       }
     }
 
-    // Date range filtering
+    if (options.hasFollowUp && !where.nextFollowUpDate) {
+      where.nextFollowUpDate = { not: null };
+    }
+
+    // Date range filtering (YYYY-MM-DD keys are interpreted in the user's timezone)
     if (options.dateField) {
       const field = options.dateField;
-      const from = options.fromDate ? new Date(options.fromDate) : null;
-      if (from) from.setHours(0, 0, 0, 0);
-      const to = options.toDate ? new Date(options.toDate) : null;
-      if (to) to.setHours(23, 59, 59, 999);
+      const toBound = (val: string | undefined, edge: 'start' | 'end'): Date | null => {
+        if (!val) return null;
+        if (isValidDateKey(val)) return localDayRange(val, tz)[edge];
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+      };
+      const from = toBound(options.fromDate, 'start');
+      const to = toBound(options.toDate, 'end');
 
       if (from || to) {
         const range: any = {};
@@ -369,7 +388,7 @@ export class LeadRepository {
       orderBy,
       skip,
       take,
-      include: leadIncludeList,
+      include: options.slim ? leadIncludeSlim : leadIncludeList,
     });
 
     return {

@@ -7,6 +7,7 @@ import {
 import { activityRepository } from '../../repositories/activityRepository';
 import { auditLogRepository } from '../../repositories/auditLogRepository';
 import { sendSuccess } from '../../utils/response';
+import { getTzOffsetMinutes, localDateKey, localDayRange, addDaysToKey, isValidDateKey } from '../../utils/timezone';
 import { sanitizeForFormulaInjection } from '../../utils/security';
 import { prisma } from '../../config/prisma';
 
@@ -14,7 +15,8 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
   try {
     const user = req.user!;
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const dashTz = getTzOffsetMinutes(req);
+    const todayStr = localDateKey(now, dashTz);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     const [allLeads, followUpTasks, allUsers, callLogs] = await Promise.all([
@@ -68,7 +70,7 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
         .filter(
           (t) =>
             t.status === 'PENDING' &&
-            new Date(t.dueDate).toISOString().split('T')[0] === todayStr &&
+            localDateKey(new Date(t.dueDate), dashTz) === todayStr &&
             (user.role === USER_ROLES.SUPER_ADMIN || t.assignedUserId === user.id)
         )
         .map((t) => t.leadId)
@@ -78,18 +80,18 @@ export async function getDashboardMetrics(req: Request, res: Response, next: Nex
         .filter(
           (t) =>
             t.status === 'PENDING' &&
-            new Date(t.dueDate).toISOString().split('T')[0] < todayStr &&
+            localDateKey(new Date(t.dueDate), dashTz) < todayStr &&
             (user.role === USER_ROLES.SUPER_ADMIN || t.assignedUserId === user.id)
         )
         .map((t) => t.leadId)
     );
 
     const followUpsDueToday = visibleLeads.filter(
-      (l) => (l.nextFollowUpDate && l.nextFollowUpDate.split('T')[0] === todayStr) || todayTaskLeadIds.has(l.id)
+      (l) => (l.nextFollowUpDate && localDateKey(new Date(l.nextFollowUpDate), dashTz) === todayStr) || todayTaskLeadIds.has(l.id)
     ).length;
 
     const overdueFollowUps = visibleLeads.filter(
-      (l) => (l.nextFollowUpDate && l.nextFollowUpDate.split('T')[0] < todayStr) || overdueTaskLeadIds.has(l.id)
+      (l) => (l.nextFollowUpDate && localDateKey(new Date(l.nextFollowUpDate), dashTz) < todayStr) || overdueTaskLeadIds.has(l.id)
     ).length;
 
     const convertedLeads = visibleLeads.filter(
@@ -358,38 +360,34 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
       }
     }
 
-    // Determine Date Bounds
+    // Determine Date Bounds in the USER's timezone (server runs in UTC)
+    const tz = getTzOffsetMinutes(req);
     const now = new Date();
-    let start = new Date(now);
-    let end = new Date(now);
-
-    if (range === 'TODAY') {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
-    } else if (range === 'YESTERDAY') {
-      start.setDate(start.getDate() - 1);
-      start.setHours(0, 0, 0, 0);
-      end.setDate(end.getDate() - 1);
-      end.setHours(23, 59, 59, 999);
+    const todayKey = localDateKey(now, tz);
+    const monthStartKey = `${todayKey.slice(0, 8)}01`;
+    const prevMonthStartKey = (() => {
+      const [y, m] = todayKey.split('-').map((x) => parseInt(x, 10));
+      const d = new Date(Date.UTC(y, m - 2, 1));
+      return d.toISOString().slice(0, 10);
+    })();
+    let startKey = todayKey;
+    let endKey = todayKey;
+    if (range === 'YESTERDAY') {
+      startKey = endKey = addDaysToKey(todayKey, -1);
     } else if (range === 'LAST_7_DAYS') {
-      start.setDate(start.getDate() - 6);
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
+      startKey = addDaysToKey(todayKey, -6);
     } else if (range === 'THIS_MONTH') {
-      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
+      startKey = monthStartKey;
     } else if (range === 'LAST_MONTH') {
-      start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-    } else if (range === 'CUSTOM' && fromDate) {
-      start = new Date(fromDate);
-      start.setHours(0, 0, 0, 0);
-      end = toDate ? new Date(toDate) : new Date(fromDate);
-      end.setHours(23, 59, 59, 999);
-    } else {
-      start.setHours(0, 0, 0, 0);
-      end.setHours(23, 59, 59, 999);
+      startKey = prevMonthStartKey;
+      endKey = addDaysToKey(monthStartKey, -1);
+    } else if (range === 'CUSTOM' && fromDate && isValidDateKey(fromDate)) {
+      startKey = fromDate;
+      endKey = toDate && isValidDateKey(toDate) ? toDate : fromDate;
+      if (endKey < startKey) [startKey, endKey] = [endKey, startKey];
     }
+    const start = localDayRange(startKey, tz).start;
+    const end = localDayRange(endKey, tz).end;
 
     const [callLogsInRange, activitiesInRange, leadsUpdatedInRange, tasksInRange, leadsWithFollowUpInRange, telecallersList] =
       await Promise.all([
@@ -548,17 +546,22 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
     const dailyTrend: { date: string; label: string; calls: number; connected: number }[] = [];
 
     if (isMultiDay) {
-      const iter = new Date(start);
-      while (iter <= end) {
-        const dayStr = iter.toISOString().split('T')[0];
-        const dayLabel = iter.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      let dayStr = startKey;
+      while (dayStr <= endKey) {
+        const [yy, mm, dd] = dayStr.split('-').map((x) => parseInt(x, 10));
+        const dayLabel = new Date(Date.UTC(yy, mm - 1, dd)).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          timeZone: 'UTC',
+        });
+        const onDay = (d: Date | string) => localDateKey(new Date(d), tz) === dayStr;
 
-        const callsOnDay = callLogsInRange.filter((c) => (c.contactDate || c.createdAt).toISOString().startsWith(dayStr)).length;
-        const actsOnDay = activitiesInRange.filter((a) => a.createdAt.toISOString().startsWith(dayStr)).length;
+        const callsOnDay = callLogsInRange.filter((c) => onDay(c.contactDate || c.createdAt)).length;
+        const actsOnDay = activitiesInRange.filter((a) => onDay(a.createdAt)).length;
 
         let connectedOnDay = 0;
         leadLatestOutcomeMap.forEach(({ outcome, timestamp }) => {
-          if (timestamp.startsWith(dayStr) && connectedOutcomes.has(outcome)) {
+          if (onDay(timestamp) && connectedOutcomes.has(outcome)) {
             connectedOnDay++;
           }
         });
@@ -570,7 +573,7 @@ export async function getTelecallerReport(req: Request, res: Response, next: Nex
           connected: connectedOnDay,
         });
 
-        iter.setDate(iter.getDate() + 1);
+        dayStr = addDaysToKey(dayStr, 1);
       }
     }
 
